@@ -82,7 +82,7 @@ function data() {
         .addSubcommand((s) =>
           s
             .setName("set")
-            .setDescription("Set the default log channel")
+            .setDescription("Set default channel")
             .addChannelOption((o) =>
               o
                 .setName("channel")
@@ -91,7 +91,7 @@ function data() {
                 .addChannelTypes(ChannelType.GuildText, ChannelType.GuildAnnouncement),
             ),
         )
-        .addSubcommand((s) => s.setName("clear").setDescription("Clear the default log channel")),
+        .addSubcommand((s) => s.setName("clear").setDescription("Clear default")),
     )
     .addSubcommandGroup((g) =>
       g
@@ -178,7 +178,7 @@ function data() {
     .addSubcommand((s) =>
       s
         .setName("webhook")
-        .setDescription("Use a webhook for this guild")
+        .setDescription("Webhook credentials")
         .addStringOption((o) => o.setName("id").setDescription("Webhook id"))
         .addStringOption((o) => o.setName("token").setDescription("Webhook token"))
         .addBooleanOption((o) => o.setName("clear").setDescription("Clear webhook")),
@@ -204,7 +204,7 @@ function data() {
     .addSubcommand((s) =>
       s
         .setName("history")
-        .setDescription("Export recent stored events")
+        .setDescription("Export history")
         .addIntegerOption((o) => o.setName("limit").setDescription("Rows (max 200)").setMinValue(1).setMaxValue(200)),
     )
     .addSubcommand((s) => s.setName("reload").setDescription("Reload guild cache"))
@@ -223,7 +223,7 @@ function data() {
         .addStringOption((o) =>
           o
             .setName("slot")
-            .setDescription("create | update | delete | voice | member | mod | info")
+            .setDescription("color slot")
             .setRequired(true)
             .addChoices(
               { name: "create", value: "create" },
@@ -256,21 +256,25 @@ function data() {
             .setRequired(true)
             .addChoices(
               { name: "paused", value: "paused" },
-              { name: "plain_text", value: "plainText" },
-              { name: "thumbnails", value: "showThumbnails" },
+              { name: "plain", value: "plainText" },
+              { name: "thumbs", value: "showThumbnails" },
               { name: "actors", value: "actors" },
-              { name: "cooldown_sec", value: "cooldownSec" },
-              { name: "min_acct_days", value: "minAccountDays" },
-              { name: "quiet_start", value: "quietStart" },
-              { name: "quiet_end", value: "quietEnd" },
-              { name: "webhook_name", value: "webhookName" },
-              { name: "webhook_avatar", value: "webhookAvatar" },
-              { name: "show_timestamp", value: "showTimestamp" },
-              { name: "attach_long", value: "attachLong" },
+              { name: "cooldown", value: "cooldownSec" },
+              { name: "acct_days", value: "minAccountDays" },
+              { name: "quiet_in", value: "quietStart" },
+              { name: "quiet_out", value: "quietEnd" },
+              { name: "hook_name", value: "webhookName" },
+              { name: "hook_av", value: "webhookAvatar" },
+              { name: "timestamp", value: "showTimestamp" },
+              { name: "attach", value: "attachLong" },
+              { name: "delivery", value: "delivery" },
+              { name: "prefix", value: "prefix" },
+              { name: "prefix_on", value: "prefixOn" },
+              { name: "slash_on", value: "slashOn" },
             ),
         )
         .addStringOption((o) =>
-          o.setName("value").setDescription("bool, all/humans/bots, number, HH:MM, URL").setRequired(true),
+          o.setName("value").setDescription("value").setRequired(true),
         ),
     )
     .addSubcommandGroup((g) =>
@@ -561,13 +565,16 @@ async function execute(interaction, { db, dispatch, processCfg }) {
     const raw = interaction.options.getString("value", true);
     const row = db.ensureGuild(interaction.guildId);
     const extra = db.extraOf(row);
-    const boolish = ["paused", "plainText", "showThumbnails", "showTimestamp", "attachLong"];
+    const boolish = ["paused", "plainText", "showThumbnails", "showTimestamp", "attachLong", "prefixOn", "slashOn"];
     if (boolish.includes(name)) {
       extra[name] = ["1", "true", "yes", "on"].includes(raw.toLowerCase());
     } else if (name === "cooldownSec" || name === "minAccountDays") {
       extra[name] = Number(raw) || 0;
     } else if (name === "actors") {
       extra.actors = ["all", "humans", "bots"].includes(raw) ? raw : "all";
+    } else if (name === "delivery") {
+      extra.delivery = ["embed", "plain", "webhook"].includes(raw) ? raw : "embed";
+      extra.plainText = extra.delivery === "plain";
     } else {
       extra[name] = raw === "clear" || raw === "-" ? null : raw;
     }

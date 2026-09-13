@@ -75,7 +75,8 @@ function createDispatcher({ client, db, processCfg, log, cache }) {
         ? `<@&${cfg.mentionRole}>`
         : null);
 
-      if (cfg.plainText && embeds.length) {
+      const delivery = cfg.delivery || (cfg.plainText ? "plain" : "embed");
+      if ((delivery === "plain" || cfg.plainText) && embeds.length) {
         const text = embeds.map(embedToPlain).join("\n\n");
         content = [content, text].filter(Boolean).join("\n");
         embeds = [];
@@ -94,7 +95,14 @@ function createDispatcher({ client, db, processCfg, log, cache }) {
       if (!queues.has(key)) queues.set(key, []);
       const q = queues.get(key);
       if (q.length >= processCfg.maxQueue) q.shift();
-      q.push({ channelId, content, embeds, files, guildId: guild.id });
+      q.push({
+        channelId,
+        content,
+        embeds: delivery === "plain" ? [] : embeds,
+        files,
+        guildId: guild.id,
+        preferWebhook: delivery === "webhook",
+      });
     } catch (error) {
       log.error("enqueue", eventKey, error);
     }
@@ -104,7 +112,8 @@ function createDispatcher({ client, db, processCfg, log, cache }) {
     const channel = await client.channels.fetch(item.channelId).catch(() => null);
     if (!channel || !channel.isTextBased()) return;
     const cfg = guildCfg(item.guildId);
-    if (cfg?.webhookId && cfg?.webhookToken) {
+    const wantHook = item.preferWebhook || (cfg?.delivery === "webhook") || Boolean(cfg?.webhookId && cfg?.webhookToken);
+    if (wantHook && cfg?.webhookId && cfg?.webhookToken) {
       try {
         const hook = new WebhookClient({ id: cfg.webhookId, token: cfg.webhookToken });
         await hook.send({
@@ -117,7 +126,11 @@ function createDispatcher({ client, db, processCfg, log, cache }) {
         return;
       } catch (error) {
         log.warn("webhook send failed, falling back to channel", error.message);
+        if (processCfg.allowWebhookFallback === false) return;
       }
+    }
+    if (item.preferWebhook && (!cfg?.webhookId || !cfg?.webhookToken)) {
+      log.warn("delivery=webhook but no webhook configured; using channel.send");
     }
     await channel.send({
       content: item.content || undefined,

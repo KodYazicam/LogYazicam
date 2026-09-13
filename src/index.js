@@ -11,6 +11,7 @@ const { createDispatcher } = require("./dispatcher");
 const { bindEvents } = require("./events");
 const commands = require("./commands");
 const { t, reloadLocales } = require("./locales");
+const { parsePrefix, fakeInteraction, canPrefix } = require("./prefix");
 
 let env = loadEnvFile();
 let processCfg = processConfig(env);
@@ -76,6 +77,25 @@ process.on("uncaughtException", (error) => reportError(error, "uncaughtException
 
 bindEvents(client, { dispatch, processCfg, log });
 
+client.on("messageCreate", async (message) => {
+  try {
+    if (!message.inGuild() || message.author.bot) return;
+    const cfg = dispatch.guildCfg(message.guildId) || dispatch.refreshGuild(message.guildId);
+    if (cfg.prefixOn === false) return;
+    const prefix = cfg.prefix || processCfg.prefix;
+    const tokens = parsePrefix(message.content, prefix);
+    if (!tokens) return;
+    if (!canPrefix(message, processCfg)) {
+      await message.reply({ content: t(cfg.locale, "cmd.denied"), allowedMentions: { repliedUser: false } });
+      return;
+    }
+    const fake = fakeInteraction(message, tokens);
+    await commands.execute(fake, { db, dispatch, processCfg });
+  } catch (error) {
+    reportError(error, "prefix");
+  }
+});
+
 client.on("guildCreate", (guild) => {
   try {
     dispatch.refreshGuild(guild.id);
@@ -86,6 +106,10 @@ client.on("guildCreate", (guild) => {
 
 client.on("interactionCreate", async (interaction) => {
   try {
+    if (interaction.inGuild()) {
+      const cfg = dispatch.guildCfg(interaction.guildId) || dispatch.refreshGuild(interaction.guildId);
+      if (cfg.slashOn === false) return;
+    }
     if (interaction.isAutocomplete() && interaction.commandName === "log") {
       await commands.autocomplete(interaction);
       return;

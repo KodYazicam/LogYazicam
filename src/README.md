@@ -69,7 +69,9 @@ Bag for per-guild overrides without a migration:
 
 Set via `/log string`, `/log color`, `/log set`, `/log watch`. `mergeGuild` applies `extra.colors` on top of columns / env. `buildEmbed` passes `extra.strings` into `t()`.
 
-Other `extra_json` knobs the dispatcher honors: `paused`, `plainText`, `showThumbnails`, `showTimestamp`, `attachLong`, `quietStart`, `quietEnd`, `minAccountDays`, `cooldownSec`, `actors`, `includeChannels`, `webhookName`, `webhookAvatar`. Process `.env` `DEFAULT_*` / `ACTIVITY_*` seed new guilds and the bot presence (hot-reloaded except TOKEN).
+Other `extra_json` knobs: `paused`, `plainText`, `showThumbnails`, `showTimestamp`, `attachLong`, `quietStart`, `quietEnd`, `minAccountDays`, `cooldownSec`, `actors`, `includeChannels`, `webhookName`, `webhookAvatar`, `delivery` (`embed|plain|webhook`), `prefix`, `prefixOn`, `slashOn`.
+
+Control plane: slash `/log` and prefix `{PREFIX}log …` share `commands.execute`. `PREFIX` / `PREFIX_ENABLED` / `SLASH_ENABLED` in env; guild overrides via `/log set`. Delivery `webhook` uses stored webhook credentials; `ALLOW_WEBHOOK_FALLBACK` decides whether a failed hook becomes `channel.send`.
 
 ## Intents
 

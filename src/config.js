@@ -68,6 +68,12 @@ function processConfig(env) {
     activityText: env.ACTIVITY_TEXT || "guild logs · /log",
     activityStatus: env.ACTIVITY_STATUS || "online",
     shardList: env.SHARD_LIST || "",
+    prefixEnabled: BOOL(env.PREFIX_ENABLED, true),
+    prefix: env.PREFIX || "!",
+    slashEnabled: BOOL(env.SLASH_ENABLED, true),
+    defaultDelivery: env.DEFAULT_DELIVERY || "embed",
+    allowWebhookFallback: BOOL(env.ALLOW_WEBHOOK_FALLBACK, true),
+    mentionUsers: BOOL(env.MENTION_USERS, false),
   };
 }
 
@@ -111,8 +117,12 @@ function mergeGuild(processCfg, row, routes, ignores, extra) {
     cooldownSec: extra?.cooldownSec != null ? Number(extra.cooldownSec) : processCfg.defaultCooldownSec,
     actors: extra?.actors || processCfg.defaultActors,
     includeChannels: Array.isArray(extra?.includeChannels) ? extra.includeChannels : [],
-    webhookName: extra?.webhookName || processCfg.webhookName,
+    webhookName: extra?.webhookName || processCfg.defaultWebhookUsername || processCfg.webhookName,
     webhookAvatar: extra?.webhookAvatar || processCfg.webhookAvatarUrl,
+    delivery: extra?.delivery || processCfg.defaultDelivery,
+    prefix: extra?.prefix || processCfg.prefix,
+    prefixOn: extra?.prefixOn != null ? Boolean(extra.prefixOn) : processCfg.prefixEnabled,
+    slashOn: extra?.slashOn != null ? Boolean(extra.slashOn) : processCfg.slashEnabled,
     ignores: ignores || [],
     events: enabled,
     colors: {

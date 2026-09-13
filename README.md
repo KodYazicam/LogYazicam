@@ -409,6 +409,11 @@ All names English. Booleans: `1` `0` `true` `false` `yes` `no` `on` `off`. Guild
 | `ACTIVITY_TYPE` | `Watching` | hot | `Playing` `Watching` `Listening` `Competing` `Custom`. |
 | `ACTIVITY_TEXT` | `guild logs · /log` | hot | Presence name (128 chars). |
 | `ACTIVITY_STATUS` | `online` | hot | `online` `idle` `dnd` `invisible`. |
+| `PREFIX_ENABLED` | `true` | hot | Process default; guild `/log set name:prefix_on`. |
+| `PREFIX` | `!` | hot | `!log status` — guild can override with `name:prefix`. |
+| `SLASH_ENABLED` | `true` | hot | `false` ignores `/log` (prefix still works if on). |
+| `DEFAULT_DELIVERY` | `embed` | hot | `embed` (bot message + embed), `plain` (bot message, no embed), `webhook` (requires webhook id/token). |
+| `ALLOW_WEBHOOK_FALLBACK` | `true` | hot | If webhook send fails, fall back to `channel.send`. `false` drops the item. |
 
 \* “process” = the Node timer or file handle was created at boot. Pull a new binary / restart to change those. Guild-level `/log filter` still applies immediately.
 
@@ -541,6 +546,22 @@ One command for the remaining guild knobs (`extra_json`). `name` + `value`:
 | `webhook_name` / `webhook_avatar` | string / URL | Per-guild webhook identity |
 | `show_timestamp` | `true` / `false` | Embed timestamp |
 | `attach_long` | `true` / `false` | `.txt` dump for long deleted messages |
+| `delivery` | `embed` `plain` `webhook` | How logs are posted |
+| `prefix` | e.g. `!` | Guild prefix for `!log …` |
+| `prefix_on` / `slash_on` | `true` / `false` | Enable prefix and/or slash |
+
+Prefix uses the **same** execute path as slash. Examples (prefix `!`):
+
+```
+!log status
+!log event on key:messageDelete channel:#logs
+!log group on name:voice
+!log set name:delivery value:plain
+!log set name:delivery value:webhook
+!log webhook id:123 token:abc
+```
+
+Named `key:value` tokens work in any order after the subcommand. Webhook delivery still needs `/log webhook` (or `!log webhook`) credentials; otherwise the bot logs a warning and uses `channel.send` unless `ALLOW_WEBHOOK_FALLBACK=false`.
 
 ### `/log watch`
 
