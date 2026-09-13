@@ -54,8 +54,8 @@ function buildEmbed(guildCfg, eventKey, fields, { description, thumbnail, url } 
   const locale = guildCfg.locale;
   const embed = new EmbedBuilder()
     .setColor(color)
-    .setTitle(t(locale, `event.${eventKey}`, {}, guildCfg.extra?.strings))
-    .setTimestamp(new Date());
+    .setTitle(t(locale, `event.${eventKey}`, {}, guildCfg.extra?.strings));
+  if (guildCfg.showTimestamp !== false) embed.setTimestamp(new Date());
   if (description) embed.setDescription(truncate(description, 4000));
   if (thumbnail && guildCfg.showThumbnails !== false) embed.setThumbnail(thumbnail);
   if (url) embed.setURL(url);

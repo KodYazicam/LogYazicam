@@ -26,7 +26,10 @@
   <a href="./docs/README.ar.md">العربية</a> ·
   <a href="./docs/README.ja.md">日本語</a> ·
   <a href="./docs/README.ko.md">한국어</a> ·
-  <a href="./docs/README.zh.md">简体中文</a>
+  <a href="./docs/README.zh.md">简体中文</a> ·
+  <a href="./docs/README.sv.md">Svenska</a> ·
+  <a href="./docs/README.hi.md">हिन्दी</a> ·
+  <a href="./docs/README.id.md">Bahasa Indonesia</a>
 </p>
 
 The bot UI (`/log locale`) uses the same language codes. Slash **option names** stay English (`key`, `channel`, `kind`). Event keys stay English (`messageDelete`). Only embed titles and command replies are translated.
@@ -393,6 +396,19 @@ All names English. Booleans: `1` `0` `true` `false` `yes` `no` `on` `off`. Guild
 | `IGNORE_SELF` | `true` | hot / guild | Drop the bot’s own id (stops log loops). |
 | `STORE_HISTORY` | `true` | hot / guild | Write summary rows. |
 | `HISTORY_LIMIT` | `200` | hot / guild | Per-guild cap; oldest trimmed. |
+| `DEFAULT_PAUSED` | `false` | hot | New guilds start paused until `/log set`. |
+| `DEFAULT_PLAIN_TEXT` | `false` | hot | Flatten embeds by default. |
+| `DEFAULT_SHOW_THUMBNAILS` | `true` | hot | Avatars on embeds. |
+| `DEFAULT_SHOW_TIMESTAMP` | `true` | hot | Embed timestamp. |
+| `DEFAULT_ATTACH_LONG` | `true` | hot | Attach `.txt` when deleted content > 1800 chars. |
+| `DEFAULT_QUIET_START` / `DEFAULT_QUIET_END` | empty | hot | Default quiet window `HH:MM`. |
+| `DEFAULT_MIN_ACCOUNT_DAYS` | `0` | hot | Skip young accounts. |
+| `DEFAULT_COOLDOWN_SEC` | `0` | hot | Per-event-key cooldown. |
+| `DEFAULT_ACTORS` | `all` | hot | `all` `humans` `bots`. |
+| `WEBHOOK_USERNAME` | `LogYazicam` | hot | Alias of webhook display name. |
+| `ACTIVITY_TYPE` | `Watching` | hot | `Playing` `Watching` `Listening` `Competing` `Custom`. |
+| `ACTIVITY_TEXT` | `guild logs · /log` | hot | Presence name (128 chars). |
+| `ACTIVITY_STATUS` | `online` | hot | `online` `idle` `dnd` `invisible`. |
 
 \* “process” = the Node timer or file handle was created at boot. Pull a new binary / restart to change those. Guild-level `/log filter` still applies immediately.
 
@@ -523,6 +539,8 @@ One command for the remaining guild knobs (`extra_json`). `name` + `value`:
 | `min_account_days` | `0`–`3650` | Skip members whose account is younger |
 | `quiet_start` / `quiet_end` | `HH:MM` in guild timezone | Drop events in that window (wraps midnight). `value:clear` unsets |
 | `webhook_name` / `webhook_avatar` | string / URL | Per-guild webhook identity |
+| `show_timestamp` | `true` / `false` | Embed timestamp |
+| `attach_long` | `true` / `false` | `.txt` dump for long deleted messages |
 
 ### `/log watch`
 
@@ -739,6 +757,9 @@ Not a compliance archive. Rows are `{ eventKey, channelId, at, summary }` e.g. `
 | `ja` | [docs/README.ja.md](./docs/README.ja.md) | `src/locales/ja.js` |
 | `ko` | [docs/README.ko.md](./docs/README.ko.md) | `src/locales/ko.js` |
 | `zh` | [docs/README.zh.md](./docs/README.zh.md) | `src/locales/zh.js` |
+| `sv` | [docs/README.sv.md](./docs/README.sv.md) | `src/locales/sv.js` |
+| `hi` | [docs/README.hi.md](./docs/README.hi.md) | `src/locales/hi.js` |
+| `id` | [docs/README.id.md](./docs/README.id.md) | `src/locales/id.js` |
 
 Missing UI strings fall back to English. `/log locale code:ja` does not require a process restart.
 

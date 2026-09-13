@@ -2,6 +2,7 @@ const {
   Client,
   GatewayIntentBits,
   Partials,
+  ActivityType,
 } = require("discord.js");
 const { loadEnvFile, processConfig } = require("./config");
 const { openDb } = require("./db");
@@ -103,8 +104,24 @@ client.on("interactionCreate", async (interaction) => {
   }
 });
 
+function applyPresence() {
+  if (!client.user) return;
+  const typeName = String(processCfg.activityType || "Watching");
+  const type = ActivityType[typeName] ?? ActivityType.Watching;
+  const status = ["online", "idle", "dnd", "invisible"].includes(processCfg.activityStatus)
+    ? processCfg.activityStatus
+    : "online";
+  client.user.setPresence({
+    status,
+    activities: processCfg.activityText
+      ? [{ name: processCfg.activityText.slice(0, 128), type }]
+      : [],
+  });
+}
+
 client.once("ready", () => {
   for (const guild of client.guilds.cache.values()) dispatch.refreshGuild(guild.id);
+  applyPresence();
   log.info(t(processCfg.defaultLocale, "bot.ready", { tag: client.user.tag, guilds: client.guilds.cache.size }));
   log.info(t(processCfg.defaultLocale, "bot.credit"));
 });
@@ -117,6 +134,7 @@ if (processCfg.hotReloadMs > 0) {
       processCfg = processConfig(nextEnv);
       processCfg.token = token;
       reloadLocales();
+      applyPresence();
       for (const id of cache.keys()) dispatch.refreshGuild(id);
       log.debug("hot-reload applied");
     } catch (error) {

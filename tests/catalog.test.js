@@ -18,7 +18,7 @@ test("every event has a unique english key and a group", () => {
 test("locales fall back to english", () => {
   assert.deepEqual(
     LOCALES.sort(),
-    ["ar", "de", "en", "es", "fr", "it", "ja", "ko", "nl", "pl", "pt", "ru", "tr", "uk", "zh"].sort(),
+    ["ar", "de", "en", "es", "fr", "hi", "id", "it", "ja", "ko", "nl", "pl", "pt", "ru", "sv", "tr", "uk", "zh"].sort(),
   );
   assert.equal(t("xx", "none"), "—");
   assert.match(t("tr", "cmd.denied"), /kullanamazsın/);

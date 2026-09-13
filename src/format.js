@@ -30,7 +30,7 @@ async function formatMessageDelete(oldMessage, client, cfg, processCfg) {
     ["field.jump", cfg.embedShowJump ? snap.url : null],
   ];
   const files = [];
-  if (snap.content && snap.content.length > 1800) {
+  if (cfg.attachLong !== false && snap.content && snap.content.length > 1800) {
     files.push(new AttachmentBuilder(Buffer.from(snap.content, "utf8"), { name: `message-${snap.id}.txt` }));
   }
   return {

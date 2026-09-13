@@ -248,7 +248,7 @@ function data() {
     .addSubcommand((s) =>
       s
         .setName("set")
-        .setDescription("Pause, quiet hours, style, actors, cooldown")
+        .setDescription("Guild knobs")
         .addStringOption((o) =>
           o
             .setName("name")
@@ -260,11 +260,13 @@ function data() {
               { name: "thumbnails", value: "showThumbnails" },
               { name: "actors", value: "actors" },
               { name: "cooldown_sec", value: "cooldownSec" },
-              { name: "min_account_days", value: "minAccountDays" },
+              { name: "min_acct_days", value: "minAccountDays" },
               { name: "quiet_start", value: "quietStart" },
               { name: "quiet_end", value: "quietEnd" },
               { name: "webhook_name", value: "webhookName" },
               { name: "webhook_avatar", value: "webhookAvatar" },
+              { name: "show_timestamp", value: "showTimestamp" },
+              { name: "attach_long", value: "attachLong" },
             ),
         )
         .addStringOption((o) =>
@@ -559,7 +561,7 @@ async function execute(interaction, { db, dispatch, processCfg }) {
     const raw = interaction.options.getString("value", true);
     const row = db.ensureGuild(interaction.guildId);
     const extra = db.extraOf(row);
-    const boolish = ["paused", "plainText", "showThumbnails"];
+    const boolish = ["paused", "plainText", "showThumbnails", "showTimestamp", "attachLong"];
     if (boolish.includes(name)) {
       extra[name] = ["1", "true", "yes", "on"].includes(raw.toLowerCase());
     } else if (name === "cooldownSec" || name === "minAccountDays") {

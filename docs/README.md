@@ -21,7 +21,10 @@ Developer map (modules, how to add an event or a language): [../src/README.md](.
   <a href="./README.ar.md">العربية</a> ·
   <a href="./README.ja.md">日本語</a> ·
   <a href="./README.ko.md">한국어</a> ·
-  <a href="./README.zh.md">简体中文</a>
+  <a href="./README.zh.md">简体中文</a> ·
+  <a href="./README.sv.md">Svenska</a> ·
+  <a href="./README.hi.md">हिन्दी</a> ·
+  <a href="./README.id.md">Bahasa Indonesia</a>
 </p>
 
 Bot UI languages are **files in `src/locales/`**, not these markdown files. `/log locale` + `/log languages` list whatever `.js` packs are on disk. Adding `sv.js` does not require a new `docs/README.sv.md`, but linking it here and in the root language bar is what makes it discoverable.
