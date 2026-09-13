@@ -77,8 +77,8 @@ function createDispatcher({ client, db, processCfg, log, cache }) {
 
       const delivery = cfg.delivery || (cfg.plainText ? "plain" : "embed");
       if ((delivery === "plain" || cfg.plainText) && embeds.length) {
-        const text = embeds.map(embedToPlain).join("\n\n");
-        content = [content, text].filter(Boolean).join("\n");
+        const text = embeds.map((e) => embedToPlain(e).slice(0, processCfg.plainMax || 1900)).join("\n\n");
+        content = [content, text].filter(Boolean).join("\n").slice(0, processCfg.plainMax || 1900);
         embeds = [];
       }
 

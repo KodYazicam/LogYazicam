@@ -1,15 +1,16 @@
 const { PermissionFlagsBits } = require("discord.js");
+const { hasConfigPermission } = require("./util");
 
-function parsePrefix(content, prefix) {
+function parsePrefix(content, prefix, commandName = "log") {
   if (!content || !prefix || !content.startsWith(prefix)) return null;
   const body = content.slice(prefix.length).trim();
   if (!body) return null;
   const [head, ...rest] = body.split(/\s+/);
-  if (head.toLowerCase() !== "log") return null;
+  if (head.toLowerCase() !== String(commandName).toLowerCase()) return null;
   return rest;
 }
 
-function fakeInteraction(message, tokens) {
+function fakeInteraction(message, tokens, commandName = "log") {
   const options = {};
   const consume = () => {
     const next = tokens[0];
@@ -77,13 +78,13 @@ function fakeInteraction(message, tokens) {
     },
     inGuild: () => true,
     isChatInputCommand: () => true,
-    commandName: "log",
+    commandName: commandName || "log",
   };
 }
 
 function canPrefix(message, processCfg) {
   if (processCfg.owners.includes(message.author.id)) return true;
-  return message.member?.permissions?.has(PermissionFlagsBits.ManageGuild);
+  return hasConfigPermission(message.member?.permissions, processCfg);
 }
 
 module.exports = { parsePrefix, fakeInteraction, canPrefix };

@@ -56,7 +56,7 @@ function buildEmbed(guildCfg, eventKey, fields, { description, thumbnail, url } 
     .setColor(color)
     .setTitle(t(locale, `event.${eventKey}`, {}, guildCfg.extra?.strings));
   if (guildCfg.showTimestamp !== false) embed.setTimestamp(new Date());
-  if (description) embed.setDescription(truncate(description, 4000));
+  if (description) embed.setDescription(truncate(description, guildCfg.descMax || 4000));
   if (thumbnail && guildCfg.showThumbnails !== false) embed.setThumbnail(thumbnail);
   if (url) embed.setURL(url);
   const compact = guildCfg.embedCompact;
@@ -64,18 +64,19 @@ function buildEmbed(guildCfg, eventKey, fields, { description, thumbnail, url } 
     if (value == null || value === "") continue;
     embed.addFields({
       name: t(locale, name, {}, guildCfg.extra?.strings),
-      value: truncate(value),
+      value: truncate(value, guildCfg.fieldMax || 1024),
       inline: compact,
     });
   }
-  const footer = [guildCfg.embedFooter, t(locale, "bot.credit", {}, guildCfg.extra?.strings)].filter(Boolean).join(" · ");
-  embed.setFooter({ text: footer.slice(0, 2048) });
+  const credit = guildCfg.showCredit === false ? null : t(locale, "bot.credit", {}, guildCfg.extra?.strings);
+  const footer = [guildCfg.embedFooter, credit].filter(Boolean).join(" · ");
+  if (footer) embed.setFooter({ text: footer.slice(0, guildCfg.footerMax || 2048) });
   return embed;
 }
 
-async function audit(guild, type, targetId, maxAge) {
+async function audit(guild, type, targetId, maxAge, fetchLimit = 6) {
   try {
-    const logs = await guild.fetchAuditLogs({ type, limit: 6 });
+    const logs = await guild.fetchAuditLogs({ type, limit: Math.min(100, Math.max(1, fetchLimit)) });
     const now = Date.now();
     for (const entry of logs.entries.values()) {
       if (targetId && entry.target?.id && entry.target.id !== targetId) continue;
@@ -135,4 +136,11 @@ function embedToPlain(embed) {
   return lines.join("\n").slice(0, 1900);
 }
 
-module.exports = { truncate, code, userTag, channelTag, diff, when, buildEmbed, audit, ignored, inQuietHours, includeOk, embedToPlain };
+function hasConfigPermission(memberPermissions, processCfg) {
+  const name = processCfg.configPermission || "ManageGuild";
+  if (!memberPermissions) return false;
+  if (typeof memberPermissions.has === "function") return memberPermissions.has(name);
+  return false;
+}
+
+module.exports = { truncate, code, userTag, channelTag, diff, when, buildEmbed, audit, ignored, inQuietHours, includeOk, embedToPlain, hasConfigPermission };

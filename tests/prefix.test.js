@@ -11,4 +11,6 @@ test("parsePrefix requires prefix + log", () => {
     "key:messageDelete",
   ]);
   assert.equal(parsePrefix("!help", "!"), null);
+  assert.deepEqual(parsePrefix("?audit status", "?", "audit"), ["status"]);
+  assert.equal(parsePrefix("!log status", "!", "audit"), null);
 });

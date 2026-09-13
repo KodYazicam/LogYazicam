@@ -414,6 +414,20 @@ All names English. Booleans: `1` `0` `true` `false` `yes` `no` `on` `off`. Guild
 | `SLASH_ENABLED` | `true` | hot | `false` ignores `/log` (prefix still works if on). |
 | `DEFAULT_DELIVERY` | `embed` | hot | `embed` (bot message + embed), `plain` (bot message, no embed), `webhook` (requires webhook id/token). |
 | `ALLOW_WEBHOOK_FALLBACK` | `true` | hot | If webhook send fails, fall back to `channel.send`. `false` drops the item. |
+| `COMMAND_NAME` | `log` | deploy | Slash + prefix verb (`!log` / `/log`). Redeploy after change. |
+| `CONFIG_PERMISSION` | `ManageGuild` | hot | Discord permission name; `OWNER_IDS` always bypass. |
+| `SLASH_EPHEMERAL` | `true` | hot | Slash replies hidden. Guild: `/log set name:ephemeral`. |
+| `SHOW_CREDIT` | `true` | hot | Embed footer credit. Guild: `name:credit`. LICENSE still requires attribution in docs. |
+| `EMBED_FIELD_MAX` | `1024` | hot | Field value cap (Discord max 1024). |
+| `EMBED_DESC_MAX` | `4000` | hot | Description cap. |
+| `EMBED_FOOTER_MAX` | `2048` | hot | Footer cap. |
+| `PLAIN_MAX` | `1900` | hot | Plain-text delivery cap. |
+| `ERROR_MESSAGE_MAX` | `1900` | hot | Error channel / owner DM cap. |
+| `ATTACH_MIN_CHARS` | `1800` | hot | Deleted-content length before `.txt` attach. Guild: not in slash set (env / extra `attachMin`). |
+| `AUDIT_FETCH_LIMIT` | `6` | hot | Audit entries fetched when attributing executor. |
+| `BULK_LINE_LIMIT` | `40` | hot | Lines in bulk-delete embed. |
+| `HISTORY_EXPORT_DEFAULT` | `50` | hot | `/log history` default rows. |
+| `COLOR_CREATE` … `COLOR_INFO` | decimal | hot | Default embed colors; `/log color` still overrides per guild. |
 
 \* “process” = the Node timer or file handle was created at boot. Pull a new binary / restart to change those. Guild-level `/log filter` still applies immediately.
 

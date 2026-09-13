@@ -71,7 +71,7 @@ Set via `/log string`, `/log color`, `/log set`, `/log watch`. `mergeGuild` appl
 
 Other `extra_json` knobs: `paused`, `plainText`, `showThumbnails`, `showTimestamp`, `attachLong`, `quietStart`, `quietEnd`, `minAccountDays`, `cooldownSec`, `actors`, `includeChannels`, `webhookName`, `webhookAvatar`, `delivery` (`embed|plain|webhook`), `prefix`, `prefixOn`, `slashOn`.
 
-Control plane: slash `/log` and prefix `{PREFIX}log …` share `commands.execute`. `PREFIX` / `PREFIX_ENABLED` / `SLASH_ENABLED` in env; guild overrides via `/log set`. Delivery `webhook` uses stored webhook credentials; `ALLOW_WEBHOOK_FALLBACK` decides whether a failed hook becomes `channel.send`.
+Control plane: slash `/log` and prefix `{PREFIX}{COMMAND_NAME} …` share `commands.execute`. `COMMAND_NAME` (default `log`) needs `npm run deploy` if you change it. `CONFIG_PERMISSION` is the Discord permission name (`ManageGuild` default). `SLASH_EPHEMERAL` / guild `ephemeral` hide slash replies. `SHOW_CREDIT` / guild `credit` toggle footer credit (KYAL still requires README/LICENSE attribution). Truncation: `EMBED_*_MAX`, `PLAIN_MAX`, `ATTACH_MIN_CHARS`, `AUDIT_FETCH_LIMIT`, `BULK_LINE_LIMIT`.
 
 ## Intents
 

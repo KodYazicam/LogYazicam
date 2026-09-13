@@ -61,13 +61,13 @@ function reportError(error, where) {
   if (processCfg.errorChannelId) {
     client.channels
       .fetch(processCfg.errorChannelId)
-      .then((ch) => ch.isTextBased() && ch.send({ content: text.slice(0, 1900) }))
+      .then((ch) => ch.isTextBased() && ch.send({ content: text.slice(0, processCfg.errorMax || 1900) }))
       .catch((err) => log.warn("error channel failed", err.message));
   }
   if (processCfg.errorDmOwner && processCfg.owners[0]) {
     client.users
       .fetch(processCfg.owners[0])
-      .then((u) => u.send({ content: text.slice(0, 1900) }))
+      .then((u) => u.send({ content: text.slice(0, processCfg.errorMax || 1900) }))
       .catch((err) => log.warn("error dm failed", err.message));
   }
 }
@@ -83,13 +83,13 @@ client.on("messageCreate", async (message) => {
     const cfg = dispatch.guildCfg(message.guildId) || dispatch.refreshGuild(message.guildId);
     if (cfg.prefixOn === false) return;
     const prefix = cfg.prefix || processCfg.prefix;
-    const tokens = parsePrefix(message.content, prefix);
+    const tokens = parsePrefix(message.content, prefix, processCfg.commandName);
     if (!tokens) return;
     if (!canPrefix(message, processCfg)) {
       await message.reply({ content: t(cfg.locale, "cmd.denied"), allowedMentions: { repliedUser: false } });
       return;
     }
-    const fake = fakeInteraction(message, tokens);
+    const fake = fakeInteraction(message, tokens, processCfg.commandName);
     await commands.execute(fake, { db, dispatch, processCfg });
   } catch (error) {
     reportError(error, "prefix");
@@ -110,11 +110,11 @@ client.on("interactionCreate", async (interaction) => {
       const cfg = dispatch.guildCfg(interaction.guildId) || dispatch.refreshGuild(interaction.guildId);
       if (cfg.slashOn === false) return;
     }
-    if (interaction.isAutocomplete() && interaction.commandName === "log") {
+    if (interaction.isAutocomplete() && interaction.commandName === processCfg.commandName) {
       await commands.autocomplete(interaction);
       return;
     }
-    if (!interaction.isChatInputCommand() || interaction.commandName !== "log") return;
+    if (!interaction.isChatInputCommand() || interaction.commandName !== processCfg.commandName) return;
     if (!interaction.inGuild()) {
       await interaction.reply({ content: "Guild only.", ephemeral: true });
       return;

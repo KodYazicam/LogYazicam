@@ -10,6 +10,9 @@ if (!cfg.token || !cfg.clientId) {
 }
 
 const body = [data().toJSON()];
+if (cfg.commandName && cfg.commandName !== "log") {
+  body[0].name = cfg.commandName;
+}
 const rest = new REST({ version: "10" }).setToken(cfg.token);
 
 (async () => {

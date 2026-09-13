@@ -30,7 +30,7 @@ async function formatMessageDelete(oldMessage, client, cfg, processCfg) {
     ["field.jump", cfg.embedShowJump ? snap.url : null],
   ];
   const files = [];
-  if (cfg.attachLong !== false && snap.content && snap.content.length > 1800) {
+  if (cfg.attachLong !== false && snap.content && snap.content.length > (cfg.attachMin || 1800)) {
     files.push(new AttachmentBuilder(Buffer.from(snap.content, "utf8"), { name: `message-${snap.id}.txt` }));
   }
   return {
@@ -68,7 +68,7 @@ async function formatMessageUpdate(oldMessage, newMessage, cfg) {
 }
 
 function formatBulk(messages, channel, cfg) {
-  const lines = [...messages.values()].slice(0, 40).map((m) => {
+  const lines = [...messages.values()].slice(0, cfg.bulkLineLimit || 40).map((m) => {
     const author = m.author ? m.author.tag : "?";
     return `${author}: ${truncate(m.cleanContent || m.content || "", 80)}`;
   });
@@ -102,7 +102,7 @@ async function formatMemberAdd(member, cfg) {
 }
 
 async function formatMemberRemove(member, guild, cfg, processCfg) {
-  const entry = await audit(guild, AuditLogEvent.MemberKick, member.id, processCfg.auditMaxAgeMs);
+  const entry = await audit(guild, AuditLogEvent.MemberKick, member.id, processCfg.auditMaxAgeMs, processCfg.auditFetchLimit);
   const fields = [
     ["field.user", userTag(member.user || member)],
     ["field.executor", entry?.executor ? userTag(entry.executor) : null],
@@ -118,7 +118,7 @@ async function formatMemberRemove(member, guild, cfg, processCfg) {
 }
 
 async function formatBanAdd(ban, cfg, processCfg) {
-  const entry = await audit(ban.guild, AuditLogEvent.MemberBanAdd, ban.user.id, processCfg.auditMaxAgeMs);
+  const entry = await audit(ban.guild, AuditLogEvent.MemberBanAdd, ban.user.id, processCfg.auditMaxAgeMs, processCfg.auditFetchLimit);
   const fields = [
     ["field.user", userTag(ban.user)],
     ["field.reason", ban.reason || entry?.reason],
@@ -133,7 +133,7 @@ async function formatBanAdd(ban, cfg, processCfg) {
 }
 
 async function formatBanRemove(ban, cfg, processCfg) {
-  const entry = await audit(ban.guild, AuditLogEvent.MemberBanRemove, ban.user.id, processCfg.auditMaxAgeMs);
+  const entry = await audit(ban.guild, AuditLogEvent.MemberBanRemove, ban.user.id, processCfg.auditMaxAgeMs, processCfg.auditFetchLimit);
   const fields = [
     ["field.user", userTag(ban.user)],
     ["field.executor", entry?.executor ? userTag(entry.executor) : null],

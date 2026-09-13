@@ -12,7 +12,7 @@ function data() {
   const cmd = new SlashCommandBuilder()
     .setName("log")
     .setDescription("Configure logging")
-    .setDefaultMemberPermissions(PermissionFlagsBits.ManageGuild)
+    .setDefaultMemberPermissions(PermissionFlagsBits[process.env.CONFIG_PERMISSION || "ManageGuild"] || PermissionFlagsBits.ManageGuild)
     .addSubcommandGroup((g) =>
       g
         .setName("event")
@@ -22,7 +22,7 @@ function data() {
             .setName("on")
             .setDescription("Enable")
             .addStringOption((o) =>
-              o.setName("key").setDescription("English event key").setRequired(true).setAutocomplete(true),
+              o.setName("key").setDescription("Event key").setRequired(true).setAutocomplete(true),
             )
             .addChannelOption((o) =>
               o
@@ -96,7 +96,7 @@ function data() {
     .addSubcommandGroup((g) =>
       g
         .setName("ignore")
-        .setDescription("Ignore list")
+        .setDescription("Ignores")
         .addSubcommand((s) =>
           s
             .setName("add")
@@ -138,7 +138,7 @@ function data() {
     .addSubcommand((s) =>
       s
         .setName("locale")
-        .setDescription("Set embed language")
+        .setDescription("Language")
         .addStringOption((o) =>
           o
             .setName("code")
@@ -150,13 +150,13 @@ function data() {
     .addSubcommand((s) =>
       s
         .setName("timezone")
-        .setDescription("Set IANA timezone")
+        .setDescription("Timezone")
         .addStringOption((o) => o.setName("tz").setDescription("e.g. Europe/Istanbul").setRequired(true)),
     )
     .addSubcommand((s) =>
       s
         .setName("filter")
-        .setDescription("Toggle a boolean filter")
+        .setDescription("Boolean filter")
         .addStringOption((o) =>
           o
             .setName("name")
@@ -189,11 +189,11 @@ function data() {
         .setDescription("Footer prefix (credit stays)")
         .addStringOption((o) => o.setName("text").setDescription("Footer text").setRequired(true)),
     )
-    .addSubcommand((s) => s.setName("status").setDescription("Show current configuration"))
+    .addSubcommand((s) => s.setName("status").setDescription("Status"))
     .addSubcommand((s) =>
       s
         .setName("test")
-        .setDescription("Send a test embed")
+        .setDescription("Test post")
         .addChannelOption((o) =>
           o
             .setName("channel")
@@ -205,7 +205,7 @@ function data() {
       s
         .setName("history")
         .setDescription("Export history")
-        .addIntegerOption((o) => o.setName("limit").setDescription("Rows (max 200)").setMinValue(1).setMaxValue(200)),
+           .addIntegerOption((o) => o.setName("limit").setDescription("Rows").setMinValue(1).setMaxValue(200)),
     )
     .addSubcommand((s) => s.setName("reload").setDescription("Reload guild cache"))
     .addSubcommand((s) => s.setName("events").setDescription("List event keys"))
@@ -244,7 +244,7 @@ function data() {
         .addRoleOption((o) => o.setName("role").setDescription("Role"))
         .addBooleanOption((o) => o.setName("clear").setDescription("Clear mention role")),
     )
-    .addSubcommand((s) => s.setName("languages").setDescription("List locale files on disk"))
+    .addSubcommand((s) => s.setName("languages").setDescription("List locales"))
     .addSubcommand((s) =>
       s
         .setName("set")
@@ -271,6 +271,8 @@ function data() {
               { name: "prefix", value: "prefix" },
               { name: "prefix_on", value: "prefixOn" },
               { name: "slash_on", value: "slashOn" },
+              { name: "ephemeral", value: "ephemeral" },
+              { name: "credit", value: "showCredit" },
             ),
         )
         .addStringOption((o) =>
@@ -313,7 +315,13 @@ function data() {
 
 function canRun(interaction, processCfg) {
   if (processCfg.owners.includes(interaction.user.id)) return true;
-  return interaction.memberPermissions?.has(PermissionFlagsBits.ManageGuild);
+  const { hasConfigPermission } = require("./util");
+  return hasConfigPermission(interaction.memberPermissions, processCfg);
+}
+
+function eph(cfg, processCfg) {
+  if (cfg && cfg.ephemeral != null) return Boolean(cfg.ephemeral);
+  return processCfg.slashEphemeral !== false;
 }
 
 async function autocomplete(interaction) {
@@ -331,10 +339,17 @@ async function autocomplete(interaction) {
 
 async function execute(interaction, { db, dispatch, processCfg }) {
   const locale = dispatch.guildCfg(interaction.guildId)?.locale || processCfg.defaultLocale;
+  const cfg0 = dispatch.guildCfg(interaction.guildId);
+  const hidden = eph(cfg0, processCfg);
   if (!canRun(interaction, processCfg)) {
-    return interaction.reply({ content: t(locale, "cmd.denied"), ephemeral: true });
+    return interaction.reply({ content: t(locale, "cmd.denied"), ephemeral: hidden });
   }
   dispatch.refreshGuild(interaction.guildId);
+  const origReply = interaction.reply.bind(interaction);
+  interaction.reply = (payload) => {
+    if (typeof payload === "string") return origReply({ content: payload, ephemeral: hidden });
+    return origReply({ ...payload, ephemeral: payload.ephemeral ?? hidden });
+  };
   const group = interaction.options.getSubcommandGroup(false);
   const sub = interaction.options.getSubcommand();
 
@@ -490,7 +505,7 @@ async function execute(interaction, { db, dispatch, processCfg }) {
   }
 
   if (sub === "history") {
-    const limit = interaction.options.getInteger("limit") || 50;
+    const limit = interaction.options.getInteger("limit") || processCfg.historyExportDefault || 50;
     const rows = db.listHistory.all(interaction.guildId, limit);
     if (!rows.length) return interaction.reply({ content: t(locale, "cmd.history_empty"), ephemeral: true });
     const body = rows
@@ -565,7 +580,7 @@ async function execute(interaction, { db, dispatch, processCfg }) {
     const raw = interaction.options.getString("value", true);
     const row = db.ensureGuild(interaction.guildId);
     const extra = db.extraOf(row);
-    const boolish = ["paused", "plainText", "showThumbnails", "showTimestamp", "attachLong", "prefixOn", "slashOn"];
+    const boolish = ["paused", "plainText", "showThumbnails", "showTimestamp", "attachLong", "prefixOn", "slashOn", "ephemeral", "showCredit"];
     if (boolish.includes(name)) {
       extra[name] = ["1", "true", "yes", "on"].includes(raw.toLowerCase());
     } else if (name === "cooldownSec" || name === "minAccountDays") {
