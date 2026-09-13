@@ -100,9 +100,11 @@ Ayrıntı: [İngilizce README — Environment](../README.md#environment-referenc
 
 `message` `member` `moderation` `invite` `channel` `thread` `role` `emoji` `sticker` `voice` `stage` `server` `webhook` `integration` `event` `automod` `command` `audit` `presence` `user`
 
-`presence` ve `user` varsayılan **kapalı**. Ses, tek Discord olayı `voiceStateUpdate` → `voiceJoin` / `Leave` / `Move` / …
+`presence` ve `user` varsayılan **kapalı**. Ses, tek Discord olayı `voiceStateUpdate` → `voiceJoin` / `Leave` / `Move` / `voiceSelfMute` (kapalı) / …
 
-Tam tablo: [İngilizce README — catalog](../README.md#full-event-catalog).
+Ek gruplar: `poll` (anket oyu), `typing` (`typingStart`, kapalı), `soundboard`, `monetization` (SKU / abonelik). `messageCreate` her mesajı loglar — kapalı tut; `commandUse` başka botların slash/butonunu loglar, kendi `/log` asla.
+
+Tam tablo ve her key’in embed alanları: [İngilizce README — catalog](../README.md#full-event-catalog).
 
 ## Lisans
 

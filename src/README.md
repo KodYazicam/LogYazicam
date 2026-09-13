@@ -25,7 +25,7 @@ index.js
 | File | Owns | Do not put here |
 | --- | --- | --- |
 | `catalog.js` | Event **keys**, groups, default colors | Discord listeners |
-| `events.js` | `client.on` for each Discord event; splits `voiceStateUpdate` / `guildMemberUpdate` | SQL |
+| `events.js` | `client.on` for each Discord event; splits `voiceStateUpdate` / `guildMemberUpdate`; also poll, typing, soundboard, entitlements, `commandUse` | SQL |
 | `format.js` | Message / member / ban / voice embed payloads | Routing |
 | `dispatcher.js` | Filters, queue, webhook vs `channel.send`, history insert | Slash UX |
 | `commands.js` | Slash builder + execute + autocomplete | Gateway |
@@ -73,9 +73,25 @@ Other `extra_json` knobs: `paused`, `plainText`, `showThumbnails`, `showTimestam
 
 Control plane: slash `/log` and prefix `{PREFIX}{COMMAND_NAME} …` share `commands.execute`. `COMMAND_NAME` (default `log`) needs `npm run deploy` if you change it. `CONFIG_PERMISSION` is the Discord permission name (`ManageGuild` default). `SLASH_EPHEMERAL` / guild `ephemeral` hide slash replies. `SHOW_CREDIT` / guild `credit` toggle footer credit (KYAL still requires README/LICENSE attribution). Truncation: `EMBED_*_MAX`, `PLAIN_MAX`, `ATTACH_MIN_CHARS`, `AUDIT_FETCH_LIMIT`, `BULK_LINE_LIMIT`.
 
+## Extra listeners (catalog keys → Discord)
+
+| Catalog key | `client.on` |
+| --- | --- |
+| `messageCreate` | `messageCreate` (skips the bot’s own user) |
+| `typingStart` | `typingStart` |
+| `messagePollVoteAdd` / `Remove` | same names |
+| `voiceChannelEffect` | `voiceChannelEffectSend` |
+| `voiceSelfMute` `voiceSelfDeaf` `voiceSuppress` | `voiceStateUpdate` via `voiceKind()` |
+| `threadMemberUpdate` | `threadMemberUpdate` |
+| `soundboard*` | `guildSoundboardSoundCreate/Delete/Update` |
+| `entitlement*` `subscription*` | matching names; guild from `guildId` |
+| `commandUse` | `interactionCreate` (ignores `COMMAND_NAME`) |
+| `guildAvailable` / `guildUnavailable` | same |
+| `guildMemberPending` | `guildMemberUpdate` when `pending` flips |
+
 ## Intents
 
-Declared only in `index.js`. Portal must match (Members, Message Content; Presence only if you enable `presenceUpdate`).
+Declared only in `index.js`. Portal must match (Members, Message Content; Presence only if you enable `presenceUpdate`). `GuildMessageTyping` is required for `typingStart` and is already requested.
 
 ## Errors
 

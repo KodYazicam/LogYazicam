@@ -161,6 +161,7 @@ Color in the embed comes from the catalog (`create` green, `update` yellow, `del
 | `messageReactionRemoveEmoji` | `messageReactionRemoveEmoji` | emoji, channel | |
 | `messagePin` | `guildAuditLogEntryCreate` + `MessagePin` | executor, target | Needs View Audit Log. |
 | `messageUnpin` | `guildAuditLogEntryCreate` + `MessageUnpin` | executor, target | Same. |
+| `messageCreate` | `messageCreate` | author, channel, content, jump | **Default off.** Logs every message the bot can see. `ignore_self` still drops LogYazicam. Use `/log watch` + a dedicated `#chat-mirror` or you will flood the log channel. Customize title with `/log string key:event.messageCreate`. |
 
 ### Group `member`
 
@@ -174,8 +175,9 @@ Color in the embed comes from the catalog (`create` green, `update` yellow, `del
 | `guildMemberRoles` | same | added roles / removed roles |
 | `guildMemberBoost` | same | boost on/off (`premiumSince`) |
 | `guildMemberAvatar` | same | server avatar thumbnail |
+| `guildMemberPending` | `guildMemberUpdate` when `pending` flips | user, before/after | Membership screening / rules gate. Fires when Discord marks the member as having passed (or failed) the gate. |
 
-`guildMemberTimeout` is also listed under `moderation` in the catalog (same key, one handler). Enabling the `moderation` group turns it on; enabling `member` also turns it on.
+`guildMemberTimeout` is also listed under `moderation` in the catalog (same key, one handler). Enabling the `moderation` group turns it on; enabling `member` also turns it on. `/log group on name:member` enables **all** member keys including `guildMemberPending` and `guildMemberUpdate` (the summary event). Turn individual keys off afterward if that is too noisy: `/log event off key:guildMemberUpdate`.
 
 ### Group `moderation`
 
@@ -212,6 +214,7 @@ Requires `GuildInvites` intent (already requested).
 | `threadUpdate` | `threadUpdate` | name, archived/locked/autoArchive diff |
 | `threadMembersUpdate` | `threadMembersUpdate` | added/removed counts |
 | `threadListSync` | `threadListSync` | thread count |
+| `threadMemberUpdate` | `threadMemberUpdate` | user id, thread, flags | A single member’s thread metadata changed (notifications, joined flags), not the add/remove burst (`threadMembersUpdate`). |
 
 ### Group `role` / `emoji` / `sticker`
 
@@ -228,8 +231,12 @@ Create / delete / update for each. Role update diffs name, color, hoist, mention
 | `voiceServerDeafen` | `serverDeaf` flipped |
 | `voiceStream` | Go Live / `streaming` flipped |
 | `voiceVideo` | camera / `selfVideo` flipped |
+| `voiceChannelEffect` | `voiceChannelEffectSend` | user, channel, emoji / animation | Soundboard-style effects sent in a voice channel (hearts, etc.). Separate from `soundboard*` (server sound library). |
+| `voiceSelfMute` | `selfMute` flipped | user, from/to, on/off | **Default off.** Client mute is noisy. Enable if you need AFK / “who muted themselves” traces. |
+| `voiceSelfDeaf` | `selfDeaf` flipped | same | **Default off.** |
+| `voiceSuppress` | `suppress` flipped | user, on/off | Stage channel speaker suppressed / unsuppressed by a moderator. |
 
-Self-mute/self-deafen are **not** separate keys (they are client-side noise). Server mute/deafen are.
+`/log group on name:voice` turns **every** voice key on, including self mute/deaf. Prefer `/log event on key:voiceJoin` plus `voiceLeave` / `voiceMove` / `voiceServerMute` if you only want staff-relevant voice.
 
 ### Group `stage`
 
@@ -241,6 +248,8 @@ Self-mute/self-deafen are **not** separate keys (they are client-side noise). Se
 | --- | --- | --- |
 | `guildUpdate` | `guildUpdate` | name, icon, owner, vanity, AFK channel diff |
 | `guildBoostLevel` | same, when `premiumTier` changes | old/new tier |
+| `guildAvailable` | `guildAvailable` | name | **Default off.** Discord marked the guild as available again after an outage. |
+| `guildUnavailable` | `guildUnavailable` | name, id | Outage / bot lost the guild. Worth leaving **on** in a `#ops` channel. |
 
 ### Group `webhook` / `integration`
 
@@ -256,7 +265,10 @@ Rule create/delete/update. `autoModerationActionExecution` — user, rule id, ma
 
 ### Group `command`
 
-`applicationCommandPermissionsUpdate` — command id, application id.
+| Key | Source | Embed | Notes |
+| --- | --- | --- | --- |
+| `applicationCommandPermissionsUpdate` | same Discord event | command id, application id | Permission overwrite on a slash command. |
+| `commandUse` | `interactionCreate` | user, command/customId, channel, kind (`slash` `button` `select` `modal` `context` `autocomplete`) | **Default off.** Logs **other** apps’ interactions in this guild. Never logs LogYazicam’s own `COMMAND_NAME` (`/log`). Buttons use `customId`. Enable per-channel with `/log event on key:commandUse channel:#mod-commands`. |
 
 ### Group `audit`
 
@@ -271,32 +283,60 @@ Rule create/delete/update. `autoModerationActionExecution` — user, rule id, ma
 
 ### Group `poll`
 
-`messagePollVoteAdd` / `messagePollVoteRemove` — voter id, answer text, jump URL.
+| Key | Source | Embed | Notes |
+| --- | --- | --- | --- |
+| `messagePollVoteAdd` | `messagePollVoteAdd` | user id, answer text, jump | Someone voted on a native Discord poll. Answer text is whatever Discord still has on the poll object. |
+| `messagePollVoteRemove` | `messagePollVoteRemove` | same | Vote retracted. |
+
+`/log group on name:poll` enables both. Needs the bot to see the poll message (same channel access as message logs).
 
 ### Group `typing` (default **off**)
 
-`typingStart` — fires often. Enable only in a dedicated channel.
+| Key | Source | Embed | Notes |
+| --- | --- | --- | --- |
+| `typingStart` | `typingStart` | user, channel | Fires on every typing indicator. **Do not** point this at the same channel as `messageCreate`. Requires `GuildMessageTyping` (already in `src/index.js`). Customize: `/log event on key:typingStart channel:#typing-debug` and `/log ignore` for bots. |
 
 ### Group `soundboard`
 
-`soundboardCreate` / `Delete` / `Update` (`guildSoundboardSound*` gateway events).
+| Key | Source | Embed | Notes |
+| --- | --- | --- | --- |
+| `soundboardCreate` | `guildSoundboardSoundCreate` | name, sound id | A sound was added to the **server** soundboard (not a one-off voice effect). |
+| `soundboardDelete` | `guildSoundboardSoundDelete` | name, id | |
+| `soundboardUpdate` | `guildSoundboardSoundUpdate` | name + diff (name, emoji) | |
+
+Voice-channel “send effect” is `voiceChannelEffect`, not this group.
 
 ### Group `monetization`
 
-`entitlementCreate` `entitlementUpdate` `entitlementDelete` `subscriptionCreate` `subscriptionUpdate` `subscriptionDelete` — SKU / user / status. Only relevant if the app has IAP or server subscriptions.
+Only useful if this **application** has SKUs, entitlements, or server subscriptions. Empty for a normal logging bot — keys still exist so you can turn them on later without a code change.
 
-Also added to existing groups (all real listeners):
+| Key | Source | Embed |
+| --- | --- | --- |
+| `entitlementCreate` | `entitlementCreate` | SKU id, user id, entitlement id |
+| `entitlementUpdate` | `entitlementUpdate` | SKU + ends timestamp diff |
+| `entitlementDelete` | `entitlementDelete` | SKU, user |
+| `subscriptionCreate` | `subscriptionCreate` | id, status |
+| `subscriptionUpdate` | `subscriptionUpdate` | id, status diff |
+| `subscriptionDelete` | `subscriptionDelete` | id |
 
-| Group | Extra keys |
-| --- | --- |
-| `message` | `messageCreate` (default **off** — every message; `ignore_self` still drops the bot) |
-| `voice` | `voiceChannelEffect` `voiceSelfMute` `voiceSelfDeaf` (default off) `voiceSuppress` |
-| `thread` | `threadMemberUpdate` |
-| `command` | `commandUse` (default **off** — other slash/buttons/modals; never logs this bot’s own `/log`) |
-| `member` | `guildMemberPending` (membership screening) |
-| `server` | `guildAvailable` (default off) `guildUnavailable` |
+Guild is resolved from `guildId` on the payload. If Discord omits it, the event is dropped (nothing to route).
 
-`/log group` names use autocomplete (24 groups). Turn a noisy key on only where you have a channel: `/log event on key:messageCreate channel:#chat-mirror`.
+### Defaults (on vs off)
+
+**Off until you enable the key or its group:** everything, as before.
+
+**Off even if you enable the parent group’s “noisy extras” by accident** — these catalog rows have `defaultOff: true`. They still turn **on** when you `/log group on` that group (group on = all keys in the group). The `defaultOff` flag is documentation + a reminder in `/log events`; it does **not** keep them off after a group enable. If you run `/log group on name:voice`, also `/log event off key:voiceSelfMute` and `voiceSelfDeaf` unless you want those.
+
+Noisy keys to leave off in production: `messageCreate`, `typingStart`, `presenceUpdate`, `userUpdate`, `commandUse`, `guildAuditLogEntryCreate`, `voiceSelfMute`, `voiceSelfDeaf`, `guildAvailable`.
+
+`/log group` names use **autocomplete** (24 groups). Example split:
+
+```
+/log event on key:messageCreate channel:#chat-mirror
+/log event on key:commandUse channel:#mod-commands
+/log group on name:poll channel:#mod-log
+/log event on key:guildUnavailable channel:#ops
+```
 
 ---
 
