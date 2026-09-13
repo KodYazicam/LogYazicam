@@ -53,7 +53,7 @@ function data() {
                 .setName("name")
                 .setDescription("Group name")
                 .setRequired(true)
-                .addChoices(...GROUPS.map((name) => ({ name, value: name }))),
+                .setAutocomplete(true),
             )
             .addChannelOption((o) =>
               o
@@ -71,7 +71,7 @@ function data() {
                 .setName("name")
                 .setDescription("Group name")
                 .setRequired(true)
-                .addChoices(...GROUPS.map((name) => ({ name, value: name }))),
+                .setAutocomplete(true),
             ),
         ),
     )
@@ -331,6 +331,10 @@ async function autocomplete(interaction) {
     const { LOCALES } = require("./locales");
     const picks = LOCALES.filter((c) => c.includes(q)).slice(0, 25);
     return interaction.respond(picks.map((c) => ({ name: c, value: c })));
+  }
+  if (focused.name === "name" && interaction.options.getSubcommandGroup(false) === "group") {
+    const picks = GROUPS.filter((g) => g.includes(q)).slice(0, 25);
+    return interaction.respond(picks.map((g) => ({ name: g, value: g })));
   }
   if (focused.name !== "key") return interaction.respond([]);
   const picks = EVENTS.filter((e) => e.key.toLowerCase().includes(q)).slice(0, 25);

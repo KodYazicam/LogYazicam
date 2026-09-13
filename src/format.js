@@ -155,6 +155,9 @@ function voiceKind(before, after) {
   if (before.serverDeaf !== after.serverDeaf) return "voiceServerDeafen";
   if (before.streaming !== after.streaming) return "voiceStream";
   if (before.selfVideo !== after.selfVideo) return "voiceVideo";
+  if (before.selfMute !== after.selfMute) return "voiceSelfMute";
+  if (before.selfDeaf !== after.selfDeaf) return "voiceSelfDeaf";
+  if (before.suppress !== after.suppress) return "voiceSuppress";
   return null;
 }
 
@@ -167,6 +170,9 @@ function formatVoice(kind, before, after, cfg) {
   ];
   if (kind === "voiceServerMute") fields.push(["field.after", after.serverMute ? t(cfg.locale, "on") : t(cfg.locale, "off")]);
   if (kind === "voiceServerDeafen") fields.push(["field.after", after.serverDeaf ? t(cfg.locale, "on") : t(cfg.locale, "off")]);
+  if (kind === "voiceSelfMute") fields.push(["field.after", after.selfMute ? t(cfg.locale, "on") : t(cfg.locale, "off")]);
+  if (kind === "voiceSelfDeaf") fields.push(["field.after", after.selfDeaf ? t(cfg.locale, "on") : t(cfg.locale, "off")]);
+  if (kind === "voiceSuppress") fields.push(["field.after", after.suppress ? t(cfg.locale, "on") : t(cfg.locale, "off")]);
   return {
     embeds: [buildEmbed(cfg, kind, fields)],
     bot: member?.user?.bot,

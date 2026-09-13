@@ -269,6 +269,35 @@ Rule create/delete/update. `autoModerationActionExecution` — user, rule id, ma
 | `presenceUpdate` | Fires constantly | Privileged **Presence** intent in the portal + this key on |
 | `userUpdate` | Username/avatar is global; the bot fans out to every shared guild | Member cache |
 
+### Group `poll`
+
+`messagePollVoteAdd` / `messagePollVoteRemove` — voter id, answer text, jump URL.
+
+### Group `typing` (default **off**)
+
+`typingStart` — fires often. Enable only in a dedicated channel.
+
+### Group `soundboard`
+
+`soundboardCreate` / `Delete` / `Update` (`guildSoundboardSound*` gateway events).
+
+### Group `monetization`
+
+`entitlementCreate` `entitlementUpdate` `entitlementDelete` `subscriptionCreate` `subscriptionUpdate` `subscriptionDelete` — SKU / user / status. Only relevant if the app has IAP or server subscriptions.
+
+Also added to existing groups (all real listeners):
+
+| Group | Extra keys |
+| --- | --- |
+| `message` | `messageCreate` (default **off** — every message; `ignore_self` still drops the bot) |
+| `voice` | `voiceChannelEffect` `voiceSelfMute` `voiceSelfDeaf` (default off) `voiceSuppress` |
+| `thread` | `threadMemberUpdate` |
+| `command` | `commandUse` (default **off** — other slash/buttons/modals; never logs this bot’s own `/log`) |
+| `member` | `guildMemberPending` (membership screening) |
+| `server` | `guildAvailable` (default off) `guildUnavailable` |
+
+`/log group` names use autocomplete (24 groups). Turn a noisy key on only where you have a channel: `/log event on key:messageCreate channel:#chat-mirror`.
+
 ---
 
 ## Discord Developer Portal

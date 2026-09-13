@@ -43,4 +43,5 @@ test("voiceKind maps discord voice states", () => {
   assert.equal(voiceKind({ channelId: "a" }, { channelId: null }), "voiceLeave");
   assert.equal(voiceKind({ channelId: "a" }, { channelId: "b" }), "voiceMove");
   assert.equal(voiceKind({ channelId: "a", serverMute: false }, { channelId: "a", serverMute: true }), "voiceServerMute");
+  assert.equal(voiceKind({ channelId: "a", selfMute: false }, { channelId: "a", selfMute: true }), "voiceSelfMute");
 });

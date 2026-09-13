@@ -30,6 +30,7 @@ const client = new Client({
     GatewayIntentBits.Guilds,
     GatewayIntentBits.GuildMembers,
     GatewayIntentBits.GuildMessages,
+    GatewayIntentBits.GuildMessageTyping,
     GatewayIntentBits.GuildMessageReactions,
     GatewayIntentBits.MessageContent,
     GatewayIntentBits.GuildVoiceStates,
@@ -106,15 +107,16 @@ client.on("guildCreate", (guild) => {
 
 client.on("interactionCreate", async (interaction) => {
   try {
-    if (interaction.inGuild()) {
+    const isOwn = interaction.commandName === processCfg.commandName;
+    if (interaction.inGuild() && isOwn) {
       const cfg = dispatch.guildCfg(interaction.guildId) || dispatch.refreshGuild(interaction.guildId);
-      if (cfg.slashOn === false) return;
+      if (cfg.slashOn === false && (interaction.isChatInputCommand?.() || interaction.isAutocomplete?.())) return;
     }
-    if (interaction.isAutocomplete() && interaction.commandName === processCfg.commandName) {
+    if (interaction.isAutocomplete() && isOwn) {
       await commands.autocomplete(interaction);
       return;
     }
-    if (!interaction.isChatInputCommand() || interaction.commandName !== processCfg.commandName) return;
+    if (!interaction.isChatInputCommand() || !isOwn) return;
     if (!interaction.inGuild()) {
       await interaction.reply({ content: "Guild only.", ephemeral: true });
       return;

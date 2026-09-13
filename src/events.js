@@ -155,6 +155,17 @@ function bindEvents(client, { dispatch, processCfg, log }) {
         ignore: { user: after.user },
       });
     }
+    if (Boolean(before.pending) !== Boolean(after.pending)) {
+      await run(guild, "guildMemberPending", {
+        embeds: [buildEmbed(cfg, "guildMemberPending", [
+          ["field.user", userTag(after.user)],
+          ["field.before", String(Boolean(before.pending))],
+          ["field.after", String(Boolean(after.pending))],
+        ])],
+        userId: after.id,
+        ignore: { user: after.user },
+      });
+    }
     if (before.premiumSinceTimestamp !== after.premiumSinceTimestamp) {
       await run(guild, "guildMemberBoost", {
         embeds: [buildEmbed(cfg, "guildMemberBoost", [
@@ -546,6 +557,211 @@ function bindEvents(client, { dispatch, processCfg, log }) {
       userId: after.user?.id,
       ignore: { user: after.user },
     });
+  }));
+
+  client.on("messageCreate", safe("messageCreate", async (message) => {
+    if (!message.guild || message.author?.id === client.user.id) return;
+    const cfg = dispatch.guildCfg(message.guild.id);
+    if (!cfg) return;
+    await run(message.guild, "messageCreate", {
+      embeds: [buildEmbed(cfg, "messageCreate", [
+        ["field.author", userTag(message.author)],
+        ["field.channel", channelTag(message.channel)],
+        ["field.content", message.cleanContent || message.content],
+        ["field.jump", cfg.embedShowJump ? message.url : null],
+      ])],
+      bot: message.author?.bot,
+      webhook: Boolean(message.webhookId),
+      userId: message.author?.id,
+      ignore: { user: message.author, channel: message.channel },
+      summary: `create ${message.id}`,
+    });
+  }));
+
+  client.on("typingStart", safe("typingStart", async (typing) => {
+    const guild = typing.guild || typing.channel?.guild;
+    if (!guild) return;
+    const cfg = dispatch.guildCfg(guild.id);
+    if (!cfg) return;
+    await run(guild, "typingStart", {
+      embeds: [buildEmbed(cfg, "typingStart", [
+        ["field.user", userTag(typing.user)],
+        ["field.channel", channelTag(typing.channel)],
+      ])],
+      bot: typing.user?.bot,
+      userId: typing.user?.id,
+      ignore: { user: typing.user, channel: typing.channel },
+    });
+  }));
+
+  client.on("messagePollVoteAdd", safe("messagePollVoteAdd", async (answer, userId) => {
+    const message = answer.poll?.message;
+    const guild = message?.guild;
+    if (!guild) return;
+    const cfg = dispatch.guildCfg(guild.id);
+    if (!cfg) return;
+    await run(guild, "messagePollVoteAdd", {
+      embeds: [buildEmbed(cfg, "messagePollVoteAdd", [
+        ["field.user", userId],
+        ["field.after", String(answer.text || answer.id)],
+        ["field.jump", message.url],
+      ])],
+      userId,
+      ignore: { channel: message.channel },
+    });
+  }));
+
+  client.on("messagePollVoteRemove", safe("messagePollVoteRemove", async (answer, userId) => {
+    const message = answer.poll?.message;
+    const guild = message?.guild;
+    if (!guild) return;
+    const cfg = dispatch.guildCfg(guild.id);
+    if (!cfg) return;
+    await run(guild, "messagePollVoteRemove", {
+      embeds: [buildEmbed(cfg, "messagePollVoteRemove", [
+        ["field.user", userId],
+        ["field.after", String(answer.text || answer.id)],
+        ["field.jump", message.url],
+      ])],
+      userId,
+      ignore: { channel: message.channel },
+    });
+  }));
+
+  client.on("voiceChannelEffectSend", safe("voiceChannelEffectSend", async (effect) => {
+    const guild = effect.guild || effect.channel?.guild;
+    if (!guild) return;
+    const cfg = dispatch.guildCfg(guild.id);
+    if (!cfg) return;
+    await run(guild, "voiceChannelEffect", {
+      embeds: [buildEmbed(cfg, "voiceChannelEffect", [
+        ["field.user", effect.userId],
+        ["field.channel", channelTag(effect.channel)],
+        ["field.emoji", effect.emoji ? String(effect.emoji) : String(effect.animationType ?? "effect")],
+      ])],
+      userId: effect.userId,
+      ignore: { channel: effect.channel },
+    });
+  }));
+
+  client.on("threadMemberUpdate", safe("threadMemberUpdate", async (before, after) => {
+    const thread = after.thread || before.thread;
+    const guild = thread?.guild;
+    if (!guild) return;
+    const cfg = dispatch.guildCfg(guild.id);
+    if (!cfg) return;
+    await run(guild, "threadMemberUpdate", {
+      embeds: [buildEmbed(cfg, "threadMemberUpdate", [
+        ["field.user", after.id],
+        ["field.thread", channelTag(thread)],
+        ["field.action", String(after.flags?.bitfield ?? after.flags ?? "")],
+      ])],
+      userId: after.id,
+    });
+  }));
+
+  const soundGuild = (sound) => sound.guild || client.guilds.cache.get(sound.guildId);
+  client.on("guildSoundboardSoundCreate", safe("soundboardCreate", async (sound) => {
+    const guild = soundGuild(sound);
+    if (!guild) return;
+    const cfg = dispatch.guildCfg(guild.id);
+    if (!cfg) return;
+    await run(guild, "soundboardCreate", namedCreate("soundboardCreate", sound.name, [["field.id", sound.soundId || sound.id]], cfg));
+  }));
+  client.on("guildSoundboardSoundDelete", safe("soundboardDelete", async (sound) => {
+    const guild = soundGuild(sound);
+    if (!guild) return;
+    const cfg = dispatch.guildCfg(guild.id);
+    if (!cfg) return;
+    await run(guild, "soundboardDelete", namedDelete("soundboardDelete", sound.name, [["field.id", sound.soundId || sound.id]], cfg));
+  }));
+  client.on("guildSoundboardSoundUpdate", safe("soundboardUpdate", async (before, after) => {
+    const guild = soundGuild(after);
+    if (!guild) return;
+    const cfg = dispatch.guildCfg(guild.id);
+    if (!cfg) return;
+    await run(guild, "soundboardUpdate", namedUpdate("soundboardUpdate", after.name, { name: before.name, emoji: before.emojiId }, { name: after.name, emoji: after.emojiId }, cfg));
+  }));
+
+  const entitlementGuild = (ent) => client.guilds.cache.get(ent.guildId);
+  client.on("entitlementCreate", safe("entitlementCreate", async (ent) => {
+    const guild = entitlementGuild(ent);
+    if (!guild) return;
+    const cfg = dispatch.guildCfg(guild.id);
+    if (!cfg) return;
+    await run(guild, "entitlementCreate", namedCreate("entitlementCreate", String(ent.skuId), [["field.user", ent.userId], ["field.id", ent.id]], cfg));
+  }));
+  client.on("entitlementUpdate", safe("entitlementUpdate", async (before, after) => {
+    const guild = entitlementGuild(after);
+    if (!guild) return;
+    const cfg = dispatch.guildCfg(guild.id);
+    if (!cfg) return;
+    await run(guild, "entitlementUpdate", namedUpdate("entitlementUpdate", String(after.skuId), { ends: before?.endsTimestamp }, { ends: after.endsTimestamp }, cfg));
+  }));
+  client.on("entitlementDelete", safe("entitlementDelete", async (ent) => {
+    const guild = entitlementGuild(ent);
+    if (!guild) return;
+    const cfg = dispatch.guildCfg(guild.id);
+    if (!cfg) return;
+    await run(guild, "entitlementDelete", namedDelete("entitlementDelete", String(ent.skuId), [["field.user", ent.userId]], cfg));
+  }));
+
+  client.on("subscriptionCreate", safe("subscriptionCreate", async (sub) => {
+    const guild = client.guilds.cache.get(sub.guildId);
+    if (!guild) return;
+    const cfg = dispatch.guildCfg(guild.id);
+    if (!cfg) return;
+    await run(guild, "subscriptionCreate", namedCreate("subscriptionCreate", sub.id, [["field.status", String(sub.status)]], cfg));
+  }));
+  client.on("subscriptionUpdate", safe("subscriptionUpdate", async (before, after) => {
+    const guild = client.guilds.cache.get(after.guildId);
+    if (!guild) return;
+    const cfg = dispatch.guildCfg(guild.id);
+    if (!cfg) return;
+    await run(guild, "subscriptionUpdate", namedUpdate("subscriptionUpdate", after.id, { status: before?.status }, { status: after.status }, cfg));
+  }));
+  client.on("subscriptionDelete", safe("subscriptionDelete", async (sub) => {
+    const guild = client.guilds.cache.get(sub.guildId);
+    if (!guild) return;
+    const cfg = dispatch.guildCfg(guild.id);
+    if (!cfg) return;
+    await run(guild, "subscriptionDelete", namedDelete("subscriptionDelete", sub.id, [], cfg));
+  }));
+
+  client.on("interactionCreate", safe("commandUse", async (interaction) => {
+    if (!interaction.inGuild()) return;
+    if (interaction.commandName && interaction.commandName === (processCfg.commandName || "log")) return;
+    const cfg = dispatch.guildCfg(interaction.guildId);
+    if (!cfg) return;
+    const kind = interaction.isChatInputCommand?.() ? "slash"
+      : interaction.isButton?.() ? "button"
+      : interaction.isStringSelectMenu?.() ? "select"
+      : interaction.isModalSubmit?.() ? "modal"
+      : interaction.isContextMenuCommand?.() ? "context"
+      : interaction.isAutocomplete?.() ? "autocomplete"
+      : "interaction";
+    await run(interaction.guild, "commandUse", {
+      embeds: [buildEmbed(cfg, "commandUse", [
+        ["field.user", userTag(interaction.user)],
+        ["field.command", interaction.commandName || interaction.customId || kind],
+        ["field.channel", channelTag(interaction.channel)],
+        ["field.action", kind],
+      ])],
+      bot: interaction.user.bot,
+      userId: interaction.user.id,
+      ignore: { user: interaction.user, channel: interaction.channel },
+    });
+  }));
+
+  client.on("guildAvailable", safe("guildAvailable", async (guild) => {
+    const cfg = dispatch.guildCfg(guild.id);
+    if (!cfg) return;
+    await run(guild, "guildAvailable", { embeds: [buildEmbed(cfg, "guildAvailable", [["field.name", guild.name]])] });
+  }));
+  client.on("guildUnavailable", safe("guildUnavailable", async (guild) => {
+    const cfg = dispatch.guildCfg(guild.id);
+    if (!cfg) return;
+    await run(guild, "guildUnavailable", { embeds: [buildEmbed(cfg, "guildUnavailable", [["field.name", guild.name], ["field.id", guild.id]])] });
   }));
 
   client.on("userUpdate", safe("userUpdate", async (before, after) => {
