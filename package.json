@@ -1,0 +1,33 @@
+{
+  "name": "logyazicam",
+  "version": "1.0.0",
+  "description": "Per-guild Discord logging bot. Every gateway event that Discord actually emits, routed and formatted from SQLite + env. No restart for config.",
+  "main": "src/index.js",
+  "scripts": {
+    "start": "node src/index.js",
+    "deploy": "node src/deploy-commands.js",
+    "dev": "nodemon src/index.js",
+    "test": "node --test"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/KodYazicam/LogYazicam.git"
+  },
+  "author": "KodYazicam <https://github.com/KodYazicam>",
+  "license": "SEE LICENSE IN LICENSE",
+  "bugs": {
+    "url": "https://github.com/KodYazicam/LogYazicam/issues"
+  },
+  "homepage": "https://github.com/KodYazicam/LogYazicam#readme",
+  "dependencies": {
+    "better-sqlite3": "^9.2.2",
+    "discord.js": "^14.16.0",
+    "dotenv": "^16.3.1"
+  },
+  "devDependencies": {
+    "nodemon": "^3.0.2"
+  },
+  "engines": {
+    "node": ">=20.0.0"
+  }
+}

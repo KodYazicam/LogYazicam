@@ -1,0 +1,14 @@
+node_modules/
+.env
+data/
+!data/.gitkeep
+*.db
+*.sqlite
+*.log
+npm-debug.log*
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/
+dist/
+coverage/
