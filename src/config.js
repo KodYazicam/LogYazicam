@@ -96,6 +96,13 @@ function processConfig(env) {
     backupDir: env.BACKUP_DIR || "",
     backupMs: INT(env.BACKUP_MS, 0),
     inviteTrack: BOOL(env.INVITE_TRACK, true),
+    snapshotTtlMs: INT(env.SNAPSHOT_TTL_MS, 0),
+    snapshotBots: BOOL(env.SNAPSHOT_BOTS, false),
+    redactUrls: BOOL(env.REDACT_URLS, false),
+    redactMentions: BOOL(env.REDACT_MENTIONS, false),
+    redactEmails: BOOL(env.REDACT_EMAILS, false),
+    redactInvites: BOOL(env.REDACT_INVITES, false),
+    retry429: BOOL(env.RETRY_429, true),
     colors: {
       create: INT(env.COLOR_CREATE, COLORS.create),
       update: INT(env.COLOR_UPDATE, COLORS.update),
@@ -161,6 +168,7 @@ function mergeGuild(processCfg, row, routes, ignores, extra) {
     hiddenFields: extra?.hiddenFields || {},
     digestMs: extra?.digestMs != null ? Number(extra.digestMs) : processCfg.digestMs,
     snapshotOn: extra?.snapshotOn != null ? Boolean(extra.snapshotOn) : processCfg.snapshotEnabled,
+    staffChannel: extra?.staffChannel || null,
     ignores: ignores || [],
     events: enabled,
     colors: {

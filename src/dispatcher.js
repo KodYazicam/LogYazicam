@@ -1,10 +1,12 @@
 const { WebhookClient } = require("discord.js");
 const { ignored, inQuietHours, includeOk, embedToPlain } = require("./util");
+const { redactEmbeds, redactText, flagsFrom } = require("./redact");
 
 function createDispatcher({ client, db, processCfg, log, cache }) {
   const queues = new Map();
   const lastSent = new Map();
   const digestBuckets = new Map();
+  const metrics = { sent: 0, dropped: 0, retries: 0 };
 
   function guildCfg(guildId) {
     return cache.get(guildId);
@@ -102,6 +104,10 @@ function createDispatcher({ client, db, processCfg, log, cache }) {
         ? `<@&${cfg.mentionRole}>`
         : null);
 
+      const flags = flagsFrom(cfg, processCfg);
+      if (embeds.length) embeds = redactEmbeds(embeds, flags);
+      if (content) content = redactText(content, flags);
+
       const delivery = cfg.delivery || (cfg.plainText ? "plain" : "embed");
       if ((delivery === "plain" || cfg.plainText) && embeds.length) {
         const text = embeds.map((e) => embedToPlain(e).slice(0, processCfg.plainMax || 1900)).join("\n\n");
@@ -131,7 +137,21 @@ function createDispatcher({ client, db, processCfg, log, cache }) {
         preferWebhook: delivery === "webhook",
         eventKey,
         summary: payload.summary,
+        staff: false,
       });
+      if (cfg.staffChannel && cfg.staffChannel !== channelId) {
+        q.push({
+          channelId: cfg.staffChannel,
+          content,
+          embeds: delivery === "plain" ? [] : embeds,
+          files,
+          guildId: guild.id,
+          preferWebhook: false,
+          eventKey,
+          summary: payload.summary,
+          staff: true,
+        });
+      }
     } catch (error) {
       log.error("enqueue", eventKey, error);
     }
@@ -183,15 +203,24 @@ function createDispatcher({ client, db, processCfg, log, cache }) {
       if (!item) continue;
       try {
         await flushOne(item);
+        metrics.sent += 1;
       } catch (error) {
-        log.error("flush", key, error);
-        const cfg = guildCfg(item.guildId);
-        if (cfg) cfg.lastError = error.message;
+        const retryAfter = error?.retryAfter || error?.httpStatus === 429;
+        if (processCfg.retry429 && retryAfter) {
+          metrics.retries += 1;
+          q.unshift(item);
+          await new Promise((r) => setTimeout(r, Math.ceil((Number(error.retryAfter) || 1) * 1000)));
+        } else {
+          metrics.dropped += 1;
+          log.error("flush", key, error);
+          const cfg = guildCfg(item.guildId);
+          if (cfg) cfg.lastError = error.message;
+        }
       }
     }
   }, processCfg.sendIntervalMs).unref();
 
-  return { enqueue, refreshGuild, guildCfg, routeFor, queues, db };
+  return { enqueue, refreshGuild, guildCfg, routeFor, queues, db, metrics };
 }
 
 module.exports = { createDispatcher };

@@ -111,12 +111,18 @@ function bindEvents(client, { dispatch, processCfg, log }) {
           const old = prev.find((p) => p.code === inv.code);
           return old && inv.uses > old.uses;
         });
-        if (used) inviterInfo = `${used.inviter?.tag || used.inviterId || used.code} (${used.code})`;
+        if (used) {
+          inviterInfo = `${used.inviter?.tag || used.inviterId || used.code} (${used.code})`;
+        } else if (member.guild.vanityURLCode) {
+          inviterInfo = `vanity (${member.guild.vanityURLCode})`;
+        } else {
+          inviterInfo = "unknown";
+        }
         for (const inv of current.values()) {
           dispatch.db.upsertInvite.run(member.guild.id, inv.code, inv.uses || 0, inv.inviter?.id || null);
         }
       } catch {
-        // missing permission
+        inviterInfo = member.guild.vanityURLCode ? `vanity (${member.guild.vanityURLCode})` : "unknown";
       }
     }
     await run(member.guild, "guildMemberAdd", await formatMemberAdd(member, cfg, inviterInfo));
@@ -581,6 +587,7 @@ function bindEvents(client, { dispatch, processCfg, log }) {
     if (!message.guild || message.author?.id === client.user.id) return;
     const cfg = dispatch.guildCfg(message.guild.id) || dispatch.refreshGuild(message.guild.id);
     if (cfg.snapshotOn === false) return;
+    if (message.author?.bot && !processCfg.snapshotBots) return;
     dispatch.db.putSnapshot({
       message_id: message.id,
       guild_id: message.guild.id,
@@ -590,7 +597,7 @@ function bindEvents(client, { dispatch, processCfg, log }) {
       content: message.cleanContent || message.content || "",
       attachments: [...(message.attachments?.values?.() || [])].map((a) => a.url).join("\n"),
       created_at: message.createdTimestamp || Date.now(),
-    }, processCfg.snapshotLimit);
+    }, processCfg.snapshotLimit, processCfg.snapshotTtlMs);
   }));
 
   client.on("messageCreate", safe("messageCreate", async (message) => {

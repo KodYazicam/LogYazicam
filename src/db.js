@@ -166,10 +166,19 @@ function openDb(filePath) {
       SELECT message_id FROM snapshots WHERE guild_id = ? ORDER BY created_at DESC LIMIT ?
     )
   `);
-  function putSnapshot(row, limit) {
+  const expireSnap = db.prepare("DELETE FROM snapshots WHERE created_at < ?");
+  function putSnapshot(row, limit, ttlMs) {
     upsertSnap.run(row.message_id, row.guild_id, row.channel_id, row.author_id, row.author_tag, row.content, row.attachments, row.created_at);
     trimSnap.run(row.guild_id, row.guild_id, limit || 2000);
+    if (ttlMs > 0) expireSnap.run(Date.now() - ttlMs);
   }
+
+  const queryHistory = db.prepare(`
+    SELECT * FROM history WHERE guild_id = ?
+      AND created_at >= ? AND created_at <= ?
+      AND (? = '' OR event_key = ?)
+    ORDER BY id DESC LIMIT ?
+  `);
 
   const upsertInvite = db.prepare(`
     INSERT INTO invites (guild_id, code, uses, inviter_id) VALUES (?, ?, ?, ?)
@@ -177,11 +186,6 @@ function openDb(filePath) {
   `);
   const listInvites = db.prepare("SELECT * FROM invites WHERE guild_id = ?");
   const deleteInvite = db.prepare("DELETE FROM invites WHERE guild_id = ? AND code = ?");
-
-  const queryHistory = db.prepare(`
-    SELECT * FROM history WHERE guild_id = ? AND created_at >= ? AND created_at <= ?
-    AND (? = '' OR event_key = ?) ORDER BY id DESC LIMIT ?
-  `);
 
   return {
     raw: db,

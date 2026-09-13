@@ -205,7 +205,9 @@ function data() {
       s
         .setName("history")
         .setDescription("Export history")
-           .addIntegerOption((o) => o.setName("limit").setDescription("Rows").setMinValue(1).setMaxValue(200)),
+           .addIntegerOption((o) => o.setName("limit").setDescription("Rows").setMinValue(1).setMaxValue(500))
+        .addStringOption((o) => o.setName("key").setDescription("Event key").setAutocomplete(true))
+        .addStringOption((o) => o.setName("format").setDescription("jsonl or csv")),
     )
     .addSubcommand((s) => s.setName("reload").setDescription("Reload guild cache"))
     .addSubcommand((s) => s.setName("events").setDescription("List event keys"))
@@ -315,6 +317,8 @@ function data() {
               { name: "credit", value: "showCredit" },
               { name: "digest_ms", value: "digestMs" },
               { name: "snapshot", value: "snapshotOn" },
+              { name: "staff_ch", value: "staffChannel" },
+              { name: "redact_url", value: "redactUrl" },
             ),
         )
         .addStringOption((o) =>
@@ -534,6 +538,8 @@ async function execute(interaction, { db, dispatch, processCfg }) {
         total: EVENTS.length,
         queue: [...dispatch.queues.values()].reduce((n, q) => n + q.length, 0),
         error: cfg.lastError || t(cfg.locale, "none"),
+        sent: String(dispatch.metrics?.sent ?? 0),
+        dropped: String(dispatch.metrics?.dropped ?? 0),
       }),
       ephemeral: true,
     });
@@ -583,12 +589,20 @@ async function execute(interaction, { db, dispatch, processCfg }) {
 
   if (sub === "history") {
     const limit = interaction.options.getInteger("limit") || processCfg.historyExportDefault || 50;
-    const rows = db.listHistory.all(interaction.guildId, limit);
+    const key = interaction.options.getString("key") || "";
+    const format = (interaction.options.getString("format") || "jsonl").toLowerCase();
+    const rows = db.queryHistory.all(interaction.guildId, 0, Date.now() + 1, key, key, limit);
     if (!rows.length) return interaction.reply({ content: t(locale, "cmd.history_empty"), ephemeral: true });
-    const body = rows
-      .map((r) => `${new Date(r.created_at).toISOString()} ${r.event_key} ${r.payload}`)
-      .join("\n");
-    const file = new AttachmentBuilder(Buffer.from(body, "utf8"), { name: `logyazicam-${interaction.guildId}.jsonl.txt` });
+    let body;
+    let name;
+    if (format === "csv") {
+      body = ["created_at,event_key,payload", ...rows.map((r) => `${r.created_at},${r.event_key},"${String(r.payload).replaceAll('"', '""')}"`)].join("\n");
+      name = `logyazicam-${interaction.guildId}.csv`;
+    } else {
+      body = rows.map((r) => JSON.stringify({ at: r.created_at, event: r.event_key, payload: r.payload })).join("\n");
+      name = `logyazicam-${interaction.guildId}.jsonl.txt`;
+    }
+    const file = new AttachmentBuilder(Buffer.from(body, "utf8"), { name });
     return interaction.reply({
       content: t(locale, "cmd.export", { count: rows.length }),
       files: [file],
@@ -667,6 +681,11 @@ async function execute(interaction, { db, dispatch, processCfg }) {
     } else if (name === "delivery") {
       extra.delivery = ["embed", "plain", "webhook"].includes(raw) ? raw : "embed";
       extra.plainText = extra.delivery === "plain";
+    } else if (name === "staffChannel") {
+      extra.staffChannel = raw.replace(/[<#>]/g, "") || null;
+    } else if (name === "redactUrl") {
+      extra.redact = extra.redact || {};
+      extra.redact.url = ["1", "true", "yes", "on"].includes(raw.toLowerCase());
     } else {
       extra[name] = raw === "clear" || raw === "-" ? null : raw;
     }

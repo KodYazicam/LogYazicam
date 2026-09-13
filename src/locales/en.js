@@ -18,7 +18,7 @@ module.exports = {
   "cmd.ignore_empty": "Ignore list is empty.",
   "cmd.filter_set": "Filter `{name}` = `{value}`.",
   "cmd.test_sent": "Test embed sent to {channel}.",
-  "cmd.status": "**LogYazicam** · locale `{locale}` · tz `{tz}` · default {channel}\nEnabled events: {enabled}/{total}\nQueue: {queue} · last error: {error}",
+  "cmd.status": "**LogYazicam** · locale `{locale}` · tz `{tz}` · default {channel}\nEnabled events: {enabled}/{total}\nQueue: {queue} · sent {sent} · dropped {dropped} · last error: {error}",
   "cmd.history_empty": "No stored history for this guild.",
   "cmd.reload": "Guild cache reloaded from SQLite and env.",
   "cmd.export": "Exported `{count}` history rows.",

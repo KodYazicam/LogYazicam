@@ -351,6 +351,20 @@ These are **not** fake Discord events. They sit on top of the catalog.
 
 **Docker:** `docker compose up --build` with `.env` and `./data` volume.
 
+**Snapshot TTL / bots:** `SNAPSHOT_TTL_MS` drops old rows; `SNAPSHOT_BOTS=false` (default) skips bot messages in the cache.
+
+**Redaction:** `REDACT_URLS` `REDACT_MENTIONS` `REDACT_EMAILS` `REDACT_INVITES` (all default **false**). Discord/GitHub/OpenAI token shapes are always stripped. Guild: `/log set name:redact_url value:true`.
+
+**Staff channel:** `/log set name:staff_ch value:CHANNEL_ID` posts a second copy (never via webhook). Empty = off.
+
+**429:** `RETRY_429=true` re-queues rate-limited Discord sends. `/log status` shows `sent` / `dropped`.
+
+**History export:** `/log history key:messageDelete format:csv|jsonl`.
+
+**Joins without an invite bump:** embed shows `vanity (code)` or `unknown`.
+
+**Locales:** extra event titles filled for de/fr/es/pt/it/nl/pl/ru/uk/ar/ja/ko/zh/sv/hi/id (still fall back to English for older keys). Nothing new is on by default.
+
 ```
 /log setup channel:#mod-log
 /log pack name:moderation channel:#mod-log
