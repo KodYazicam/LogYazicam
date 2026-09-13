@@ -39,6 +39,7 @@ async function formatMessageDelete(oldMessage, client, cfg, processCfg) {
     bot: snap.bot,
     webhook: snap.webhook,
     userId: snap.authorId,
+    createdTimestamp: message.author?.createdTimestamp,
     ignore: { user: message.author, channel: message.channel, roleIds: message.member?.roles?.cache ? [...message.member.roles.cache.keys()] : [] },
     summary: `delete ${snap.id}`,
   };
@@ -94,6 +95,7 @@ async function formatMemberAdd(member, cfg) {
     embeds: [buildEmbed(cfg, "guildMemberAdd", fields, { thumbnail: member.user.displayAvatarURL({ size: 128 }) })],
     bot: member.user.bot,
     userId: member.id,
+    createdTimestamp: member.user.createdTimestamp,
     ignore: { user: member.user },
     summary: `join ${member.id}`,
   };

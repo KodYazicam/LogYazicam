@@ -507,7 +507,28 @@ Reloads `src/locales/*.js` from disk and lists codes. Adding `sv.js` does not ne
 
 ### `/log mention`
 
-`role:@Staff` sets `mention_role` and `mention_on_delete`. `clear:True` unsets both. Combined with the delete filter, the dispatcher may prepend a role mention on `messageDelete`.
+`role:@Staff` sets `mention_role` and `mention_on_delete`. `clear:True` unsets both.
+
+### `/log set`
+
+One command for the remaining guild knobs (`extra_json`). `name` + `value`:
+
+| `name` | `value` | Effect |
+| --- | --- | --- |
+| `paused` | `true` / `false` | Drop **all** events until resumed |
+| `plain_text` | `true` / `false` | Flatten embeds to markdown text |
+| `thumbnails` | `true` / `false` | Avatar on embeds |
+| `actors` | `all` `humans` `bots` | Who is logged |
+| `cooldown_sec` | `0`–`3600` | Min seconds between two logs of the **same event key** |
+| `min_account_days` | `0`–`3650` | Skip members whose account is younger |
+| `quiet_start` / `quiet_end` | `HH:MM` in guild timezone | Drop events in that window (wraps midnight). `value:clear` unsets |
+| `webhook_name` / `webhook_avatar` | string / URL | Per-guild webhook identity |
+
+### `/log watch`
+
+Allow-list. Empty = every channel. `add` / `remove` / `clear` / `list` a text channel or **category**. If a category is listed, its children match.
+
+Quiet hours, pause, allow-list, cooldown, and account age all run **before** the send queue. They apply without restart.
 
 Developer maps: [`src/README.md`](src/README.md) · [`src/locales/README.md`](src/locales/README.md) · [`docs/README.md`](docs/README.md).
 

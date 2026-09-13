@@ -1,8 +1,9 @@
 const { WebhookClient } = require("discord.js");
-const { ignored } = require("./util");
+const { ignored, inQuietHours, includeOk, embedToPlain } = require("./util");
 
 function createDispatcher({ client, db, processCfg, log, cache }) {
   const queues = new Map();
+  const lastSent = new Map();
 
   function guildCfg(guildId) {
     return cache.get(guildId);
@@ -26,22 +27,59 @@ function createDispatcher({ client, db, processCfg, log, cache }) {
     return route.channelId || cfg.defaultChannel || fallbackChannel || null;
   }
 
+  function actorOk(cfg, payload) {
+    const mode = cfg.actors || "all";
+    if (mode === "all") return true;
+    const isBot = Boolean(payload.bot);
+    if (mode === "humans" && isBot) return false;
+    if (mode === "bots" && !isBot) return false;
+    return true;
+  }
+
+  function accountAgeOk(cfg, payload) {
+    const days = cfg.minAccountDays || 0;
+    if (!days || !payload.createdTimestamp) return true;
+    return Date.now() - payload.createdTimestamp >= days * 86400000;
+  }
+
+  function cooldownOk(cfg, guildId, eventKey) {
+    const sec = cfg.cooldownSec || 0;
+    if (!sec) return true;
+    const stamp = `${guildId}:${eventKey}`;
+    const last = lastSent.get(stamp) || 0;
+    if (Date.now() - last < sec * 1000) return false;
+    lastSent.set(stamp, Date.now());
+    return true;
+  }
+
   async function enqueue(guild, eventKey, payload) {
     try {
       if (!guild) return;
       const cfg = guildCfg(guild.id) || refreshGuild(guild.id);
+      if (cfg.paused) return;
+      if (inQuietHours(cfg)) return;
       const channelId = routeFor(cfg, eventKey);
       if (!channelId) return;
       if (cfg.ignoreSelf && payload.userId && payload.userId === client.user.id) return;
       if (cfg.ignoreBots && payload.bot) return;
       if (cfg.ignoreWebhooks && payload.webhook) return;
+      if (!actorOk(cfg, payload)) return;
+      if (!accountAgeOk(cfg, payload)) return;
+      if (!includeOk(cfg, payload.ignore?.channel)) return;
       if (ignored(cfg, payload.ignore || {})) return;
+      if (!cooldownOk(cfg, guild.id, eventKey)) return;
 
-      const embeds = payload.embeds || [];
+      let embeds = payload.embeds || [];
       const files = payload.files || [];
-      const content = payload.content || (cfg.mentionOnDelete && eventKey === "messageDelete" && cfg.mentionRole
+      let content = payload.content || (cfg.mentionOnDelete && eventKey === "messageDelete" && cfg.mentionRole
         ? `<@&${cfg.mentionRole}>`
         : null);
+
+      if (cfg.plainText && embeds.length) {
+        const text = embeds.map(embedToPlain).join("\n\n");
+        content = [content, text].filter(Boolean).join("\n");
+        embeds = [];
+      }
 
       if (cfg.storeHistory) {
         db.pushHistory(guild.id, eventKey, {
@@ -71,10 +109,10 @@ function createDispatcher({ client, db, processCfg, log, cache }) {
         const hook = new WebhookClient({ id: cfg.webhookId, token: cfg.webhookToken });
         await hook.send({
           content: item.content || undefined,
-          embeds: item.embeds,
+          embeds: item.embeds?.length ? item.embeds : undefined,
           files: item.files,
-          username: processCfg.webhookName,
-          avatarURL: processCfg.webhookAvatarUrl || undefined,
+          username: cfg.webhookName || processCfg.webhookName,
+          avatarURL: cfg.webhookAvatar || processCfg.webhookAvatarUrl || undefined,
         });
         return;
       } catch (error) {
@@ -83,9 +121,9 @@ function createDispatcher({ client, db, processCfg, log, cache }) {
     }
     await channel.send({
       content: item.content || undefined,
-      embeds: item.embeds,
+      embeds: item.embeds?.length ? item.embeds : undefined,
       files: item.files,
-      allowedMentions: { parse: [] },
+      allowedMentions: { parse: [], roles: cfg?.mentionRole ? [cfg.mentionRole] : [] },
     });
   }
 

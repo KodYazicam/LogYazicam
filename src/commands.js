@@ -11,18 +11,18 @@ const { buildEmbed } = require("./util");
 function data() {
   const cmd = new SlashCommandBuilder()
     .setName("log")
-    .setDescription("Configure LogYazicam for this server")
+    .setDescription("Configure logging")
     .setDefaultMemberPermissions(PermissionFlagsBits.ManageGuild)
     .addSubcommandGroup((g) =>
       g
         .setName("event")
-        .setDescription("Enable or disable a single event")
+        .setDescription("One event")
         .addSubcommand((s) =>
           s
             .setName("on")
-            .setDescription("Turn an event on")
+            .setDescription("Enable")
             .addStringOption((o) =>
-              o.setName("key").setDescription("Event key (English id)").setRequired(true).setAutocomplete(true),
+              o.setName("key").setDescription("English event key").setRequired(true).setAutocomplete(true),
             )
             .addChannelOption((o) =>
               o
@@ -43,11 +43,11 @@ function data() {
     .addSubcommandGroup((g) =>
       g
         .setName("group")
-        .setDescription("Enable or disable a whole group")
+        .setDescription("Event group")
         .addSubcommand((s) =>
           s
             .setName("on")
-            .setDescription("Turn a group on")
+            .setDescription("Enable group")
             .addStringOption((o) =>
               o
                 .setName("name")
@@ -65,7 +65,7 @@ function data() {
         .addSubcommand((s) =>
           s
             .setName("off")
-            .setDescription("Turn a group off")
+            .setDescription("Disable group")
             .addStringOption((o) =>
               o
                 .setName("name")
@@ -96,7 +96,7 @@ function data() {
     .addSubcommandGroup((g) =>
       g
         .setName("ignore")
-        .setDescription("Ignore users, channels, roles, or categories")
+        .setDescription("Ignore list")
         .addSubcommand((s) =>
           s
             .setName("add")
@@ -142,7 +142,7 @@ function data() {
         .addStringOption((o) =>
           o
             .setName("code")
-            .setDescription("Locale code from src/locales (autocomplete)")
+            .setDescription("Locale code")
             .setRequired(true)
             .setAutocomplete(true),
         ),
@@ -186,7 +186,7 @@ function data() {
     .addSubcommand((s) =>
       s
         .setName("footer")
-        .setDescription("Custom embed footer (credit is always appended)")
+        .setDescription("Footer prefix (credit stays)")
         .addStringOption((o) => o.setName("text").setDescription("Footer text").setRequired(true)),
     )
     .addSubcommand((s) => s.setName("status").setDescription("Show current configuration"))
@@ -207,19 +207,19 @@ function data() {
         .setDescription("Export recent stored events")
         .addIntegerOption((o) => o.setName("limit").setDescription("Rows (max 200)").setMinValue(1).setMaxValue(200)),
     )
-    .addSubcommand((s) => s.setName("reload").setDescription("Reload this guild from SQLite + env"))
-    .addSubcommand((s) => s.setName("events").setDescription("List every event key and group"))
+    .addSubcommand((s) => s.setName("reload").setDescription("Reload guild cache"))
+    .addSubcommand((s) => s.setName("events").setDescription("List event keys"))
     .addSubcommand((s) =>
       s
         .setName("string")
-        .setDescription("Override one locale string for this guild")
+        .setDescription("Override one UI string")
         .addStringOption((o) => o.setName("key").setDescription("e.g. event.messageDelete").setRequired(true))
         .addStringOption((o) => o.setName("value").setDescription("Replacement text ({vars} ok)").setRequired(true)),
     )
     .addSubcommand((s) =>
       s
         .setName("color")
-        .setDescription("Override an embed color (hex, e.g. #ed4245)")
+        .setDescription("Embed color override")
         .addStringOption((o) =>
           o
             .setName("slot")
@@ -240,11 +240,68 @@ function data() {
     .addSubcommand((s) =>
       s
         .setName("mention")
-        .setDescription("Role to ping on messageDelete when mention_on_delete is on")
+        .setDescription("Ping role on messageDelete")
         .addRoleOption((o) => o.setName("role").setDescription("Role"))
         .addBooleanOption((o) => o.setName("clear").setDescription("Clear mention role")),
     )
-    .addSubcommand((s) => s.setName("languages").setDescription("List installed locale files"));
+    .addSubcommand((s) => s.setName("languages").setDescription("List locale files on disk"))
+    .addSubcommand((s) =>
+      s
+        .setName("set")
+        .setDescription("Pause, quiet hours, style, actors, cooldown")
+        .addStringOption((o) =>
+          o
+            .setName("name")
+            .setDescription("Setting")
+            .setRequired(true)
+            .addChoices(
+              { name: "paused", value: "paused" },
+              { name: "plain_text", value: "plainText" },
+              { name: "thumbnails", value: "showThumbnails" },
+              { name: "actors", value: "actors" },
+              { name: "cooldown_sec", value: "cooldownSec" },
+              { name: "min_account_days", value: "minAccountDays" },
+              { name: "quiet_start", value: "quietStart" },
+              { name: "quiet_end", value: "quietEnd" },
+              { name: "webhook_name", value: "webhookName" },
+              { name: "webhook_avatar", value: "webhookAvatar" },
+            ),
+        )
+        .addStringOption((o) =>
+          o.setName("value").setDescription("bool, all/humans/bots, number, HH:MM, URL").setRequired(true),
+        ),
+    )
+    .addSubcommandGroup((g) =>
+      g
+        .setName("watch")
+        .setDescription("Channel allow-list")
+        .addSubcommand((s) =>
+          s
+            .setName("add")
+            .setDescription("Allow channel")
+            .addChannelOption((o) =>
+              o
+                .setName("channel")
+                .setDescription("Target")
+                .setRequired(true)
+                .addChannelTypes(ChannelType.GuildText, ChannelType.GuildAnnouncement, ChannelType.GuildCategory),
+            ),
+        )
+        .addSubcommand((s) =>
+          s
+            .setName("remove")
+            .setDescription("Unwatch")
+            .addChannelOption((o) =>
+              o
+                .setName("channel")
+                .setDescription("Target")
+                .setRequired(true)
+                .addChannelTypes(ChannelType.GuildText, ChannelType.GuildAnnouncement, ChannelType.GuildCategory),
+            ),
+        )
+        .addSubcommand((s) => s.setName("clear").setDescription("Clear allow-list"))
+        .addSubcommand((s) => s.setName("list").setDescription("List allow-list")),
+    );
   return cmd;
 }
 
@@ -489,9 +546,56 @@ async function execute(interaction, { db, dispatch, processCfg }) {
     const { LOCALES, reloadLocales } = require("./locales");
     reloadLocales();
     return interaction.reply({
-      content: `Installed locales (${LOCALES.length}): ${LOCALES.map((c) => `\`${c}\``).join(" ")}`,
+      content: t(locale, "cmd.languages", {
+        count: LOCALES.length,
+        list: LOCALES.map((c) => `\`${c}\``).join(" "),
+      }),
       ephemeral: true,
     });
+  }
+
+  if (sub === "set") {
+    const name = interaction.options.getString("name", true);
+    const raw = interaction.options.getString("value", true);
+    const row = db.ensureGuild(interaction.guildId);
+    const extra = db.extraOf(row);
+    const boolish = ["paused", "plainText", "showThumbnails"];
+    if (boolish.includes(name)) {
+      extra[name] = ["1", "true", "yes", "on"].includes(raw.toLowerCase());
+    } else if (name === "cooldownSec" || name === "minAccountDays") {
+      extra[name] = Number(raw) || 0;
+    } else if (name === "actors") {
+      extra.actors = ["all", "humans", "bots"].includes(raw) ? raw : "all";
+    } else {
+      extra[name] = raw === "clear" || raw === "-" ? null : raw;
+    }
+    db.setExtra(interaction.guildId, extra);
+    dispatch.refreshGuild(interaction.guildId);
+    return interaction.reply({
+      content: t(locale, "cmd.filter_set", { name, value: String(extra[name]) }),
+      ephemeral: true,
+    });
+  }
+
+  if (group === "watch") {
+    const row = db.ensureGuild(interaction.guildId);
+    const extra = db.extraOf(row);
+    extra.includeChannels = Array.isArray(extra.includeChannels) ? extra.includeChannels : [];
+    if (sub === "add") {
+      extra.includeChannels.push(interaction.options.getChannel("channel", true).id);
+      extra.includeChannels = [...new Set(extra.includeChannels)];
+    } else if (sub === "remove") {
+      const id = interaction.options.getChannel("channel", true).id;
+      extra.includeChannels = extra.includeChannels.filter((x) => x !== id);
+    } else if (sub === "clear") {
+      extra.includeChannels = [];
+    } else {
+      const list = extra.includeChannels.map((id) => `<#${id}>`).join(" ") || t(locale, "none");
+      return interaction.reply({ content: list, ephemeral: true });
+    }
+    db.setExtra(interaction.guildId, extra);
+    dispatch.refreshGuild(interaction.guildId);
+    return interaction.reply({ content: t(locale, "cmd.reload"), ephemeral: true });
   }
 
   if (sub === "events") {

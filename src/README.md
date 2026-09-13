@@ -67,7 +67,9 @@ Bag for per-guild overrides without a migration:
 }
 ```
 
-Set via `/log string` and `/log color`. `mergeGuild` applies `extra.colors` on top of columns / env. `buildEmbed` passes `extra.strings` into `t()`.
+Set via `/log string`, `/log color`, `/log set`, `/log watch`. `mergeGuild` applies `extra.colors` on top of columns / env. `buildEmbed` passes `extra.strings` into `t()`.
+
+Other `extra_json` knobs the dispatcher honors: `paused`, `plainText`, `showThumbnails`, `quietStart`, `quietEnd`, `minAccountDays`, `cooldownSec`, `actors`, `includeChannels`, `webhookName`, `webhookAvatar`.
 
 ## Intents
 
