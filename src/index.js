@@ -9,7 +9,7 @@ const { createLogger } = require("./logger");
 const { createDispatcher } = require("./dispatcher");
 const { bindEvents } = require("./events");
 const commands = require("./commands");
-const { t } = require("./locales");
+const { t, reloadLocales } = require("./locales");
 
 let env = loadEnvFile();
 let processCfg = processConfig(env);
@@ -116,6 +116,7 @@ if (processCfg.hotReloadMs > 0) {
       const token = processCfg.token;
       processCfg = processConfig(nextEnv);
       processCfg.token = token;
+      reloadLocales();
       for (const id of cache.keys()) dispatch.refreshGuild(id);
       log.debug("hot-reload applied");
     } catch (error) {

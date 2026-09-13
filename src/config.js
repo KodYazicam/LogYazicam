@@ -2,7 +2,7 @@ const fs = require("fs");
 const path = require("path");
 const dotenv = require("dotenv");
 const { EVENTS, COLORS } = require("./catalog");
-const { LOCALES } = require("./locales");
+const locales = require("./locales");
 
 const BOOL = (v, fallback) => {
   if (v == null || v === "") return fallback;
@@ -24,7 +24,7 @@ function processConfig(env) {
     .split(",")
     .map((s) => s.trim())
     .filter(Boolean);
-  const locale = LOCALES.includes(env.DEFAULT_LOCALE) ? env.DEFAULT_LOCALE : "en";
+  const locale = locales.LOCALES.includes(env.DEFAULT_LOCALE) ? env.DEFAULT_LOCALE : "en";
   return {
     token: env.TOKEN || "",
     clientId: env.CLIENT_ID || "",
@@ -65,9 +65,10 @@ function mergeGuild(processCfg, row, routes, ignores, extra) {
       channelId: route?.channel_id || row.default_channel || null,
     };
   }
+  const extraColors = extra?.colors || {};
   return {
     id: row.id,
-    locale: LOCALES.includes(row.locale) ? row.locale : processCfg.defaultLocale,
+    locale: locales.LOCALES.includes(row.locale) ? row.locale : processCfg.defaultLocale,
     timezone: row.timezone || processCfg.defaultTimezone,
     defaultChannel: row.default_channel,
     webhookId: row.webhook_id,
@@ -87,13 +88,13 @@ function mergeGuild(processCfg, row, routes, ignores, extra) {
     ignores: ignores || [],
     events: enabled,
     colors: {
-      create: row.embed_color_create || processCfg.colors.create,
-      update: row.embed_color_update || processCfg.colors.update,
-      delete: row.embed_color_delete || processCfg.colors.delete,
-      voice: processCfg.colors.voice,
-      member: processCfg.colors.member,
-      mod: processCfg.colors.mod,
-      info: processCfg.colors.info,
+      create: extraColors.create || row.embed_color_create || processCfg.colors.create,
+      update: extraColors.update || row.embed_color_update || processCfg.colors.update,
+      delete: extraColors.delete || row.embed_color_delete || processCfg.colors.delete,
+      voice: extraColors.voice || processCfg.colors.voice,
+      member: extraColors.member || processCfg.colors.member,
+      mod: extraColors.mod || processCfg.colors.mod,
+      info: extraColors.info || processCfg.colors.info,
     },
   };
 }

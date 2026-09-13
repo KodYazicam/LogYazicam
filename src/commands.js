@@ -142,9 +142,9 @@ function data() {
         .addStringOption((o) =>
           o
             .setName("code")
-            .setDescription("en | tr | de | fr | es")
+            .setDescription("Locale code from src/locales (autocomplete)")
             .setRequired(true)
-            .addChoices(...LOCALES.map((code) => ({ name: code, value: code }))),
+            .setAutocomplete(true),
         ),
     )
     .addSubcommand((s) =>
@@ -208,7 +208,43 @@ function data() {
         .addIntegerOption((o) => o.setName("limit").setDescription("Rows (max 200)").setMinValue(1).setMaxValue(200)),
     )
     .addSubcommand((s) => s.setName("reload").setDescription("Reload this guild from SQLite + env"))
-    .addSubcommand((s) => s.setName("events").setDescription("List every event key and group"));
+    .addSubcommand((s) => s.setName("events").setDescription("List every event key and group"))
+    .addSubcommand((s) =>
+      s
+        .setName("string")
+        .setDescription("Override one locale string for this guild")
+        .addStringOption((o) => o.setName("key").setDescription("e.g. event.messageDelete").setRequired(true))
+        .addStringOption((o) => o.setName("value").setDescription("Replacement text ({vars} ok)").setRequired(true)),
+    )
+    .addSubcommand((s) =>
+      s
+        .setName("color")
+        .setDescription("Override an embed color (hex, e.g. #ed4245)")
+        .addStringOption((o) =>
+          o
+            .setName("slot")
+            .setDescription("create | update | delete | voice | member | mod | info")
+            .setRequired(true)
+            .addChoices(
+              { name: "create", value: "create" },
+              { name: "update", value: "update" },
+              { name: "delete", value: "delete" },
+              { name: "voice", value: "voice" },
+              { name: "member", value: "member" },
+              { name: "mod", value: "mod" },
+              { name: "info", value: "info" },
+            ),
+        )
+        .addStringOption((o) => o.setName("hex").setDescription("#rrggbb").setRequired(true)),
+    )
+    .addSubcommand((s) =>
+      s
+        .setName("mention")
+        .setDescription("Role to ping on messageDelete when mention_on_delete is on")
+        .addRoleOption((o) => o.setName("role").setDescription("Role"))
+        .addBooleanOption((o) => o.setName("clear").setDescription("Clear mention role")),
+    )
+    .addSubcommand((s) => s.setName("languages").setDescription("List installed locale files"));
   return cmd;
 }
 
@@ -219,8 +255,13 @@ function canRun(interaction, processCfg) {
 
 async function autocomplete(interaction) {
   const focused = interaction.options.getFocused(true);
-  if (focused.name !== "key") return interaction.respond([]);
   const q = String(focused.value || "").toLowerCase();
+  if (focused.name === "code") {
+    const { LOCALES } = require("./locales");
+    const picks = LOCALES.filter((c) => c.includes(q)).slice(0, 25);
+    return interaction.respond(picks.map((c) => ({ name: c, value: c })));
+  }
+  if (focused.name !== "key") return interaction.respond([]);
   const picks = EVENTS.filter((e) => e.key.toLowerCase().includes(q)).slice(0, 25);
   return interaction.respond(picks.map((e) => ({ name: `${e.key} (${e.group})`, value: e.key })));
 }
@@ -306,7 +347,11 @@ async function execute(interaction, { db, dispatch, processCfg }) {
   }
 
   if (sub === "locale") {
+    const { LOCALES } = require("./locales");
     const code = interaction.options.getString("code", true);
+    if (!LOCALES.includes(code)) {
+      return interaction.reply({ content: t(locale, "cmd.unknown_event", { key: code }), ephemeral: true });
+    }
     db.setGuild(interaction.guildId, { locale: code });
     dispatch.refreshGuild(interaction.guildId);
     return interaction.reply({ content: t(code, "cmd.locale_set", { locale: code }), ephemeral: true });
@@ -399,6 +444,54 @@ async function execute(interaction, { db, dispatch, processCfg }) {
   if (sub === "reload") {
     dispatch.refreshGuild(interaction.guildId);
     return interaction.reply({ content: t(locale, "cmd.reload"), ephemeral: true });
+  }
+
+  if (sub === "string") {
+    const key = interaction.options.getString("key", true);
+    const value = interaction.options.getString("value", true);
+    const row = db.ensureGuild(interaction.guildId);
+    const extra = db.extraOf(row);
+    extra.strings = extra.strings || {};
+    extra.strings[key] = value;
+    db.setExtra(interaction.guildId, extra);
+    dispatch.refreshGuild(interaction.guildId);
+    return interaction.reply({ content: t(locale, "cmd.filter_set", { name: key, value }), ephemeral: true });
+  }
+
+  if (sub === "color") {
+    const slot = interaction.options.getString("slot", true);
+    const hex = interaction.options.getString("hex", true).replace("#", "");
+    const n = Number.parseInt(hex, 16);
+    if (!Number.isFinite(n) || hex.length < 6) {
+      return interaction.reply({ content: "hex must be #rrggbb", ephemeral: true });
+    }
+    const row = db.ensureGuild(interaction.guildId);
+    const extra = db.extraOf(row);
+    extra.colors = extra.colors || {};
+    extra.colors[slot] = n;
+    db.setExtra(interaction.guildId, extra);
+    dispatch.refreshGuild(interaction.guildId);
+    return interaction.reply({ content: t(locale, "cmd.filter_set", { name: `color.${slot}`, value: `#${hex}` }), ephemeral: true });
+  }
+
+  if (sub === "mention") {
+    if (interaction.options.getBoolean("clear")) {
+      db.setGuild(interaction.guildId, { mention_role: null, mention_on_delete: 0 });
+    } else {
+      const role = interaction.options.getRole("role");
+      if (role) db.setGuild(interaction.guildId, { mention_role: role.id, mention_on_delete: 1 });
+    }
+    dispatch.refreshGuild(interaction.guildId);
+    return interaction.reply({ content: t(locale, "cmd.reload"), ephemeral: true });
+  }
+
+  if (sub === "languages") {
+    const { LOCALES, reloadLocales } = require("./locales");
+    reloadLocales();
+    return interaction.reply({
+      content: `Installed locales (${LOCALES.length}): ${LOCALES.map((c) => `\`${c}\``).join(" ")}`,
+      ephemeral: true,
+    });
   }
 
   if (sub === "events") {

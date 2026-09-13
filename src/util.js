@@ -54,7 +54,7 @@ function buildEmbed(guildCfg, eventKey, fields, { description, thumbnail, url } 
   const locale = guildCfg.locale;
   const embed = new EmbedBuilder()
     .setColor(color)
-    .setTitle(t(locale, `event.${eventKey}`))
+    .setTitle(t(locale, `event.${eventKey}`, {}, guildCfg.extra?.strings))
     .setTimestamp(new Date());
   if (description) embed.setDescription(truncate(description, 4000));
   if (thumbnail) embed.setThumbnail(thumbnail);
@@ -62,9 +62,13 @@ function buildEmbed(guildCfg, eventKey, fields, { description, thumbnail, url } 
   const compact = guildCfg.embedCompact;
   for (const [name, value] of fields) {
     if (value == null || value === "") continue;
-    embed.addFields({ name: t(locale, name), value: truncate(value), inline: compact });
+    embed.addFields({
+      name: t(locale, name, {}, guildCfg.extra?.strings),
+      value: truncate(value),
+      inline: compact,
+    });
   }
-  const footer = [guildCfg.embedFooter, t(locale, "bot.credit")].filter(Boolean).join(" · ");
+  const footer = [guildCfg.embedFooter, t(locale, "bot.credit", {}, guildCfg.extra?.strings)].filter(Boolean).join(" · ");
   embed.setFooter({ text: footer.slice(0, 2048) });
   return embed;
 }
