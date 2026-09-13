@@ -21,6 +21,17 @@ if (!processCfg.token) {
   process.exit(1);
 }
 
+if (processCfg.shardList && !process.env.SHARDING_MANAGER) {
+  const { ShardingManager } = require("discord.js");
+  const manager = new ShardingManager(__filename, {
+    token: processCfg.token,
+    totalShards: processCfg.shardList === "auto" ? "auto" : Number(processCfg.shardList) || "auto",
+  });
+  manager.on("shardCreate", (shard) => console.log(`shard ${shard.id} spawned`));
+  manager.spawn();
+  return;
+}
+
 const log = createLogger(processCfg);
 const db = openDb(processCfg.databasePath);
 const cache = new Map();
@@ -100,6 +111,7 @@ client.on("messageCreate", async (message) => {
 client.on("guildCreate", (guild) => {
   try {
     dispatch.refreshGuild(guild.id);
+    cacheInvites(guild);
   } catch (error) {
     reportError(error, "guildCreate");
   }
@@ -145,8 +157,23 @@ function applyPresence() {
   });
 }
 
+async function cacheInvites(guild) {
+  if (!processCfg.inviteTrack) return;
+  try {
+    const invites = await guild.invites.fetch();
+    for (const inv of invites.values()) {
+      db.upsertInvite.run(guild.id, inv.code, inv.uses || 0, inv.inviter?.id || null);
+    }
+  } catch {
+    log.debug("invite cache skipped", guild.id);
+  }
+}
+
 client.once("ready", () => {
-  for (const guild of client.guilds.cache.values()) dispatch.refreshGuild(guild.id);
+  for (const guild of client.guilds.cache.values()) {
+    dispatch.refreshGuild(guild.id);
+    cacheInvites(guild);
+  }
   applyPresence();
   log.info(t(processCfg.defaultLocale, "bot.ready", { tag: client.user.tag, guilds: client.guilds.cache.size }));
   log.info(t(processCfg.defaultLocale, "bot.credit"));
@@ -167,6 +194,11 @@ if (processCfg.hotReloadMs > 0) {
       reportError(error, "hot-reload");
     }
   }, processCfg.hotReloadMs).unref();
+}
+
+if (processCfg.backupMs > 0 && processCfg.backupDir) {
+  const { backupSqlite } = require("./sinks");
+  setInterval(() => backupSqlite(processCfg.databasePath, processCfg.backupDir), processCfg.backupMs).unref();
 }
 
 client.login(processCfg.token).catch((error) => {

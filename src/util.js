@@ -60,8 +60,11 @@ function buildEmbed(guildCfg, eventKey, fields, { description, thumbnail, url } 
   if (thumbnail && guildCfg.showThumbnails !== false) embed.setThumbnail(thumbnail);
   if (url) embed.setURL(url);
   const compact = guildCfg.embedCompact;
+  const hidden = new Set((guildCfg.hiddenFields?.[eventKey] || guildCfg.hiddenFields?.["*"] || []).map(String));
   for (const [name, value] of fields) {
     if (value == null || value === "") continue;
+    const short = name.replace(/^field\./, "");
+    if (hidden.has(name) || hidden.has(short)) continue;
     embed.addFields({
       name: t(locale, name, {}, guildCfg.extra?.strings),
       value: truncate(value, guildCfg.fieldMax || 1024),

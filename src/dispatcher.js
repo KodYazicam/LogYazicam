@@ -4,6 +4,7 @@ const { ignored, inQuietHours, includeOk, embedToPlain } = require("./util");
 function createDispatcher({ client, db, processCfg, log, cache }) {
   const queues = new Map();
   const lastSent = new Map();
+  const digestBuckets = new Map();
 
   function guildCfg(guildId) {
     return cache.get(guildId);
@@ -67,6 +68,32 @@ function createDispatcher({ client, db, processCfg, log, cache }) {
       if (!accountAgeOk(cfg, payload)) return;
       if (!includeOk(cfg, payload.ignore?.channel)) return;
       if (ignored(cfg, payload.ignore || {})) return;
+      const digestMs = cfg.digestMs || 0;
+      if (digestMs > 0 && !payload.digest) {
+        const dkey = `${guild.id}:${eventKey}:${channelId}`;
+        const bucket = digestBuckets.get(dkey) || { count: 0, timer: null, sample: payload, guild, eventKey };
+        bucket.count += 1;
+        bucket.sample = payload;
+        if (!bucket.timer) {
+          bucket.timer = setTimeout(() => {
+            digestBuckets.delete(dkey);
+            const n = bucket.count;
+            const min = processCfg.digestMin || 5;
+            if (n >= min) {
+              const { buildEmbed } = require("./util");
+              const embed = buildEmbed(cfg, eventKey, [
+                ["field.count", String(n)],
+                ["field.channel", `<#${channelId}>`],
+              ], { description: `${n}× ${eventKey}` });
+              enqueue(guild, eventKey, { ...bucket.sample, embeds: [embed], digest: true, summary: `digest ${n}` });
+            } else {
+              enqueue(guild, eventKey, { ...bucket.sample, digest: true });
+            }
+          }, digestMs).unref();
+        }
+        digestBuckets.set(dkey, bucket);
+        return;
+      }
       if (!cooldownOk(cfg, guild.id, eventKey)) return;
 
       let embeds = payload.embeds || [];
@@ -102,6 +129,8 @@ function createDispatcher({ client, db, processCfg, log, cache }) {
         files,
         guildId: guild.id,
         preferWebhook: delivery === "webhook",
+        eventKey,
+        summary: payload.summary,
       });
     } catch (error) {
       log.error("enqueue", eventKey, error);
@@ -132,6 +161,14 @@ function createDispatcher({ client, db, processCfg, log, cache }) {
     if (item.preferWebhook && (!cfg?.webhookId || !cfg?.webhookToken)) {
       log.warn("delivery=webhook but no webhook configured; using channel.send");
     }
+    const sinks = String(processCfg.logSink || "discord").split(",").map((s) => s.trim());
+    if (sinks.includes("file") || sinks.includes("http")) {
+      const { writeFileSink, postHttpSink } = require("./sinks");
+      const body = { guildId: item.guildId, eventKey: item.eventKey, summary: item.summary, at: Date.now() };
+      if (sinks.includes("file")) writeFileSink(processCfg.fileSinkDir, item.guildId, item.eventKey, body);
+      if (sinks.includes("http")) postHttpSink(processCfg.httpSinkUrl, body);
+    }
+    if (!sinks.includes("discord") && sinks.length) return;
     await channel.send({
       content: item.content || undefined,
       embeds: item.embeds?.length ? item.embeds : undefined,
@@ -154,7 +191,7 @@ function createDispatcher({ client, db, processCfg, log, cache }) {
     }
   }, processCfg.sendIntervalMs).unref();
 
-  return { enqueue, refreshGuild, guildCfg, routeFor, queues };
+  return { enqueue, refreshGuild, guildCfg, routeFor, queues, db };
 }
 
 module.exports = { createDispatcher };

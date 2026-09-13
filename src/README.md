@@ -73,6 +73,15 @@ Other `extra_json` knobs: `paused`, `plainText`, `showThumbnails`, `showTimestam
 
 Control plane: slash `/log` and prefix `{PREFIX}{COMMAND_NAME} …` share `commands.execute`. `COMMAND_NAME` (default `log`) needs `npm run deploy` if you change it. `CONFIG_PERMISSION` is the Discord permission name (`ManageGuild` default). `SLASH_EPHEMERAL` / guild `ephemeral` hide slash replies. `SHOW_CREDIT` / guild `credit` toggle footer credit (KYAL still requires README/LICENSE attribution). Truncation: `EMBED_*_MAX`, `PLAIN_MAX`, `ATTACH_MIN_CHARS`, `AUDIT_FETCH_LIMIT`, `BULK_LINE_LIMIT`.
 
+## Product add-ons (not gateway events)
+
+| Module | Role |
+| --- | --- |
+| `packs.js` | Named key lists for `/log pack` / `/log setup` |
+| `sinks.js` | File JSONL + HTTP POST + SQLite copy |
+| snapshots table | Fills `messageDelete` when cache is empty |
+| invites table | Diffs uses on `guildMemberAdd` |
+
 ## Extra listeners (catalog keys → Discord)
 
 | Catalog key | `client.on` |

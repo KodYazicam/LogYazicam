@@ -329,6 +329,35 @@ Guild is resolved from `guildId` on the payload. If Discord omits it, the event 
 
 Noisy keys to leave off in production: `messageCreate`, `typingStart`, `presenceUpdate`, `userUpdate`, `commandUse`, `guildAuditLogEntryCreate`, `voiceSelfMute`, `voiceSelfDeaf`, `guildAvailable`.
 
+## Snapshot cache, invites, digests, packs, sinks
+
+These are **not** fake Discord events. They sit on top of the catalog.
+
+**Snapshots** (`SNAPSHOT_ENABLED`, `/log set name:snapshot value:true`): every `messageCreate` stores `{content, author, attachments}` in SQLite (capped by `SNAPSHOT_LIMIT` per guild), even if `messageCreate` logging is off. `messageDelete` fills empty bodies from this table. Retention is the cap, not forever — treat `data/` as sensitive.
+
+**Invite attribution** (`INVITE_TRACK`): on `ready` and `guildCreate` the bot caches invite uses. On `guildMemberAdd` it diffs uses and sets `field.inviter` (`tag (code)`). Needs permission to fetch invites. Vanity / widget joins have no row.
+
+**Burst digest** (`DIGEST_MS`, guild `digest_ms`): if more than `DIGEST_MIN` of the **same** event key hit the same log channel within the window, one embed `{count}× eventKey` is sent instead of N embeds. `0` disables. Filters still run first (ignored users never enter the bucket).
+
+**Packs** (`/log pack name:moderation|voice|message|server|quiet`): enables a curated key list. `/log setup channel:#mod-log` sets the default channel **and** applies `quiet` (ban, timeout, delete, unavailable). Defined in `src/packs.js`.
+
+**Field hiding** (`/log fields key:messageDelete hide:jump,id`): per-event embed field names (without `field.` prefix, or full `field.jump`). `*` hides on every event.
+
+**Sinks** (`LOG_SINK=discord,file,http`): after a successful route, also append JSONL under `FILE_SINK_DIR/guildId/YYYY-MM-DD.jsonl` and/or POST `HTTP_SINK_URL`. Omit `discord` to skip Discord entirely (file-only logger).
+
+**Backup** (`BACKUP_DIR` + `BACKUP_MS`): copy the SQLite file on an interval.
+
+**Sharding** (`SHARD_LIST=auto` or a number): process starts a `ShardingManager`. Empty = single process.
+
+**Docker:** `docker compose up --build` with `.env` and `./data` volume.
+
+```
+/log setup channel:#mod-log
+/log pack name:moderation channel:#mod-log
+/log set name:digest_ms value:8000
+/log fields key:messageDelete hide:id,jump
+```
+
 `/log group` names use **autocomplete** (24 groups). Example split:
 
 ```

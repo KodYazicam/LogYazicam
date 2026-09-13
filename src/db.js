@@ -54,6 +54,24 @@ function openDb(filePath) {
       created_at INTEGER NOT NULL
     );
     CREATE INDEX IF NOT EXISTS history_guild_time ON history (guild_id, created_at DESC);
+    CREATE TABLE IF NOT EXISTS snapshots (
+      message_id TEXT PRIMARY KEY,
+      guild_id TEXT NOT NULL,
+      channel_id TEXT,
+      author_id TEXT,
+      author_tag TEXT,
+      content TEXT,
+      attachments TEXT,
+      created_at INTEGER NOT NULL
+    );
+    CREATE INDEX IF NOT EXISTS snapshots_guild ON snapshots (guild_id, created_at);
+    CREATE TABLE IF NOT EXISTS invites (
+      guild_id TEXT NOT NULL,
+      code TEXT NOT NULL,
+      uses INTEGER DEFAULT 0,
+      inviter_id TEXT,
+      PRIMARY KEY (guild_id, code)
+    );
   `);
 
   const ensureGuild = db.prepare(`
@@ -137,6 +155,34 @@ function openDb(filePath) {
     trimHistory.run(guildId, guildId, cap);
   }
 
+  const upsertSnap = db.prepare(`
+    INSERT INTO snapshots (message_id, guild_id, channel_id, author_id, author_tag, content, attachments, created_at)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+    ON CONFLICT(message_id) DO UPDATE SET content = excluded.content, attachments = excluded.attachments
+  `);
+  const getSnap = db.prepare("SELECT * FROM snapshots WHERE message_id = ?");
+  const trimSnap = db.prepare(`
+    DELETE FROM snapshots WHERE guild_id = ? AND message_id NOT IN (
+      SELECT message_id FROM snapshots WHERE guild_id = ? ORDER BY created_at DESC LIMIT ?
+    )
+  `);
+  function putSnapshot(row, limit) {
+    upsertSnap.run(row.message_id, row.guild_id, row.channel_id, row.author_id, row.author_tag, row.content, row.attachments, row.created_at);
+    trimSnap.run(row.guild_id, row.guild_id, limit || 2000);
+  }
+
+  const upsertInvite = db.prepare(`
+    INSERT INTO invites (guild_id, code, uses, inviter_id) VALUES (?, ?, ?, ?)
+    ON CONFLICT(guild_id, code) DO UPDATE SET uses = excluded.uses, inviter_id = excluded.inviter_id
+  `);
+  const listInvites = db.prepare("SELECT * FROM invites WHERE guild_id = ?");
+  const deleteInvite = db.prepare("DELETE FROM invites WHERE guild_id = ? AND code = ?");
+
+  const queryHistory = db.prepare(`
+    SELECT * FROM history WHERE guild_id = ? AND created_at >= ? AND created_at <= ?
+    AND (? = '' OR event_key = ?) ORDER BY id DESC LIMIT ?
+  `);
+
   return {
     raw: db,
     ensureGuild: (id) => {
@@ -157,6 +203,12 @@ function openDb(filePath) {
     listIgnores,
     pushHistory,
     listHistory,
+    queryHistory,
+    putSnapshot,
+    getSnap,
+    upsertInvite,
+    listInvites,
+    deleteInvite,
   };
 }
 

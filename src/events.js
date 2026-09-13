@@ -30,7 +30,8 @@ function bindEvents(client, { dispatch, processCfg, log }) {
     if (!message.guild) return;
     const cfg = dispatch.guildCfg(message.guild.id);
     if (!cfg) return;
-    await run(message.guild, "messageDelete", await formatMessageDelete(message, client, cfg, processCfg));
+    const stored = dispatch.db?.getSnap?.get(message.id);
+    await run(message.guild, "messageDelete", await formatMessageDelete(message, client, cfg, processCfg, stored));
   }));
 
   client.on("messageUpdate", safe("messageUpdate", async (before, after) => {
@@ -101,7 +102,24 @@ function bindEvents(client, { dispatch, processCfg, log }) {
   client.on("guildMemberAdd", safe("guildMemberAdd", async (member) => {
     const cfg = dispatch.guildCfg(member.guild.id);
     if (!cfg) return;
-    await run(member.guild, "guildMemberAdd", await formatMemberAdd(member, cfg));
+    let inviterInfo = null;
+    if (processCfg.inviteTrack) {
+      try {
+        const current = await member.guild.invites.fetch();
+        const prev = dispatch.db.listInvites.all(member.guild.id);
+        const used = [...current.values()].find((inv) => {
+          const old = prev.find((p) => p.code === inv.code);
+          return old && inv.uses > old.uses;
+        });
+        if (used) inviterInfo = `${used.inviter?.tag || used.inviterId || used.code} (${used.code})`;
+        for (const inv of current.values()) {
+          dispatch.db.upsertInvite.run(member.guild.id, inv.code, inv.uses || 0, inv.inviter?.id || null);
+        }
+      } catch {
+        // missing permission
+      }
+    }
+    await run(member.guild, "guildMemberAdd", await formatMemberAdd(member, cfg, inviterInfo));
   }));
 
   client.on("guildMemberRemove", safe("guildMemberRemove", async (member) => {
@@ -557,6 +575,22 @@ function bindEvents(client, { dispatch, processCfg, log }) {
       userId: after.user?.id,
       ignore: { user: after.user },
     });
+  }));
+
+  client.on("messageCreate", safe("messageCreateSnap", async (message) => {
+    if (!message.guild || message.author?.id === client.user.id) return;
+    const cfg = dispatch.guildCfg(message.guild.id) || dispatch.refreshGuild(message.guild.id);
+    if (cfg.snapshotOn === false) return;
+    dispatch.db.putSnapshot({
+      message_id: message.id,
+      guild_id: message.guild.id,
+      channel_id: message.channel.id,
+      author_id: message.author?.id,
+      author_tag: message.author?.tag,
+      content: message.cleanContent || message.content || "",
+      attachments: [...(message.attachments?.values?.() || [])].map((a) => a.url).join("\n"),
+      created_at: message.createdTimestamp || Date.now(),
+    }, processCfg.snapshotLimit);
   }));
 
   client.on("messageCreate", safe("messageCreate", async (message) => {

@@ -211,6 +211,46 @@ function data() {
     .addSubcommand((s) => s.setName("events").setDescription("List event keys"))
     .addSubcommand((s) =>
       s
+        .setName("pack")
+        .setDescription("Enable a preset set of events")
+        .addStringOption((o) =>
+          o
+            .setName("name")
+            .setDescription("moderation voice message server quiet")
+            .setRequired(true)
+            .addChoices(
+              { name: "moderation", value: "moderation" },
+              { name: "voice", value: "voice" },
+              { name: "message", value: "message" },
+              { name: "server", value: "server" },
+              { name: "quiet", value: "quiet" },
+            ),
+        )
+        .addChannelOption((o) =>
+          o.setName("channel").setDescription("Channel").addChannelTypes(ChannelType.GuildText, ChannelType.GuildAnnouncement),
+        ),
+    )
+    .addSubcommand((s) =>
+      s
+        .setName("setup")
+        .setDescription("Set default channel and apply the quiet pack")
+        .addChannelOption((o) =>
+          o
+            .setName("channel")
+            .setDescription("Log channel")
+            .setRequired(true)
+            .addChannelTypes(ChannelType.GuildText, ChannelType.GuildAnnouncement),
+        ),
+    )
+    .addSubcommand((s) =>
+      s
+        .setName("fields")
+        .setDescription("Hide embed fields for one event")
+        .addStringOption((o) => o.setName("key").setDescription("Event key").setRequired(true).setAutocomplete(true))
+        .addStringOption((o) => o.setName("hide").setDescription("Comma field names, e.g. jump,id")),
+    )
+    .addSubcommand((s) =>
+      s
         .setName("string")
         .setDescription("Override one UI string")
         .addStringOption((o) => o.setName("key").setDescription("e.g. event.messageDelete").setRequired(true))
@@ -273,6 +313,8 @@ function data() {
               { name: "slash_on", value: "slashOn" },
               { name: "ephemeral", value: "ephemeral" },
               { name: "credit", value: "showCredit" },
+              { name: "digest_ms", value: "digestMs" },
+              { name: "snapshot", value: "snapshotOn" },
             ),
         )
         .addStringOption((o) =>
@@ -508,6 +550,37 @@ async function execute(interaction, { db, dispatch, processCfg }) {
     return interaction.reply({ content: t(cfg.locale, "cmd.test_sent", { channel: `${channel}` }), ephemeral: true });
   }
 
+  if (sub === "pack") {
+    const { applyPack } = require("./packs");
+    const name = interaction.options.getString("name", true);
+    const channel = interaction.options.getChannel("channel");
+    const keys = applyPack(db, interaction.guildId, name, channel?.id);
+    dispatch.refreshGuild(interaction.guildId);
+    if (!keys) return interaction.reply({ content: t(locale, "cmd.unknown_event", { key: name }) });
+    return interaction.reply({ content: t(locale, "cmd.group_on", { group: name, channel: channel ? `${channel}` : t(locale, "none") }) });
+  }
+
+  if (sub === "setup") {
+    const { applyPack } = require("./packs");
+    const channel = interaction.options.getChannel("channel", true);
+    db.setGuild(interaction.guildId, { default_channel: channel.id });
+    applyPack(db, interaction.guildId, "quiet", channel.id);
+    dispatch.refreshGuild(interaction.guildId);
+    return interaction.reply({ content: t(locale, "cmd.channel_set", { channel: `${channel}` }) });
+  }
+
+  if (sub === "fields") {
+    const key = interaction.options.getString("key", true);
+    const hide = interaction.options.getString("hide") || "";
+    const row = db.ensureGuild(interaction.guildId);
+    const extra = db.extraOf(row);
+    extra.hiddenFields = extra.hiddenFields || {};
+    extra.hiddenFields[key] = hide.split(",").map((s) => s.trim()).filter(Boolean);
+    db.setExtra(interaction.guildId, extra);
+    dispatch.refreshGuild(interaction.guildId);
+    return interaction.reply({ content: t(locale, "cmd.filter_set", { name: `fields.${key}`, value: hide || "—" }) });
+  }
+
   if (sub === "history") {
     const limit = interaction.options.getInteger("limit") || processCfg.historyExportDefault || 50;
     const rows = db.listHistory.all(interaction.guildId, limit);
@@ -584,10 +657,10 @@ async function execute(interaction, { db, dispatch, processCfg }) {
     const raw = interaction.options.getString("value", true);
     const row = db.ensureGuild(interaction.guildId);
     const extra = db.extraOf(row);
-    const boolish = ["paused", "plainText", "showThumbnails", "showTimestamp", "attachLong", "prefixOn", "slashOn", "ephemeral", "showCredit"];
+    const boolish = ["paused", "plainText", "showThumbnails", "showTimestamp", "attachLong", "prefixOn", "slashOn", "ephemeral", "showCredit", "snapshotOn"];
     if (boolish.includes(name)) {
       extra[name] = ["1", "true", "yes", "on"].includes(raw.toLowerCase());
-    } else if (name === "cooldownSec" || name === "minAccountDays") {
+    } else if (name === "cooldownSec" || name === "minAccountDays" || name === "digestMs") {
       extra[name] = Number(raw) || 0;
     } else if (name === "actors") {
       extra.actors = ["all", "humans", "bots"].includes(raw) ? raw : "all";

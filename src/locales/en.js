@@ -98,6 +98,7 @@ module.exports = {
   "field.command": "Command",
   "field.audit": "Audit action",
   "field.flags": "Flags",
+  "field.inviter": "Invited by",
   "none": "—",
   "unknown": "Unknown",
   "yes": "Yes",

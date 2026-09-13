@@ -17,9 +17,18 @@ function messageSnapshot(message) {
   };
 }
 
-async function formatMessageDelete(oldMessage, client, cfg, processCfg) {
+async function formatMessageDelete(oldMessage, client, cfg, processCfg, storedSnap) {
   const message = oldMessage.partial ? await oldMessage.fetch().catch(() => oldMessage) : oldMessage;
-  const snap = messageSnapshot(message);
+  let snap = messageSnapshot(message);
+  if ((!snap.content || snap.content === "") && storedSnap) {
+    snap = {
+      ...snap,
+      content: storedSnap.content || snap.content,
+      author: storedSnap.author_tag || snap.author,
+      authorId: storedSnap.author_id || snap.authorId,
+      attachments: storedSnap.attachments || snap.attachments,
+    };
+  }
   const fields = [
     ["field.author", snap.author],
     ["field.channel", channelTag(message.channel)],
@@ -84,12 +93,13 @@ function formatBulk(messages, channel, cfg) {
   };
 }
 
-async function formatMemberAdd(member, cfg) {
+async function formatMemberAdd(member, cfg, inviterInfo) {
   const created = Math.floor(member.user.createdTimestamp / 1000);
   const fields = [
     ["field.user", userTag(member.user)],
     ["field.id", cfg.embedShowIds ? member.id : null],
     ["field.channel", `<t:${created}:R>`],
+    ["field.inviter", inviterInfo || null],
   ];
   return {
     embeds: [buildEmbed(cfg, "guildMemberAdd", fields, { thumbnail: member.user.displayAvatarURL({ size: 128 }) })],
