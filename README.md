@@ -353,7 +353,7 @@ These are **not** fake Discord events. They sit on top of the catalog.
 
 **Snapshot TTL / bots:** `SNAPSHOT_TTL_MS` drops old rows; `SNAPSHOT_BOTS=false` (default) skips bot messages in the cache.
 
-**Redaction:** `REDACT_URLS` `REDACT_MENTIONS` `REDACT_EMAILS` `REDACT_INVITES` (all default **false**). Discord/GitHub/OpenAI token shapes are always stripped. Guild: `/log set name:redact_url value:true`.
+**Redaction:** `REDACT_URLS` `REDACT_MENTIONS` `REDACT_EMAILS` `REDACT_INVITES` (all default **false**). Discord/GitHub/OpenAI/Anthropic/AWS/Stripe/Slack token shapes are always stripped. Guild: `/log set name:redact_url value:true`.
 
 **Staff channel:** `/log set name:staff_ch value:CHANNEL_ID` posts a second copy (never via webhook). Empty = off.
 

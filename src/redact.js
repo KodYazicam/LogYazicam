@@ -3,6 +3,10 @@ const PATTERNS = [
   { kind: "github-token", re: /\bgh[pousr]_[A-Za-z0-9_]{20,}\b/g },
   { kind: "openai", re: /\bsk-(?:proj|svcacct)-[A-Za-z0-9_-]{16,}\b/g },
   { kind: "openai", re: /\bsk-[A-Za-z0-9]{32,}\b/g },
+  { kind: "anthropic", re: /\bsk-ant-[A-Za-z0-9_-]{16,}\b/g },
+  { kind: "aws-key", re: /\bAKIA[0-9A-Z]{16}\b/g },
+  { kind: "stripe", re: /\b(?:sk|rk)_live_[A-Za-z0-9]{16,}\b/g },
+  { kind: "slack-token", re: /\bxox[baprs]-[A-Za-z0-9-]{10,}\b/g },
   { kind: "url", re: /https?:\/\/[^\s<]+/gi },
   { kind: "invite", re: /(?:discord\.gg|discord\.com\/invite)\/[A-Za-z0-9-]+/gi },
   { kind: "email", re: /\b[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}\b/gi },
@@ -53,6 +57,10 @@ function flagsFrom(cfg, processCfg) {
     "discord-token": true,
     "github-token": true,
     openai: true,
+    anthropic: true,
+    "aws-key": true,
+    stripe: true,
+    "slack-token": true,
   };
 }
 
