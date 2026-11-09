@@ -29,7 +29,7 @@ Project: LogYazicam
 Source : https://github.com/KodYazicam/LogYazicam
 ```
 
-**KYAL-1.0** — 可自由使用，**必须署名**。Embed 页脚始终带有 `Powered by LogYazicam — KodYazicam`。
+**Apache-2.0** — free to use, modify, and distribute. Attribution is not required.
 
 ## 这是什么
 
@@ -80,4 +80,4 @@ https://discord.com/oauth2/authorize?client_id=CLIENT_ID&scope=bot%20application
 
 ## 许可
 
-KYAL-1.0 — [LICENSE](../LICENSE)。目录：[English](../README.md#full-event-catalog)。
+Apache-2.0 — [LICENSE](../LICENSE)。目录：[English](../README.md#full-event-catalog)。

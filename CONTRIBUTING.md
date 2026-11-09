@@ -17,4 +17,4 @@ Rules:
 - Event keys are English identifiers in `src/catalog.js`. Locale strings go in `src/locales/en.js` first.
 - Do not log an event Discord does not emit. No stub handlers.
 - Config changes must work without a process restart (except `TOKEN`).
-- Keep KYAL-1.0 attribution in LICENSE, README, and embed footers (`bot.credit`).
+- Keep the Apache-2.0 license text in `LICENSE` and the license notice in `README.md`. Do not introduce mandatory attribution requirements.

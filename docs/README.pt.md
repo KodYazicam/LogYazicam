@@ -29,7 +29,7 @@ Project: LogYazicam
 Source : https://github.com/KodYazicam/LogYazicam
 ```
 
-**KYAL-1.0** — uso livre, **atribuição obrigatória**. O rodapé do embed inclui sempre `Powered by LogYazicam — KodYazicam`.
+**Apache-2.0** — free to use, modify, and distribute. Attribution is not required.
 
 ## O que é
 
@@ -80,4 +80,4 @@ Manage Guild ou `OWNER_IDS`. Respostas efémeras.
 
 ## Licença
 
-KYAL-1.0 — [LICENSE](../LICENSE). Catálogo: [English](../README.md#full-event-catalog).
+Apache-2.0 — [LICENSE](../LICENSE). Catálogo: [English](../README.md#full-event-catalog).

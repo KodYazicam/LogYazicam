@@ -29,7 +29,7 @@ Project: LogYazicam
 Source : https://github.com/KodYazicam/LogYazicam
 ```
 
-**KYAL-1.0** — wolne użycie, **wymagane uznanie autorstwa**. Stopka embeda zawsze zawiera `Powered by LogYazicam — KodYazicam`.
+**Apache-2.0** — free to use, modify, and distribute. Attribution is not required.
 
 ## Czym jest
 
@@ -80,4 +80,4 @@ Manage Guild lub `OWNER_IDS`. Odpowiedzi ephemeral.
 
 ## Licencja
 
-KYAL-1.0 — [LICENSE](../LICENSE). Katalog: [English](../README.md#full-event-catalog).
+Apache-2.0 — [LICENSE](../LICENSE). Katalog: [English](../README.md#full-event-catalog).
