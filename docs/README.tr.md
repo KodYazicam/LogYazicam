@@ -29,7 +29,7 @@ Project: LogYazicam
 Source : https://github.com/KodYazicam/LogYazicam
 ```
 
-**KYAL-1.0** — kullan, değiştir; **atıf zorunlu**. Embed altbilgisine `Powered by LogYazicam — KodYazicam` her zaman eklenir.
+**Apache-2.0** — free to use, modify, and distribute. Attribution is not required.
 
 ## Bu nedir
 
@@ -108,4 +108,4 @@ Tam tablo ve her key’in embed alanları: [İngilizce README — catalog](../RE
 
 ## Lisans
 
-KYAL-1.0 — [LICENSE](../LICENSE). Çatallarda atıf kalsın.
+Apache-2.0 — [LICENSE](../LICENSE). Çatallarda atıf kalsın.

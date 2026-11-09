@@ -35,7 +35,7 @@ Missing keys fall back to English inside `t()`.
 
 ## Guild overrides
 
-`/log string key:event.messageDelete value:…` writes `guilds.extra_json.strings`. That wins over the pack for **that guild only**. Credit key `bot.credit` can be rephrased but KYAL still requires visible KodYazicam credit in README/LICENSE; do not use this to hide attribution in public forks’ documentation.
+`/log string key:event.messageDelete value:…` writes `guilds.extra_json.strings`. That wins over the pack for **that guild only**. Credit key `bot.credit` can be rephrased or hidden; Apache-2.0 does not require visible credit.
 
 Placeholders: `{key}`, `{channel}`, `{locale}`, … — same names as in `en.js`.
 

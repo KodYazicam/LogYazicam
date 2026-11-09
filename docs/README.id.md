@@ -14,7 +14,7 @@ Author : Batuhan (KodYazicam) · Project: LogYazicam
 Source : https://github.com/KodYazicam/LogYazicam
 ```
 
-**KYAL-1.0** — atribusi wajib. Footer embed: `Powered by LogYazicam — KodYazicam`.
+**Apache-2.0** — free to use, modify, and distribute. Attribution is not required.
 
 ```bash
 git clone https://github.com/KodYazicam/LogYazicam.git

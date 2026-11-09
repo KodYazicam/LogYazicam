@@ -1,0 +1,8 @@
+blank_issues_enabled: false
+contact_links:
+  - name: Questions and ideas
+    url: https://github.com/KodYazicam/LogYazicam/discussions
+    about: Ask a question or share a workflow. Please do not open an issue for support questions.
+  - name: Security report
+    url: https://github.com/KodYazicam/LogYazicam/security/policy
+    about: Report a vulnerability privately. Do not open a public issue.

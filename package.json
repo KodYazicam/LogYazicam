@@ -14,7 +14,7 @@
     "url": "git+https://github.com/KodYazicam/LogYazicam.git"
   },
   "author": "KodYazicam <https://github.com/KodYazicam>",
-  "license": "SEE LICENSE IN LICENSE",
+  "license": "Apache-2.0",
   "bugs": {
     "url": "https://github.com/KodYazicam/LogYazicam/issues"
   },

@@ -6,7 +6,7 @@
 <p align="center">
   <img src="https://img.shields.io/badge/discord.js-v14-5865F2?style=flat-square&logo=discord&logoColor=white" alt="discord.js">
   <img src="https://img.shields.io/badge/node-%3E%3D20-339933?style=flat-square" alt="Node">
-  <img src="https://img.shields.io/badge/license-KYAL--1.0-7C3AED?style=flat-square" alt="License">
+  <img src="https://img.shields.io/badge/license-Apache--2.0-2ea44f?style=flat-square" alt="License">
   <img src="https://img.shields.io/badge/author-KodYazicam-0D0D0D?style=flat-square" alt="Author">
 </p>
 
@@ -40,7 +40,7 @@ Project: LogYazicam
 Source : https://github.com/KodYazicam/LogYazicam
 ```
 
-**KYAL-1.0** — free to use and modify. Attribution is **mandatory** in LICENSE, this README, and any public bot that ships this code. Embed footers always append `Powered by LogYazicam — KodYazicam`. You may add your own footer prefix; you may not strip the credit.
+**Apache-2.0** — free to use, modify, and distribute. Attribution is not required. The embed footer credit is on by default in this build; you can disable it with `SHOW_CREDIT=false` or `/log config credit false`.
 
 ---
 
@@ -73,7 +73,7 @@ Source : https://github.com/KodYazicam/LogYazicam
 25. [Tests and CI](#tests-and-ci)
 26. [Troubleshooting](#troubleshooting)
 27. [FAQ](#faq)
-28. [License](#license--kyal-10)
+28. [License](#license)
 
 ---
 
@@ -470,7 +470,7 @@ In Discord:
 /log test
 ```
 
-Then delete a message the bot can see. You should get `messageDelete` in `#mod-log` with the KYAL footer.
+Then delete a message the bot can see. You should get `messageDelete` in `#mod-log` with the configured footer.
 
 `better-sqlite3` is a native addon. Use Node **20 or 22 LTS**. Node 24 may fail to find bindings until a prebuild exists (`npm install` without `--ignore-scripts` on a machine with `build-essential`).
 
@@ -972,7 +972,7 @@ LogYazicam/
   tests/README.md
   docs/README.md          Language index + translated operator manuals
   .env.example
-  LICENSE                 KYAL-1.0
+  LICENSE                 Apache-2.0
 ```
 
 ---
@@ -1035,18 +1035,10 @@ CI: GitHub Actions, Node 22, `npm ci` && `npm test`.
 
 **Is it on npm?** No. Clone.
 
-**Can I strip the footer credit?** Not under KYAL-1.0.
+**Can I strip the footer credit?** Yes. It is on by default, but Apache-2.0 does not require it. Set `SHOW_CREDIT=false` or use `/log config credit false`.
 
 ---
 
-## License — KYAL-1.0
+## License
 
-```
-Author : Batuhan (KodYazicam)
-Project: LogYazicam
-Source : https://github.com/KodYazicam/LogYazicam
-```
-
-See [LICENSE](./LICENSE). Keep this block in forks and in any public bot documentation.
-
-<p align="center"><sub>Built by <a href="https://github.com/KodYazicam">KodYazicam</a> · Powered by LogYazicam</sub></p>
+Apache-2.0. See [LICENSE](./LICENSE).

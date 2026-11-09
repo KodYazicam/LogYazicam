@@ -29,7 +29,7 @@ Project: LogYazicam
 Source : https://github.com/KodYazicam/LogYazicam
 ```
 
-**KYAL-1.0** — استخدام حر، **الإسناد إلزامي**. تذييل الـ embed يتضمن دائمًا `Powered by LogYazicam — KodYazicam`.
+**Apache-2.0** — free to use, modify, and distribute. Attribution is not required.
 
 ## ما هذا
 
@@ -80,4 +80,4 @@ Manage Guild أو `OWNER_IDS`. الردود ephemeral.
 
 ## الرخصة
 
-KYAL-1.0 — [LICENSE](../LICENSE). الكتالوج: [English](../README.md#full-event-catalog).
+Apache-2.0 — [LICENSE](../LICENSE). الكتالوج: [English](../README.md#full-event-catalog).

@@ -1,0 +1,51 @@
+name: Feature request
+description: Suggest a capability, flag, integration, or documentation improvement.
+title: "[feat] "
+labels: ["enhancement", "needs triage"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Before opening a request, check the README and existing issues. Small, focused requests are easiest to ship.
+
+  - type: textarea
+    id: problem
+    attributes:
+      label: Problem
+      description: What are you trying to do, and what gets in the way?
+      placeholder: "I want to ... but the tool currently ..."
+    validations:
+      required: true
+
+  - type: textarea
+    id: proposal
+    attributes:
+      label: Proposed solution
+      description: A flag, command, config option, or API shape. A sketch is enough.
+    validations:
+      required: true
+
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: Alternatives considered
+      description: Workarounds, other tools, or approaches you rejected.
+
+  - type: dropdown
+    id: scope
+    attributes:
+      label: Scope
+      options:
+        - Small (one flag or docs fix)
+        - Medium (new command or integration)
+        - Large (new subsystem)
+    validations:
+      required: true
+
+  - type: checkboxes
+    id: contribution
+    attributes:
+      label: Contribution
+      options:
+        - label: I am willing to open a pull request for this.
+        - label: I can help test a preview build.

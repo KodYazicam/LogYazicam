@@ -29,7 +29,7 @@ Project: LogYazicam
 Source : https://github.com/KodYazicam/LogYazicam
 ```
 
-**KYAL-1.0** — 자유롭게 쓰되 **저작자 표기 필수**. Embed 푸터에는 항상 `Powered by LogYazicam — KodYazicam` 이 붙습니다.
+**Apache-2.0** — free to use, modify, and distribute. Attribution is not required.
 
 ## 무엇인가
 
@@ -80,4 +80,4 @@ Manage Guild 또는 `OWNER_IDS`. 응답은 ephemeral.
 
 ## 라이선스
 
-KYAL-1.0 — [LICENSE](../LICENSE). 카탈로그: [English](../README.md#full-event-catalog).
+Apache-2.0 — [LICENSE](../LICENSE). 카탈로그: [English](../README.md#full-event-catalog).
