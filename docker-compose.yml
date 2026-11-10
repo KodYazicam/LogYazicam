@@ -4,4 +4,8 @@ services:
     restart: unless-stopped
     env_file: .env
     volumes:
-      - ./data:/app/data
+      - logyazicam-data:/app/data
+
+volumes:
+  logyazicam-data:
+    name: logyazicam-data
