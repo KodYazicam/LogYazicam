@@ -11,6 +11,19 @@ All notable changes to this project are documented here. The format follows
 - Added issue templates, pull request template, roadmap, Dependabot, and code of conduct.
 - Clarified that the embed footer credit is optional.
 
+### Fixed
+
+- Webhook send failures now reach the retry/drop path when
+  `ALLOW_WEBHOOK_FALLBACK=false` instead of being counted as sent. A 429 is
+  retried; other failures increment `metrics.dropped`.
+
+### Added
+
+- Regression tests for webhook delivery: success, 429 retry (no duplicate
+  delivery), 500 and timeout drops, channel fallback, and delivery metrics.
+  `createDispatcher` accepts an optional `deps` object for the webhook client,
+  sleep, and interval, so tests never open a network connection.
+
 ### Security
 
 - Overrode `minimatch` to `^11.0.5` for the dev-only `nodemon` dependency,

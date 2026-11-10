@@ -2,11 +2,14 @@ const { WebhookClient } = require("discord.js");
 const { ignored, inQuietHours, includeOk, embedToPlain } = require("./util");
 const { redactEmbeds, redactText, flagsFrom } = require("./redact");
 
-function createDispatcher({ client, db, processCfg, log, cache }) {
+function createDispatcher({ client, db, processCfg, log, cache, deps = {} }) {
   const queues = new Map();
   const lastSent = new Map();
   const digestBuckets = new Map();
   const metrics = { sent: 0, dropped: 0, retries: 0 };
+  const makeWebhook = deps.createWebhookClient || ((options) => new WebhookClient(options));
+  const sleep = deps.sleep || ((ms) => new Promise((resolve) => setTimeout(resolve, ms)));
+  const schedule = deps.setInterval || setInterval;
 
   function guildCfg(guildId) {
     return cache.get(guildId);
@@ -164,7 +167,7 @@ function createDispatcher({ client, db, processCfg, log, cache }) {
     const wantHook = item.preferWebhook || (cfg?.delivery === "webhook") || Boolean(cfg?.webhookId && cfg?.webhookToken);
     if (wantHook && cfg?.webhookId && cfg?.webhookToken) {
       try {
-        const hook = new WebhookClient({ id: cfg.webhookId, token: cfg.webhookToken });
+        const hook = makeWebhook({ id: cfg.webhookId, token: cfg.webhookToken });
         await hook.send({
           content: item.content || undefined,
           embeds: item.embeds?.length ? item.embeds : undefined,
@@ -175,7 +178,7 @@ function createDispatcher({ client, db, processCfg, log, cache }) {
         return;
       } catch (error) {
         log.warn("webhook send failed, falling back to channel", error.message);
-        if (processCfg.allowWebhookFallback === false) return;
+        if (processCfg.allowWebhookFallback === false) throw error;
       }
     }
     if (item.preferWebhook && (!cfg?.webhookId || !cfg?.webhookToken)) {
@@ -197,7 +200,7 @@ function createDispatcher({ client, db, processCfg, log, cache }) {
     });
   }
 
-  setInterval(async () => {
+  async function flushQueues() {
     for (const [key, q] of queues) {
       const item = q.shift();
       if (!item) continue;
@@ -209,7 +212,7 @@ function createDispatcher({ client, db, processCfg, log, cache }) {
         if (processCfg.retry429 && retryAfter) {
           metrics.retries += 1;
           q.unshift(item);
-          await new Promise((r) => setTimeout(r, Math.ceil((Number(error.retryAfter) || 1) * 1000)));
+          await sleep(Math.ceil((Number(error.retryAfter) || 1) * 1000));
         } else {
           metrics.dropped += 1;
           log.error("flush", key, error);
@@ -218,9 +221,12 @@ function createDispatcher({ client, db, processCfg, log, cache }) {
         }
       }
     }
-  }, processCfg.sendIntervalMs).unref();
+  }
 
-  return { enqueue, refreshGuild, guildCfg, routeFor, queues, db, metrics };
+  const timer = schedule(flushQueues, processCfg.sendIntervalMs);
+  if (typeof timer?.unref === "function") timer.unref();
+
+  return { enqueue, refreshGuild, guildCfg, routeFor, queues, db, metrics, tick: flushQueues };
 }
 
 module.exports = { createDispatcher };
