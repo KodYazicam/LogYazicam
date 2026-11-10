@@ -46,7 +46,8 @@ index.js
    - drop self / bots / webhooks / ignore list
    - optional `history` row (`summary` only, not full body)
    - push queue (`MAX_QUEUE_PER_CHANNEL`, drop oldest)
-4. Timer (`SEND_INTERVAL_MS`) sends webhook or `channel.send`.
+4. Timer (`SEND_INTERVAL_MS`) sends webhook or `channel.send`. Tests call the
+   exposed `tick()` with an injected webhook client and clock.
 
 ## Adding an event
 

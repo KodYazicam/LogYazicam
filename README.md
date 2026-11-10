@@ -1000,6 +1000,7 @@ npm test
 - `processConfig` env parsing
 - `voiceKind` mapping
 - SQLite routes / group enable / ignore / history cap (skipped if `better-sqlite3` has no native build, e.g. Node 24 without compile)
+- Webhook delivery: success, 429 retry and no-duplicate delivery, 500 drop, timeout/network failure, fallback to `channel.send`, and `sent`/`retries`/`dropped` metrics (injected sender and clock, no real webhook)
 
 CI: GitHub Actions, Node 22, `npm ci` && `npm test`.
 
