@@ -349,7 +349,7 @@ These are **not** fake Discord events. They sit on top of the catalog.
 
 **Sharding** (`SHARD_LIST=auto` or a number): process starts a `ShardingManager`. Empty = single process.
 
-**Docker:** `docker compose up --build` with `.env` and `./data` volume.
+**Docker:** see [Docker Compose (one command)](#docker-compose-one-command).
 
 **Snapshot TTL / bots:** `SNAPSHOT_TTL_MS` drops old rows; `SNAPSHOT_BOTS=false` (default) skips bot messages in the cache.
 
@@ -459,6 +459,41 @@ npm start
 ```
 
 `npm run deploy` with `GUILD_ID` registers `/log` on that guild in seconds. Without `GUILD_ID` it registers **global** commands (can take up to an hour). Re-run deploy after pulling command changes.
+
+### Docker Compose (one command)
+
+Requires Docker Engine with Compose v2. From a clean clone:
+
+```bash
+git clone https://github.com/KodYazicam/LogYazicam.git
+cd LogYazicam
+cp .env.example .env
+# edit .env: TOKEN, CLIENT_ID, OWNER_IDS (GUILD_ID is optional)
+docker compose up -d --build
+docker compose run --rm logyazicam npm run deploy
+docker compose logs -f logyazicam
+```
+
+`up -d` builds the image, creates the `logyazicam-data` volume, and starts the bot. `run --rm ... npm run deploy` registers the slash commands once. `logs -f` follows the process log; press `Ctrl+C` to stop following (the container keeps running).
+
+SQLite, process logs, and backups live in the named volume at `/app/data`. The image owns that directory as UID `10001`, so a fresh host needs no `chown` and no bind mount.
+
+Back up the volume while the bot is running:
+
+```bash
+docker compose cp logyazicam:/app/data ./logyazicam-data-backup
+```
+
+Restore a backup into the volume (stop the bot first so SQLite is not written during the copy):
+
+```bash
+docker compose stop logyazicam
+docker compose cp ./logyazicam-data-backup/. logyazicam:/app/data
+docker compose run --rm --user root logyazicam chown -R 10001:10001 /app/data
+docker compose start logyazicam
+```
+
+To update: `git pull && docker compose up -d --build`. To stop: `docker compose down` (the named volume is kept).
 
 In Discord:
 
@@ -1001,6 +1036,7 @@ npm test
 - `voiceKind` mapping
 - SQLite routes / group enable / ignore / history cap (skipped if `better-sqlite3` has no native build, e.g. Node 24 without compile)
 - Webhook delivery: success, 429 retry and no-duplicate delivery, 500 drop, timeout/network failure, fallback to `channel.send`, and `sent`/`retries`/`dropped` metrics (injected sender and clock, no real webhook)
+- Docker quickstart invariants: named data volume, `/app/data` ownership before `USER 10001`, and the documented start/deploy/logs/backup commands
 
 CI: GitHub Actions, Node 22, `npm ci` && `npm test`.
 

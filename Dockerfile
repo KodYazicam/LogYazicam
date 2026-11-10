@@ -6,7 +6,9 @@ COPY package.json package-lock.json* ./
 RUN npm ci --omit=dev || npm install --omit=dev
 COPY src ./src
 COPY LICENSE README.md ./
-RUN useradd --uid 10001 --create-home logyazicam
+RUN useradd --uid 10001 --create-home logyazicam \
+    && mkdir -p /app/data \
+    && chown -R 10001:10001 /app/data
 USER 10001
 ENV NODE_ENV=production
 VOLUME ["/app/data"]

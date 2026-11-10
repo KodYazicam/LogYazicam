@@ -7,7 +7,7 @@ Small, shippable steps. Upvote or comment on an issue if you want something move
 - [x] Per-guild routing for 60 Discord gateway events
 - [x] SQLite config, filters, quiet hours, and history
 - [x] Five fully translated locales (`en`, `tr`, `de`, `fr`, `es`)
-- [ ] A one-command Docker Compose example in the README
+- [x] A one-command Docker Compose example in the README
 - [ ] More tests around the webhook delivery path
 
 ## Next
