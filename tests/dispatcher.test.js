@@ -92,6 +92,18 @@ function setup(options = {}) {
   return { dispatch, cfg, hookCalls, channelSends, channelFetchCalls, sleeps, warnings, errors };
 }
 
+async function readFileWhenReady(file) {
+  let text = "";
+  for (let i = 0; i < 50; i += 1) {
+    if (fs.existsSync(file)) {
+      text = fs.readFileSync(file, "utf8");
+      if (text) return text;
+    }
+    await new Promise((resolve) => setTimeout(resolve, 10));
+  }
+  return text;
+}
+
 const rateLimited = () =>
   Object.assign(new Error("rate limited"), { httpStatus: 429, retryAfter: 0.02 });
 
@@ -287,4 +299,41 @@ test("enqueue routes an event into the queue and tick delivers it", async () => 
   assert.equal(h.dispatch.metrics.sent, 1);
   assert.equal(h.hookCalls.length, 1);
   assert.equal(h.dispatch.queues.get("g1:c1").length, 0);
+});
+test("file sink runs before a successful webhook delivery", async (t) => {
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), "logyazicam-sink-webhook-"));
+  t.after(() => fs.rmSync(dir, { recursive: true, force: true }));
+
+  const h = setup({
+    processCfg: { logSink: "file,discord", fileSinkDir: dir },
+  });
+
+  await h.dispatch.tick();
+  assert.equal(h.hookCalls.length, 1);
+  assert.equal(h.channelFetchCalls.length, 0);
+
+  const day = new Date().toISOString().slice(0, 10);
+  const text = await readFileWhenReady(path.join(dir, "g1", `${day}.jsonl`));
+  assert.match(text, /"guildId":"g1"/);
+});
+
+test("sink output is written once across a 429 retry", async (t) => {
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), "logyazicam-sink-retry-"));
+  t.after(() => fs.rmSync(dir, { recursive: true, force: true }));
+  let attempts = 0;
+  const h = setup({
+    processCfg: { logSink: "file,discord", fileSinkDir: dir },
+    send: async () => {
+      attempts += 1;
+      if (attempts === 1) throw rateLimited();
+    },
+  });
+
+  await h.dispatch.tick();
+  await h.dispatch.tick();
+  await new Promise((resolve) => setTimeout(resolve, 30));
+
+  const day = new Date().toISOString().slice(0, 10);
+  const text = await readFileWhenReady(path.join(dir, "g1", `${day}.jsonl`));
+  assert.equal(text.trim().split("\n").length, 1);
 });

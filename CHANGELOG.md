@@ -85,6 +85,9 @@ All notable changes to this project are documented here. The format follows
 - Numeric environment settings are now parsed as bounded integers, so
   fractional or negative limits cannot reach SQLite `LIMIT` clauses, queue
   checks, or embed colors.
+- File/HTTP sinks now run before webhook delivery and only once per event, so a
+  configured webhook no longer disables sink mirroring and a 429 retry no
+  longer writes duplicate sink rows.
 
 ### Security
 

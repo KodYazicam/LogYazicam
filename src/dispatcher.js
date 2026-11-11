@@ -162,6 +162,24 @@ function createDispatcher({ client, db, processCfg, log, cache, deps = {} }) {
 
   async function flushOne(item) {
     const cfg = guildCfg(item.guildId);
+    const sinks = String(processCfg.logSink || "discord").split(",").map((s) => s.trim());
+    // Mirror each event once, before any delivery path. The marker keeps a 429
+    // retry from writing the same sink row twice.
+    if (!item.staff && !item.sinksDone) {
+      item.sinksDone = true;
+      if (sinks.includes("file") || sinks.includes("http")) {
+        const { writeFileSink, postHttpSink } = require("./sinks");
+        const body = { guildId: item.guildId, eventKey: item.eventKey, summary: item.summary, at: Date.now() };
+        try {
+          if (sinks.includes("file") && !writeFileSink(processCfg.fileSinkDir, item.guildId, item.eventKey, body)) {
+            log.warn("file sink failed", processCfg.fileSinkDir || "(no directory)");
+          }
+          if (sinks.includes("http")) postHttpSink(processCfg.httpSinkUrl, body);
+        } catch (error) {
+          log.warn("sink failed", error.message);
+        }
+      }
+    }
     const wantHook = item.preferWebhook || (cfg?.delivery === "webhook") || Boolean(cfg?.webhookId && cfg?.webhookToken);
     if (wantHook && cfg?.webhookId && cfg?.webhookToken) {
       try {
@@ -181,19 +199,6 @@ function createDispatcher({ client, db, processCfg, log, cache, deps = {} }) {
     }
     if (item.preferWebhook && (!cfg?.webhookId || !cfg?.webhookToken)) {
       log.warn("delivery=webhook but no webhook configured; using channel.send");
-    }
-    const sinks = String(processCfg.logSink || "discord").split(",").map((s) => s.trim());
-    if (sinks.includes("file") || sinks.includes("http")) {
-      const { writeFileSink, postHttpSink } = require("./sinks");
-      const body = { guildId: item.guildId, eventKey: item.eventKey, summary: item.summary, at: Date.now() };
-      try {
-        if (sinks.includes("file") && !writeFileSink(processCfg.fileSinkDir, item.guildId, item.eventKey, body)) {
-          log.warn("file sink failed", processCfg.fileSinkDir || "(no directory)");
-        }
-        if (sinks.includes("http")) postHttpSink(processCfg.httpSinkUrl, body);
-      } catch (error) {
-        log.warn("sink failed", error.message);
-      }
     }
     if (!sinks.includes("discord") && sinks.length) return;
     const channel = await client.channels.fetch(item.channelId).catch(() => null);
