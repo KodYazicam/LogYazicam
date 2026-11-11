@@ -6,6 +6,7 @@ module.exports = {
   "cmd.guild_only": "Este comando solo funciona en un servidor.",
   "cmd.invalid_timezone": "Zona horaria IANA no válida: `{tz}`.",
   "cmd.invalid_hex": "El color debe ser `#rrggbb`.",
+  "cmd.invalid_option": "Opción no válida: `{name}`.",
   "cmd.error": "Se produjo un error: {error}",
   "cmd.need_channel": "Configura un canal de logs primero: `/log channel set`.",
   "cmd.unknown_event": "Evento desconocido `{key}`.",

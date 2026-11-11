@@ -12,6 +12,7 @@ const TRANSLATED_KEYS = [
   "cmd.invalid_timezone",
   "cmd.invalid_hex",
   "cmd.error",
+  "cmd.invalid_option",
 ];
 
 function placeholders(text) {

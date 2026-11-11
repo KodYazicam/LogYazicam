@@ -1,7 +1,7 @@
 const { test } = require("node:test");
 const assert = require("node:assert/strict");
 const { PermissionFlagsBits } = require("discord.js");
-const { data, clampHistoryLimit, MAX_HISTORY_LIMIT } = require("../src/commands");
+const { data, clampHistoryLimit, MAX_HISTORY_LIMIT, FILTER_NAMES } = require("../src/commands");
 
 function permission(json) {
   return json.default_member_permissions;
@@ -57,4 +57,13 @@ test("history export limits are clamped to the slash option bounds", () => {
   assert.equal(clampHistoryLimit(-5, 25), 25);
   assert.equal(clampHistoryLimit(2.5, 25), 25);
   assert.equal(clampHistoryLimit(null, 25), 25);
+});
+
+test("filter allowlist rejects guild columns and unknown names", () => {
+  for (const name of ["ignore_bots", "ignore_webhooks", "store_history", "mention_on_delete"]) {
+    assert.equal(FILTER_NAMES.has(name), true, name);
+  }
+  for (const name of ["webhook_id", "webhook_token", "locale", "timezone", "default_channel", "unknown"]) {
+    assert.equal(FILTER_NAMES.has(name), false, name);
+  }
 });

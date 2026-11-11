@@ -6,6 +6,7 @@ module.exports = {
   "cmd.guild_only": "يعمل هذا الأمر في السيرفرات فقط.",
   "cmd.invalid_timezone": "المنطقة الزمنية IANA غير صالحة: `{tz}`.",
   "cmd.invalid_hex": "يجب أن يكون اللون `#rrggbb`.",
+  "cmd.invalid_option": "خيار غير صالح: `{name}`.",
   "cmd.error": "خطأ: {error}",
   "cmd.need_channel": "عيّن قناة السجلات أولاً: `/log channel set`.",
   "cmd.unknown_event": "حدث غير معروف `{key}`.",

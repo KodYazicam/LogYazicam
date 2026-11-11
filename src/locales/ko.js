@@ -6,6 +6,7 @@ module.exports = {
   "cmd.guild_only": "이 명령은 서버에서만 사용할 수 있습니다.",
   "cmd.invalid_timezone": "잘못된 IANA 시간대입니다: `{tz}`.",
   "cmd.invalid_hex": "색상은 `#rrggbb` 형식이어야 합니다.",
+  "cmd.invalid_option": "잘못된 옵션입니다: `{name}`.",
   "cmd.error": "오류: {error}",
   "cmd.need_channel": "먼저 로그 채널을 설정하세요: `/log channel set`.",
   "cmd.unknown_event": "알 수 없는 이벤트 `{key}`.",

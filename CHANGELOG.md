@@ -73,6 +73,8 @@ All notable changes to this project are documented here. The format follows
   default color.
 - `/log color` now requires exactly six hex digits (with optional `#`) and
   rejects out-of-range or malformed values.
+- `/log filter` now enforces the boolean-filter allowlist, so a prefix call
+  cannot overwrite webhook credentials or other guild columns.
 
 ### Security
 

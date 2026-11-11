@@ -6,6 +6,7 @@ module.exports = {
   "cmd.guild_only": "Detta kommando fungerar bara i en server.",
   "cmd.invalid_timezone": "Ogiltig IANA-tidszon: `{tz}`.",
   "cmd.invalid_hex": "Färgen måste vara `#rrggbb`.",
+  "cmd.invalid_option": "Ogiltigt alternativ: `{name}`.",
   "cmd.error": "Fel: {error}",
   "cmd.need_channel": "Ange en loggkanal först: `/log channel set`.",
   "cmd.unknown_event": "Okänd händelse `{key}`.",

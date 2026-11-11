@@ -6,6 +6,7 @@ module.exports = {
   "cmd.guild_only": "यह कमांड केवल सर्वर में काम करता है।",
   "cmd.invalid_timezone": "अमान्य IANA समय क्षेत्र: `{tz}`।",
   "cmd.invalid_hex": "रंग `#rrggbb` होना चाहिए।",
+  "cmd.invalid_option": "अमान्य विकल्प: `{name}`।",
   "cmd.error": "त्रुटि: {error}",
   "cmd.need_channel": "पहले लॉग चैनल सेट करें: `/log channel set`।",
   "cmd.unknown_event": "अज्ञात इवेंट `{key}`।",

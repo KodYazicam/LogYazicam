@@ -21,6 +21,7 @@ Small, shippable steps. Upvote or comment on an issue if you want something move
 - [x] Prefix integer bounds match slash options
 - [x] Black embed colors preserved
 - [x] Strict hex color validation
+- [x] Filter command column allowlist
 
 ## Next
 

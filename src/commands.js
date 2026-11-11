@@ -9,6 +9,16 @@ const { LOCALES, t } = require("./locales");
 const { buildEmbed, parseHexColor } = require("./util");
 
 const MAX_HISTORY_LIMIT = 500;
+const FILTER_NAMES = new Set([
+  "ignore_bots",
+  "ignore_webhooks",
+  "ignore_self",
+  "embed_show_ids",
+  "embed_show_jump",
+  "embed_compact",
+  "store_history",
+  "mention_on_delete",
+]);
 
 function clampHistoryLimit(value, fallback = 50) {
   const n = Number(value);
@@ -525,6 +535,9 @@ async function execute(interaction, { db, dispatch, processCfg }) {
   if (sub === "filter") {
     const name = interaction.options.getString("name", true);
     const value = interaction.options.getBoolean("value", true);
+    if (!FILTER_NAMES.has(name)) {
+      return interaction.reply({ content: t(locale, "cmd.invalid_option", { name }), ephemeral: true });
+    }
     db.setGuild(interaction.guildId, { [name]: value ? 1 : 0 });
     dispatch.refreshGuild(interaction.guildId);
     return interaction.reply({
@@ -820,4 +833,4 @@ async function execute(interaction, { db, dispatch, processCfg }) {
   return interaction.reply({ content: t(locale, "cmd.denied"), ephemeral: true });
 }
 
-module.exports = { data, execute, autocomplete, clampHistoryLimit, MAX_HISTORY_LIMIT };
+module.exports = { data, execute, autocomplete, clampHistoryLimit, MAX_HISTORY_LIMIT, FILTER_NAMES };
