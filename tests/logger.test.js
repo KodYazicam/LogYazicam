@@ -129,6 +129,19 @@ test("configure falls back for invalid levels and blocked paths", (t) => {
   assert.doesNotMatch(captured.out, /hidden debug/);
 });
 
+test("append failures do not throw or block stdout", (t) => {
+  const dir = tempDir(t);
+  const directoryFile = path.join(dir, "as-directory");
+  fs.mkdirSync(directoryFile);
+  const log = createLogger({ logLevel: "info", logFile: directoryFile });
+
+  const captured = capture(() => {
+    assert.doesNotThrow(() => log.info("still works"));
+  });
+
+  assert.match(captured.out, /INFO still works/);
+});
+
 test("logger safely handles circular, BigInt, and throwing values", (t) => {
   const dir = tempDir(t);
   const file = path.join(dir, "safe.log");
