@@ -966,13 +966,15 @@ DASHBOARD_TOKEN=
 DASHBOARD_LIMIT=50
 ```
 
-The page reads the `history` table only: guild, event key, time, channel, and summary. It has no buttons that change config and loads no external scripts or fonts.
+The page reads the `history` table only: guild, event key, time, channel, and summary. It has no buttons that change config and loads no external scripts or fonts. The page controls can filter by event key and a recency window in minutes; the API takes the equivalent epoch-millisecond `since` value.
 
 | Route | Auth | Returns |
 | --- | --- | --- |
 | `GET /` | none | Self-contained HTML table |
-| `GET /api/events?limit=&guildId=` | bearer if token set | Newest-first history rows without full payloads |
+| `GET /api/events?limit=&guildId=&event=&since=` | bearer if token set | Newest-first history rows without full payloads |
 | `GET /api/health` | bearer if token set | `{ ok, guilds, events }` |
+
+`event` must be a catalog key; unknown keys and invalid/negative/fractional `since` values return `400`.
 
 `DASHBOARD_HOST=127.0.0.1` is the safe default. If you bind to another interface, the process refuses to start unless `DASHBOARD_TOKEN` is set; send it as `Authorization: Bearer <token>`. The dashboard is read-only, but history summaries can still be sensitive, so keep it on loopback or behind a trusted reverse proxy. Port, host, and token changes require a restart.
 
