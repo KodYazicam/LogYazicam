@@ -14,6 +14,7 @@ Small, shippable steps. Upvote or comment on an issue if you want something move
 - [x] Config import uses true replace semantics
 - [x] Webhook delivery independent of channel fetch
 - [x] Optional sink failures isolated from Discord delivery
+- [x] Deploy honors `.env` permission settings
 
 ## Next
 

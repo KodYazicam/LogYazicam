@@ -8,11 +8,13 @@ const { EVENTS, GROUPS, byKey } = require("./catalog");
 const { LOCALES, t } = require("./locales");
 const { buildEmbed } = require("./util");
 
-function data() {
+function data(config = {}) {
+  const permissionName = config.configPermission || process.env.CONFIG_PERMISSION || "ManageGuild";
+  const permission = PermissionFlagsBits[permissionName] || PermissionFlagsBits.ManageGuild;
   const cmd = new SlashCommandBuilder()
     .setName("log")
     .setDescription("Configure logging")
-    .setDefaultMemberPermissions(PermissionFlagsBits[process.env.CONFIG_PERMISSION || "ManageGuild"] || PermissionFlagsBits.ManageGuild)
+    .setDefaultMemberPermissions(permission)
     .addSubcommandGroup((g) =>
       g
         .setName("event")

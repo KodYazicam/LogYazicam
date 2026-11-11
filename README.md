@@ -569,7 +569,7 @@ All names English. Booleans: `1` `0` `true` `false` `yes` `no` `on` `off`. Guild
 | `DEFAULT_DELIVERY` | `embed` | hot | `embed` (bot message + embed), `plain` (bot message, no embed), `webhook` (requires webhook id/token). |
 | `ALLOW_WEBHOOK_FALLBACK` | `true` | hot | If webhook send fails, fall back to `channel.send`. `false` drops the item. |
 | `COMMAND_NAME` | `log` | deploy | Slash + prefix verb (`!log` / `/log`). Redeploy after change. |
-| `CONFIG_PERMISSION` | `ManageGuild` | hot | Discord permission name; `OWNER_IDS` always bypass. |
+| `CONFIG_PERMISSION` | `ManageGuild` | deploy / hot | Discord permission name; `OWNER_IDS` always bypass. Slash defaults apply on `npm run deploy`; prefix checks update on hot reload. |
 | `SLASH_EPHEMERAL` | `true` | hot | Slash replies hidden. Guild: `/log set name:ephemeral`. |
 | `SHOW_CREDIT` | `true` | hot | Embed footer credit. Guild: `name:credit`. LICENSE still requires attribution in docs. |
 | `EMBED_FIELD_MAX` | `1024` | hot | Field value cap (Discord max 1024). |

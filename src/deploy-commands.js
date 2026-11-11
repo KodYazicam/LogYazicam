@@ -9,7 +9,7 @@ if (!cfg.token || !cfg.clientId) {
   process.exit(1);
 }
 
-const body = [data().toJSON()];
+const body = [data(cfg).toJSON()];
 if (cfg.commandName && cfg.commandName !== "log") {
   body[0].name = cfg.commandName;
 }
