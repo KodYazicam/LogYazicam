@@ -77,6 +77,8 @@ All notable changes to this project are documented here. The format follows
   cannot overwrite webhook credentials or other guild columns.
 - `/log import` attachment downloads now have a 10-second abort timeout instead
   of hanging until the interaction expires.
+- The logger safely formats circular, BigInt, and throwing values instead of
+  letting a formatting error escape the log call.
 
 ### Security
 

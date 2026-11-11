@@ -3,6 +3,22 @@ const path = require("path");
 
 const LEVELS = { error: 0, warn: 1, info: 2, debug: 3 };
 
+function formatValue(value) {
+  if (value instanceof Error) return value.stack || value.message;
+  if (typeof value === "string") return value;
+  if (typeof value === "bigint") return value.toString();
+  try {
+    const text = JSON.stringify(value);
+    return text === undefined ? String(value) : text;
+  } catch {
+    try {
+      return String(value);
+    } catch {
+      return "[unloggable]";
+    }
+  }
+}
+
 function createLogger(env = {}) {
   let level = 2;
   let file = null;
@@ -29,7 +45,7 @@ function createLogger(env = {}) {
   const write = (name, args) => {
     if ((LEVELS[name] ?? 9) > level) return;
     const line = `[${new Date().toISOString()}] ${name.toUpperCase()} ${args
-      .map((a) => (a instanceof Error ? a.stack || a.message : typeof a === "string" ? a : JSON.stringify(a)))
+      .map(formatValue)
       .join(" ")}`;
     const stream = name === "error" ? process.stderr : process.stdout;
     stream.write(`${line}\n`);
