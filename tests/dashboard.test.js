@@ -75,6 +75,37 @@ test("events endpoint filters by guild and validates the id", async (t) => {
   assert.equal((await fetch(`${base}/api/events?guildId=not-a-snowflake`)).status, 400);
 });
 
+test("events endpoint filters by event key and time", async (t) => {
+  const setupResult = setup(t);
+  if (!setupResult) return;
+  setupResult.db.raw.prepare("UPDATE history SET created_at = 1 WHERE id = 1").run();
+  const base = await listen(setupResult.dashboard);
+
+  const byEvent = await (await fetch(`${base}/api/events?event=messageDelete`)).json();
+  assert.equal(byEvent.count, 2);
+  assert.deepEqual(byEvent.events.map((event) => event.summary), ["three", "one"]);
+  assert.deepEqual(byEvent.filters, { guildId: null, event: "messageDelete", since: 0 });
+
+  const recent = await (await fetch(`${base}/api/events?since=1000`)).json();
+  assert.equal(recent.count, 2);
+  assert.deepEqual(recent.events.map((event) => event.summary), ["three", "two"]);
+
+  const combined = await (await fetch(`${base}/api/events?guildId=111&event=messageUpdate`)).json();
+  assert.equal(combined.count, 1);
+  assert.equal(combined.events[0].summary, "two");
+});
+
+test("events endpoint rejects unknown events and invalid time filters", async (t) => {
+  const setupResult = setup(t);
+  if (!setupResult) return;
+  const base = await listen(setupResult.dashboard);
+
+  assert.equal((await fetch(`${base}/api/events?event=notAnEvent`)).status, 400);
+  assert.equal((await fetch(`${base}/api/events?since=nope`)).status, 400);
+  assert.equal((await fetch(`${base}/api/events?since=-1`)).status, 400);
+  assert.equal((await fetch(`${base}/api/events?since=1.5`)).status, 400);
+});
+
 test("limit is capped and invalid values fall back to the configured default", async (t) => {
   const setupResult = setup(t, { dashboardLimit: 1 });
   if (!setupResult) return;
@@ -110,6 +141,8 @@ test("serves the read-only page without external assets", async (t) => {
   assert.match(response.headers.get("content-type"), /text\/html/);
   assert.match(body, /<table>/);
   assert.match(body, /\/api\/events/);
+  assert.match(body, /id="event"/);
+  assert.match(body, /id="since"/);
   assert.doesNotMatch(body, /<script[^>]+src=/i);
   assert.doesNotMatch(body, /<link[^>]+href=/i);
   assert.doesNotMatch(body, /https?:\/\//i);

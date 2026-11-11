@@ -52,6 +52,8 @@ All notable changes to this project are documented here. The format follows
 - Optional quiet-day scheduling via `/log set name:quiet_days value:mon,tue`.
   The existing quiet window can now apply only on selected local weekdays;
   `all` or `clear` restores every-day behavior.
+- Dashboard event/time filters: `/api/events` accepts validated `event` and
+  `since` parameters, and the page exposes event-key and recency controls.
 - All 18 locale packs now translate the `/log export` and `/log import` replies;
   a placeholder-consistency test keeps future additions honest.
 - `/log import` now resets every importable setting to `null` before applying

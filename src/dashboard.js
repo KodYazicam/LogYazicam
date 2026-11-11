@@ -1,5 +1,6 @@
 const http = require("http");
 const crypto = require("crypto");
+const { byKey } = require("./catalog");
 
 const MAX_LIMIT = 500;
 
@@ -71,6 +72,8 @@ function page() {
 <form id="controls">
   <label>Token <input id="token" type="password" autocomplete="off" placeholder="only if configured"></label>
   <label>Limit <input id="limit" type="number" min="1" max="${MAX_LIMIT}" value="50"></label>
+  <label>Event <input id="event" type="text" placeholder="all events"></label>
+  <label>Since (minutes) <input id="since" type="number" min="0" placeholder="any time"></label>
   <button type="submit">Refresh</button>
   <span id="status" role="status"></span>
 </form>
@@ -83,6 +86,8 @@ function page() {
   var form = document.getElementById("controls");
   var tokenInput = document.getElementById("token");
   var limitInput = document.getElementById("limit");
+  var eventInput = document.getElementById("event");
+  var sinceInput = document.getElementById("since");
   var status = document.getElementById("status");
   var rows = document.getElementById("rows");
   tokenInput.value = sessionStorage.getItem("logyazicam-token") || "";
@@ -98,10 +103,17 @@ function page() {
     sessionStorage.setItem("logyazicam-token", token);
     var limit = Math.max(1, Math.min(${MAX_LIMIT}, Number(limitInput.value) || 50));
     limitInput.value = limit;
+    var eventKey = eventInput.value.trim();
+    var minutes = Number(sinceInput.value);
+    var params = new URLSearchParams({ limit: String(limit) });
+    if (eventKey) params.set("event", eventKey);
+    if (Number.isFinite(minutes) && minutes > 0) {
+      params.set("since", String(Date.now() - minutes * 60000));
+    }
     status.textContent = "Loading…";
     var headers = token ? { authorization: "Bearer " + token } : {};
     try {
-      var response = await fetch("/api/events?limit=" + encodeURIComponent(limit), { headers: headers });
+      var response = await fetch("/api/events?" + params.toString(), { headers: headers });
       if (!response.ok) throw new Error("HTTP " + response.status);
       var data = await response.json();
       rows.replaceChildren();
@@ -110,7 +122,7 @@ function page() {
         var td = document.createElement("td");
         td.colSpan = 5;
         td.className = "empty";
-        td.textContent = "No stored events yet.";
+        td.textContent = "No stored events for this filter.";
         empty.appendChild(td);
         rows.appendChild(empty);
       }
@@ -186,6 +198,17 @@ function createDashboard({ db, processCfg, log }) {
       if (guildId && !/^[0-9]{1,32}$/.test(guildId)) {
         return json(res, 400, { error: "invalid guildId" });
       }
+      const eventKey = String(url.searchParams.get("event") || "").trim();
+      if (eventKey && !byKey[eventKey]) {
+        return json(res, 400, { error: "invalid event" });
+      }
+      let since = 0;
+      if (url.searchParams.has("since")) {
+        since = Number(url.searchParams.get("since"));
+        if (!Number.isSafeInteger(since) || since < 0) {
+          return json(res, 400, { error: "invalid since" });
+        }
+      }
       const rawConfigured = Number(processCfg.dashboardLimit);
       const configured = Number.isInteger(rawConfigured) && rawConfigured > 0
         ? Math.min(rawConfigured, MAX_LIMIT)
@@ -194,8 +217,13 @@ function createDashboard({ db, processCfg, log }) {
       const limit = Number.isInteger(requested) && requested > 0
         ? Math.min(requested, MAX_LIMIT)
         : configured;
-      const events = db.recentHistory(limit, guildId).map(eventRow);
-      return json(res, 200, { events, count: events.length, limit });
+      const events = db.recentHistory(limit, guildId, { eventKey, since }).map(eventRow);
+      return json(res, 200, {
+        events,
+        count: events.length,
+        limit,
+        filters: { guildId: guildId || null, event: eventKey || null, since },
+      });
     } catch (error) {
       if (log) log.error("dashboard request", error);
       if (!res.headersSent) json(res, 500, { error: "internal error" });
