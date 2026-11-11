@@ -48,6 +48,7 @@ const EXTRA_NUMBERS = {
   fieldMax: [1, 4000],
   attachMin: [0, 100000],
   digestMs: [0, 86400000],
+  historyRetentionDays: [0, 3650],
 };
 const EXTRA_STRINGS = {
   webhookName: 80,

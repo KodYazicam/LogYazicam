@@ -52,6 +52,8 @@ function processConfig(env) {
     ignoreSelf: BOOL(env.IGNORE_SELF, true),
     storeHistory: BOOL(env.STORE_HISTORY, true),
     historyLimit: INT(env.HISTORY_LIMIT, 200),
+    historyRetentionDays: INT(env.HISTORY_RETENTION_DAYS, 0),
+    historyPruneMs: INT(env.HISTORY_PRUNE_MS, 3600000),
     defaultPaused: BOOL(env.DEFAULT_PAUSED, false),
     defaultPlainText: BOOL(env.DEFAULT_PLAIN_TEXT, false),
     defaultShowThumbnails: BOOL(env.DEFAULT_SHOW_THUMBNAILS, true),
@@ -146,6 +148,9 @@ function mergeGuild(processCfg, row, routes, ignores, extra) {
     embedFooter: row.embed_footer || processCfg.embedFooter,
     storeHistory: row.store_history == null ? processCfg.storeHistory : Boolean(row.store_history),
     historyLimit: row.history_limit || processCfg.historyLimit,
+    historyRetentionDays: extra?.historyRetentionDays != null
+      ? Number(extra.historyRetentionDays)
+      : processCfg.historyRetentionDays,
     mentionOnDelete: Boolean(row.mention_on_delete),
     mentionRole: row.mention_role,
     extra: extra || {},

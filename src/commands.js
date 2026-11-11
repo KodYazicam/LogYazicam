@@ -331,6 +331,7 @@ function data() {
               { name: "ephemeral", value: "ephemeral" },
               { name: "credit", value: "showCredit" },
               { name: "digest_ms", value: "digestMs" },
+              { name: "history_days", value: "historyRetentionDays" },
               { name: "snapshot", value: "snapshotOn" },
               { name: "staff_ch", value: "staffChannel" },
               { name: "redact_url", value: "redactUrl" },
@@ -750,6 +751,9 @@ async function execute(interaction, { db, dispatch, processCfg }) {
       extra[name] = ["1", "true", "yes", "on"].includes(raw.toLowerCase());
     } else if (name === "cooldownSec" || name === "minAccountDays" || name === "digestMs") {
       extra[name] = Number(raw) || 0;
+    } else if (name === "historyRetentionDays") {
+      const days = Number(raw);
+      extra[name] = Number.isFinite(days) && days > 0 ? Math.min(Math.floor(days), 3650) : 0;
     } else if (name === "actors") {
       extra.actors = ["all", "humans", "bots"].includes(raw) ? raw : "all";
     } else if (name === "delivery") {

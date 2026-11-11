@@ -18,5 +18,5 @@ Small, shippable steps. Upvote or comment on an issue if you want something move
 
 ## Later
 
-- [ ] Retention policies for history
+- [x] Retention policies for history
 - [ ] A hosted demo server (read-only)

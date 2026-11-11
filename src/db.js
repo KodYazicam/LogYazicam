@@ -163,7 +163,10 @@ function openDb(filePath) {
   const listHistory = db.prepare("SELECT * FROM history WHERE guild_id = ? ORDER BY id DESC LIMIT ?");
   const listRecentHistory = db.prepare("SELECT * FROM history ORDER BY id DESC LIMIT ?");
   const listRecentHistoryByGuild = db.prepare("SELECT * FROM history WHERE guild_id = ? ORDER BY id DESC LIMIT ?");
+  const listHistoryGuilds = db.prepare("SELECT DISTINCT guild_id FROM history");
   const countHistory = db.prepare("SELECT COUNT(*) AS n FROM history");
+  const pruneAllHistory = db.prepare("DELETE FROM history WHERE created_at < ?");
+  const pruneGuildHistory = db.prepare("DELETE FROM history WHERE guild_id = ? AND created_at < ?");
   const trimHistory = db.prepare(`
     DELETE FROM history WHERE guild_id = ? AND id NOT IN (
       SELECT id FROM history WHERE guild_id = ? ORDER BY id DESC LIMIT ?
@@ -178,6 +181,13 @@ function openDb(filePath) {
 
   function historyCount() {
     return countHistory.get().n;
+  }
+
+  function pruneHistory(cutoff, guildId = "") {
+    const info = guildId
+      ? pruneGuildHistory.run(guildId, cutoff)
+      : pruneAllHistory.run(cutoff);
+    return info.changes;
   }
 
   function pushHistory(guildId, eventKey, payload, limit) {
@@ -241,6 +251,8 @@ function openDb(filePath) {
     listHistory,
     recentHistory,
     historyCount,
+    listHistoryGuilds,
+    pruneHistory,
     queryHistory,
     putSnapshot,
     getSnap,
