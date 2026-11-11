@@ -37,6 +37,7 @@ Small, shippable steps. Upvote or comment on an issue if you want something move
 - [x] Event override reset
 - [x] Validated `/log set` allowlist
 - [x] Per-event digest overrides
+- [x] Per-event actor filters
 
 ## Next
 

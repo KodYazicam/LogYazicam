@@ -195,6 +195,17 @@ test("mergeGuild keeps per-event digest overrides", (t) => {
   });
 });
 
+test("mergeGuild keeps per-event actor modes", (t) => {
+  const db = withDb(t);
+  if (!db) return;
+  db.setExtra("g1", { eventActors: { messageDelete: "humans", guildBanAdd: "bots" } });
+
+  const row = db.getGuild.get("g1");
+  const merged = mergeGuild(processConfig({}), row, [], [], db.extraOf(row));
+
+  assert.deepEqual(merged.eventActors, { messageDelete: "humans", guildBanAdd: "bots" });
+});
+
 test("buildEmbed prefers a per-event color over the slot color", () => {
   const cfg = {
     id: "g1",

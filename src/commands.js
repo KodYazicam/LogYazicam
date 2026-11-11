@@ -192,6 +192,25 @@ function data(config = {}) {
         )
         .addSubcommand((s) =>
           s
+            .setName("actors")
+            .setDescription("Override actor filtering for one event")
+            .addStringOption((o) =>
+              o.setName("key").setDescription("Event key").setRequired(true).setAutocomplete(true),
+            )
+            .addStringOption((o) =>
+              o
+                .setName("mode")
+                .setDescription("Who to log")
+                .addChoices(
+                  { name: "all", value: "all" },
+                  { name: "humans", value: "humans" },
+                  { name: "bots", value: "bots" },
+                ),
+            )
+            .addBooleanOption((o) => o.setName("clear").setDescription("Use the guild actor setting")),
+        )
+        .addSubcommand((s) =>
+          s
             .setName("reset")
             .setDescription("Clear color and cooldown overrides for one event")
             .addStringOption((o) =>
@@ -586,7 +605,7 @@ async function execute(interaction, { db, dispatch, processCfg }) {
       const row = db.ensureGuild(interaction.guildId);
       const extra = db.extraOf(row);
       let changed = false;
-      for (const mapKey of ["eventColors", "eventCooldown", "eventDigest"]) {
+      for (const mapKey of ["eventColors", "eventCooldown", "eventDigest", "eventActors"]) {
         if (!extra[mapKey] || typeof extra[mapKey] !== "object" || Array.isArray(extra[mapKey])) continue;
         if (Object.prototype.hasOwnProperty.call(extra[mapKey], key)) changed = true;
         delete extra[mapKey][key];
@@ -682,6 +701,34 @@ async function execute(interaction, { db, dispatch, processCfg }) {
       dispatch.refreshGuild(interaction.guildId);
       return interaction.reply({
         content: t(locale, "cmd.filter_set", { name: `event.${key}.digest`, value }),
+        ephemeral: true,
+      });
+    }
+    if (sub === "actors") {
+      const mode = interaction.options.getString("mode");
+      const clear = interaction.options.getBoolean("clear");
+      const row = db.ensureGuild(interaction.guildId);
+      const extra = db.extraOf(row);
+      const eventActors = extra.eventActors && typeof extra.eventActors === "object" && !Array.isArray(extra.eventActors)
+        ? { ...extra.eventActors }
+        : {};
+      let value;
+      if (clear) {
+        delete eventActors[key];
+        value = t(locale, "none");
+      } else {
+        if (!["all", "humans", "bots"].includes(mode)) {
+          return interaction.reply({ content: t(locale, "cmd.invalid_option", { name: "mode" }), ephemeral: true });
+        }
+        eventActors[key] = mode;
+        value = mode;
+      }
+      if (Object.keys(eventActors).length) extra.eventActors = eventActors;
+      else delete extra.eventActors;
+      db.setExtra(interaction.guildId, extra);
+      dispatch.refreshGuild(interaction.guildId);
+      return interaction.reply({
+        content: t(locale, "cmd.filter_set", { name: `event.${key}.actors`, value }),
         ephemeral: true,
       });
     }

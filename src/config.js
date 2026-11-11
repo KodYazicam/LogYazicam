@@ -161,6 +161,7 @@ function mergeGuild(processCfg, row, routes, ignores, extra) {
   const eventColors = extra?.eventColors;
   const eventCooldown = extra?.eventCooldown;
   const eventDigest = extra?.eventDigest;
+  const eventActors = extra?.eventActors;
   return {
     id: row.id,
     locale: locales.LOCALES.includes(row.locale) ? row.locale : processCfg.defaultLocale,
@@ -228,6 +229,9 @@ function mergeGuild(processCfg, row, routes, ignores, extra) {
       : {},
     eventDigest: eventDigest && typeof eventDigest === "object" && !Array.isArray(eventDigest)
       ? eventDigest
+      : {},
+    eventActors: eventActors && typeof eventActors === "object" && !Array.isArray(eventActors)
+      ? eventActors
       : {},
   };
 }

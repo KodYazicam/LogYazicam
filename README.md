@@ -610,7 +610,8 @@ All names English. Booleans: `1` `0` `true` `false` `yes` `no` `on` `off`. Numer
 | `color` | `key` (required, autocomplete), `hex` `#rrggbb`, `clear` | Store `extra_json.eventColors[key]`. This wins over the group slot color; `clear` restores the slot. |
 | `cooldown` | `key` (required, autocomplete), `seconds` `0`–`3600`, `clear` | Store `extra_json.eventCooldown[key]`. Overrides the guild cooldown for one event; `0` disables it, `clear` restores the guild value. |
 | `digest` | `key` (required, autocomplete), `ms` `0`–`3600000`, `min` `1`–`1000`, `clear` | Store `extra_json.eventDigest[key]`. Overrides the guild digest window and optional minimum count; `ms:0` disables digesting for that event. |
-| `reset` | `key` (required, autocomplete) | Remove that event's color, cooldown, and digest overrides; routes, channel overrides, and guild settings stay unchanged. |
+| `actors` | `key` (required, autocomplete), `mode` (`all` `humans` `bots`), `clear` | Store `extra_json.eventActors[key]`. Overrides the guild `actors` setting for one event; `clear` restores it. |
+| `reset` | `key` (required, autocomplete) | Remove that event's color, cooldown, digest, and actor overrides; routes, channel overrides, and guild settings stay unchanged. |
 
 Autocomplete matches substring of the English key (`del` → `messageDelete`, …), max 25 choices (Discord limit). `/log events` lists all keys if you cannot find one.
 
@@ -719,7 +720,7 @@ One command for the remaining guild knobs (`extra_json`). `name` + `value`:
 | `paused` | `true` / `false` | Drop **all** events until resumed |
 | `plain_text` | `true` / `false` | Flatten embeds to markdown text |
 | `thumbnails` | `true` / `false` | Avatar on embeds |
-| `actors` | `all` `humans` `bots` | Who is logged |
+| `actors` | `all` `humans` `bots` | Who is logged. Per-event override: `/log event actors`. |
 | `cooldown_sec` | `0`–`3600` | Min seconds between two logs of the **same event key**. Per-event override: `/log event cooldown`. |
 | `history_days` | `0`–`3650` | Delete stored history older than N days; `0` keeps forever |
 | `min_account_days` | `0`–`3650` | Skip members whose account is younger |
@@ -739,7 +740,7 @@ One command for the remaining guild knobs (`extra_json`). `name` + `value`:
 | `prefix` | e.g. `!` | Guild prefix for `!log …` |
 | `prefix_on` / `slash_on` | `true` / `false` | Enable prefix and/or slash |
 
-Numeric values are validated, not silently clamped: `cooldown_sec` `0`–`3600`, `min_account_days` `0`–`3650`, `digest_ms` `0`–`3600000`, `history_days` `0`–`3650`, `field_max` `1`–`1024`, and `attach_min` `0`–`100000`. Booleans accept `true`/`false`, `1`/`0`, `yes`/`no`, and `on`/`off`. Unknown names and internal maps (`eventColors`, `colors`, `strings`, `hiddenFields`) are rejected. Discord caps slash choices at 25, so `field_max` and `attach_min` use the prefix form (`!log set name:field_max value:900`) or config import.
+Numeric values are validated, not silently clamped: `cooldown_sec` `0`–`3600`, `min_account_days` `0`–`3650`, `digest_ms` `0`–`3600000`, `history_days` `0`–`3650`, `field_max` `1`–`1024`, and `attach_min` `0`–`100000`. Booleans accept `true`/`false`, `1`/`0`, `yes`/`no`, and `on`/`off`. Unknown names and internal maps (`eventColors`, `eventCooldown`, `eventDigest`, `eventActors`, `colors`, `strings`, `hiddenFields`) are rejected. Discord caps slash choices at 25, so `field_max` and `attach_min` use the prefix form (`!log set name:field_max value:900`) or config import.
 
 Prefix uses the **same** execute path as slash. Examples (prefix `!`):
 
@@ -803,6 +804,7 @@ Developer maps: [`src/README.md`](src/README.md) · [`src/locales/README.md`](sr
 /log event cooldown key:messageDelete seconds:0
 /log event cooldown key:messageDelete clear:true
 /log event digest key:messageUpdate ms:8000 min:3
+/log event actors key:messageDelete mode:humans
 /log event reset key:messageDelete
 ```
 

@@ -33,8 +33,9 @@ function createDispatcher({ client, db, processCfg, log, cache, deps = {} }) {
     return route.channelId || cfg.defaultChannel || fallbackChannel || null;
   }
 
-  function actorOk(cfg, payload) {
-    const mode = cfg.actors || "all";
+  function actorOk(cfg, payload, eventKey) {
+    const override = cfg.eventActors?.[eventKey];
+    const mode = ["all", "humans", "bots"].includes(override) ? override : (cfg.actors || "all");
     if (mode === "all") return true;
     const isBot = Boolean(payload.bot);
     if (mode === "humans" && isBot) return false;
@@ -85,7 +86,7 @@ function createDispatcher({ client, db, processCfg, log, cache, deps = {} }) {
       if (cfg.ignoreSelf && payload.userId && payload.userId === client.user.id) return;
       if (cfg.ignoreBots && payload.bot) return;
       if (cfg.ignoreWebhooks && payload.webhook) return;
-      if (!actorOk(cfg, payload)) return;
+      if (!actorOk(cfg, payload, eventKey)) return;
       if (!accountAgeOk(cfg, payload)) return;
       if (!includeOk(cfg, payload.ignore?.channel)) return;
       if (ignored(cfg, payload.ignore || {})) return;
