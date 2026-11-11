@@ -65,6 +65,8 @@ All notable changes to this project are documented here. The format follows
   intervals are skipped and failures are logged.
 - Hot reload now reconfigures the logger, so `LOG_LEVEL` and `LOG_FILE` changes
   apply without a restart.
+- Remaining hardcoded command replies (guild-only, invalid timezone, invalid hex,
+  and generic errors) are translated in all 18 locale packs.
 
 ### Security
 

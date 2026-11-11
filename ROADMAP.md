@@ -17,6 +17,7 @@ Small, shippable steps. Upvote or comment on an issue if you want something move
 - [x] Deploy honors `.env` permission settings
 - [x] WAL-consistent online SQLite backups
 - [x] Logger reconfigures on hot reload
+- [x] All command replies translated
 
 ## Next
 

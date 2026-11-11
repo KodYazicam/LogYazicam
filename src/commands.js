@@ -508,7 +508,7 @@ async function execute(interaction, { db, dispatch, processCfg }) {
     try {
       Intl.DateTimeFormat("en", { timeZone: tz }).format(new Date());
     } catch {
-      return interaction.reply({ content: `Invalid IANA timezone: ${tz}`, ephemeral: true });
+      return interaction.reply({ content: t(locale, "cmd.invalid_timezone", { tz }), ephemeral: true });
     }
     db.setGuild(interaction.guildId, { timezone: tz });
     dispatch.refreshGuild(interaction.guildId);
@@ -710,7 +710,7 @@ async function execute(interaction, { db, dispatch, processCfg }) {
     const hex = interaction.options.getString("hex", true).replace("#", "");
     const n = Number.parseInt(hex, 16);
     if (!Number.isFinite(n) || hex.length < 6) {
-      return interaction.reply({ content: "hex must be #rrggbb", ephemeral: true });
+      return interaction.reply({ content: t(locale, "cmd.invalid_hex"), ephemeral: true });
     }
     const row = db.ensureGuild(interaction.guildId);
     const extra = db.extraOf(row);
