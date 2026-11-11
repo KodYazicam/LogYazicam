@@ -1047,7 +1047,7 @@ async function execute(interaction, { db, dispatch, processCfg }) {
     const { LOCALES } = require("./locales");
     const code = interaction.options.getString("code", true);
     if (!LOCALES.includes(code)) {
-      return interaction.reply({ content: t(locale, "cmd.unknown_event", { key: code }), ephemeral: true });
+      return interaction.reply({ content: t(locale, "cmd.invalid_option", { name: "locale" }), ephemeral: true });
     }
     db.setGuild(interaction.guildId, { locale: code });
     dispatch.refreshGuild(interaction.guildId);
@@ -1134,7 +1134,7 @@ async function execute(interaction, { db, dispatch, processCfg }) {
     const channel = interaction.options.getChannel("channel");
     const keys = applyPack(db, interaction.guildId, name, channel?.id);
     dispatch.refreshGuild(interaction.guildId);
-    if (!keys) return interaction.reply({ content: t(locale, "cmd.unknown_event", { key: name }) });
+    if (!keys) return interaction.reply({ content: t(locale, "cmd.invalid_option", { name: "pack" }) });
     return interaction.reply({ content: t(locale, "cmd.group_on", { group: name, channel: channel ? `${channel}` : t(locale, "none") }) });
   }
 

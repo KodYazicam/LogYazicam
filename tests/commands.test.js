@@ -1,7 +1,9 @@
 const { test } = require("node:test");
 const assert = require("node:assert/strict");
 const { PermissionFlagsBits } = require("discord.js");
-const { data, execute, clampHistoryLimit, MAX_HISTORY_LIMIT, FILTER_NAMES, SETTING_NAMES, SETTING_ALIASES } = require("../src/commands");
+const { data, execute, autocomplete, clampHistoryLimit, MAX_HISTORY_LIMIT, FILTER_NAMES, SETTING_NAMES, SETTING_ALIASES } = require("../src/commands");
+const { EVENTS } = require("../src/catalog");
+const { exportGuild, FORMAT, VERSION, MAX_BYTES } = require("../src/configTransfer");
 
 function permission(json) {
   return json.default_member_permissions;
@@ -727,4 +729,555 @@ test("set command rejects unknown names and out-of-range values", async () => {
   assert.equal(extra.cooldownSec, 30);
   await run("history_days", "0");
   assert.equal(extra.historyRetentionDays, 0);
+});
+
+function commandCfg(overrides = {}) {
+  const events = {};
+  for (const event of EVENTS) events[event.key] = { on: false, channelId: null };
+  return {
+    id: "g1",
+    locale: "en",
+    timezone: "UTC",
+    defaultChannel: null,
+    lastError: null,
+    colors: {
+      create: 0x00ff00,
+      update: 0xffcc00,
+      delete: 0xff0000,
+      voice: 0x5865f2,
+      member: 0xff69b4,
+      mod: 0xff8800,
+      info: 0x5865f2,
+    },
+    eventColors: {},
+    extra: {},
+    hiddenFields: {},
+    embedShowIds: true,
+    embedShowJump: true,
+    embedCompact: false,
+    embedFooter: "LogYazicam",
+    showTimestamp: false,
+    showThumbnails: true,
+    showCredit: false,
+    events,
+    ...overrides,
+  };
+}
+
+function commandChannel(id = "c1", label = `#${id}`) {
+  return { id, toString: () => label };
+}
+
+function commandGuild(channels = [], roles = []) {
+  return {
+    id: "g1",
+    channels: { cache: new Map(channels.map((channel) => [channel.id, channel])) },
+    roles: { cache: new Map(roles.map((role) => [role.id, role])) },
+  };
+}
+
+function commandHarness(t, options = {}) {
+  const calls = {
+    setGuild: [],
+    setExtra: [],
+    setRoute: [],
+    setGroup: [],
+    addIgnore: [],
+    removeIgnore: [],
+    replaceConfig: [],
+    refresh: 0,
+  };
+  let response;
+  let extra = options.extra || {};
+  const row = options.row || { id: "g1" };
+  const cfg = commandCfg(options.cfg);
+  const db = {
+    ensureGuild: () => row,
+    extraOf: () => extra,
+    setExtra: (id, next) => {
+      calls.setExtra.push([id, next]);
+      extra = next;
+    },
+    setGuild: (id, patch) => {
+      calls.setGuild.push([id, patch]);
+      Object.assign(row, patch);
+    },
+    setRoute: (id, key, patch) => {
+      calls.setRoute.push([id, key, patch]);
+      cfg.events[key] = {
+        on: Boolean(patch.enabled),
+        channelId: patch.channelId ?? cfg.events[key]?.channelId ?? null,
+      };
+    },
+    setGroup: (id, name, patch) => {
+      calls.setGroup.push([id, name, patch]);
+      for (const event of EVENTS) {
+        if (event.group === name) {
+          cfg.events[event.key] = {
+            on: Boolean(patch.enabled),
+            channelId: patch.channelId ?? null,
+          };
+        }
+      }
+    },
+    addIgnore: { run: (...args) => calls.addIgnore.push(args) },
+    removeIgnore: { run: (...args) => calls.removeIgnore.push(args) },
+    listIgnores: { all: () => options.ignores || [] },
+    listRoutes: { all: () => options.routes || [] },
+    queryHistory: { all: () => options.history || [] },
+    replaceConfig: (id, payload) => calls.replaceConfig.push([id, payload]),
+    ...options.db,
+  };
+  const dispatch = {
+    guildCfg: () => cfg,
+    refreshGuild: () => {
+      calls.refresh += 1;
+      return cfg;
+    },
+    queues: options.queues || new Map(),
+    metrics: options.metrics || { sent: 0, dropped: 0 },
+    ...options.dispatch,
+  };
+  const processCfg = {
+    owners: options.owners || [],
+    defaultLocale: "en",
+    slashEphemeral: true,
+    ...options.processCfg,
+  };
+
+  const interaction = (overrides = {}) => {
+    const strings = overrides.strings || {};
+    const booleans = overrides.booleans || {};
+    const integers = overrides.integers || {};
+    const channels = overrides.channels || {};
+    const roles = overrides.roles || {};
+    return {
+      guildId: "g1",
+      guild: overrides.guild || commandGuild(),
+      user: overrides.user || { id: "u1", tag: "tester#0001" },
+      memberPermissions: overrides.memberPermissions || { has: () => true },
+      channel: overrides.channel || commandChannel("c1", "#general"),
+      options: {
+        getSubcommandGroup: () => overrides.group ?? null,
+        getSubcommand: () => overrides.sub ?? "status",
+        getString: (name) => (Object.hasOwn(strings, name) ? strings[name] : null),
+        getBoolean: (name) => (Object.hasOwn(booleans, name) ? booleans[name] : null),
+        getInteger: (name) => (Object.hasOwn(integers, name) ? integers[name] : null),
+        getChannel: (name) => channels[name] ?? null,
+        getRole: (name) => roles[name] ?? null,
+        getAttachment: () => overrides.attachment ?? null,
+        getFocused: () => overrides.focused ?? null,
+      },
+      reply: async (payload) => {
+        response = payload;
+        return payload;
+      },
+    };
+  };
+
+  return {
+    calls,
+    cfg,
+    db,
+    dispatch,
+    processCfg,
+    interaction,
+    row,
+    get response() {
+      return response;
+    },
+    get extra() {
+      return extra;
+    },
+  };
+}
+
+async function runCommand(h, overrides) {
+  await execute(h.interaction(overrides), {
+    db: h.db,
+    dispatch: h.dispatch,
+    processCfg: h.processCfg,
+  });
+  return h.response;
+}
+
+test("core commands deny unauthorized users and allow owners", async (t) => {
+  const denied = commandHarness(t);
+  const deniedResponse = await runCommand(denied, {
+    sub: "status",
+    memberPermissions: { has: () => false },
+  });
+  assert.match(deniedResponse.content, /cannot use/i);
+  assert.equal(deniedResponse.ephemeral, true);
+
+  const owner = commandHarness(t, { owners: ["u1"] });
+  const ownerResponse = await runCommand(owner, {
+    sub: "status",
+    memberPermissions: { has: () => false },
+  });
+  assert.match(ownerResponse.content, /LogYazicam/);
+  assert.doesNotMatch(ownerResponse.content, /cannot use/i);
+});
+
+test("status reports enabled routes, queue depth, metrics, and last error", async (t) => {
+  const h = commandHarness(t, {
+    queues: new Map([["g1", [1, 2, 3]]]),
+    metrics: { sent: 7, dropped: 2 },
+  });
+  h.cfg.defaultChannel = "c9";
+  h.cfg.lastError = "boom";
+  h.cfg.events.messageDelete.on = true;
+  h.cfg.events.guildBanAdd.on = true;
+
+  const response = await runCommand(h, { sub: "status" });
+  assert.match(response.content, /locale `en`/);
+  assert.match(response.content, /tz `UTC`/);
+  assert.match(response.content, /<#c9>/);
+  assert.match(response.content, new RegExp(`Enabled events: 2/${EVENTS.length}`));
+  assert.match(response.content, /Queue: 3/);
+  assert.match(response.content, /sent 7/);
+  assert.match(response.content, /dropped 2/);
+  assert.match(response.content, /boom/);
+});
+
+test("channel, group, and event on/off commands write routes", async (t) => {
+  const h = commandHarness(t);
+  const channel = commandChannel("c9", "#logs");
+
+  const setChannel = await runCommand(h, {
+    group: "channel",
+    sub: "set",
+    channels: { channel },
+  });
+  assert.deepEqual(h.calls.setGuild.at(-1), ["g1", { default_channel: "c9" }]);
+  assert.match(setChannel.content, /#logs/);
+
+  const clearChannel = await runCommand(h, { group: "channel", sub: "clear" });
+  assert.deepEqual(h.calls.setGuild.at(-1), ["g1", { default_channel: null }]);
+  assert.match(clearChannel.content, /cleared/i);
+
+  const groupOn = await runCommand(h, {
+    group: "group",
+    sub: "on",
+    strings: { name: "message" },
+    channels: { channel: commandChannel("c5", "#c5") },
+  });
+  assert.deepEqual(h.calls.setGroup.at(-1), ["g1", "message", { enabled: true, channelId: "c5" }]);
+  assert.match(groupOn.content, /Group `message`/);
+
+  const groupOff = await runCommand(h, {
+    group: "group",
+    sub: "off",
+    strings: { name: "message" },
+  });
+  assert.deepEqual(h.calls.setGroup.at(-1), ["g1", "message", { enabled: false }]);
+  assert.match(groupOff.content, /off/i);
+
+  const eventOn = await runCommand(h, {
+    group: "event",
+    sub: "on",
+    strings: { key: "messageDelete" },
+    channels: { channel: commandChannel("c1") },
+  });
+  assert.deepEqual(h.calls.setRoute.at(-1), ["g1", "messageDelete", { enabled: true, channelId: "c1" }]);
+  assert.match(eventOn.content, /\*\*on\*\*/);
+  assert.match(eventOn.content, /<#c1>/);
+
+  const eventOff = await runCommand(h, {
+    group: "event",
+    sub: "off",
+    strings: { key: "messageDelete" },
+  });
+  assert.deepEqual(h.calls.setRoute.at(-1), ["g1", "messageDelete", { enabled: false }]);
+  assert.match(eventOff.content, /\*\*off\*\*/);
+});
+
+test("ignore commands add, remove, list, and report an empty list", async (t) => {
+  const h = commandHarness(t, {
+    ignores: [{ kind: "user", target_id: "u9" }],
+  });
+
+  const added = await runCommand(h, {
+    group: "ignore",
+    sub: "add",
+    strings: { kind: "user", id: "u9" },
+  });
+  assert.deepEqual(h.calls.addIgnore.at(-1), ["g1", "user", "u9"]);
+  assert.match(added.content, /Added ignore/);
+
+  const removed = await runCommand(h, {
+    group: "ignore",
+    sub: "remove",
+    strings: { kind: "role", id: "r1" },
+  });
+  assert.deepEqual(h.calls.removeIgnore.at(-1), ["g1", "role", "r1"]);
+  assert.match(removed.content, /Removed ignore/);
+
+  const listed = await runCommand(h, { group: "ignore", sub: "list" });
+  assert.match(listed.content, /Ignore list \(1\)/);
+  assert.match(listed.content, /user/);
+  assert.match(listed.content, /u9/);
+
+  const empty = commandHarness(t, { ignores: [] });
+  const emptyResponse = await runCommand(empty, { group: "ignore", sub: "list" });
+  assert.match(emptyResponse.content, /empty/i);
+});
+
+test("locale and timezone commands validate before writing", async (t) => {
+  const h = commandHarness(t);
+
+  const badLocale = await runCommand(h, { sub: "locale", strings: { code: "zz" } });
+  assert.match(badLocale.content, /Invalid option `locale`/);
+  assert.equal(h.calls.setGuild.length, 0);
+
+  const goodLocale = await runCommand(h, { sub: "locale", strings: { code: "tr" } });
+  assert.deepEqual(h.calls.setGuild.at(-1), ["g1", { locale: "tr" }]);
+  assert.match(goodLocale.content, /tr/);
+
+  const badTz = await runCommand(h, { sub: "timezone", strings: { tz: "Not/AZone" } });
+  assert.match(badTz.content, /Invalid IANA timezone/);
+  assert.equal(h.calls.setGuild.length, 1);
+
+  const goodTz = await runCommand(h, { sub: "timezone", strings: { tz: "Europe/Istanbul" } });
+  assert.deepEqual(h.calls.setGuild.at(-1), ["g1", { timezone: "Europe/Istanbul" }]);
+  assert.match(goodTz.content, /Europe\/Istanbul/);
+});
+
+test("filter, footer, webhook, and reload commands write settings", async (t) => {
+  const h = commandHarness(t);
+
+  const filter = await runCommand(h, {
+    sub: "filter",
+    strings: { name: "ignore_bots" },
+    booleans: { value: true },
+  });
+  assert.deepEqual(h.calls.setGuild.at(-1), ["g1", { ignore_bots: 1 }]);
+  assert.match(filter.content, /ignore_bots/);
+  assert.match(filter.content, /true/);
+
+  const beforeInvalid = h.calls.setGuild.length;
+  const invalid = await runCommand(h, {
+    sub: "filter",
+    strings: { name: "webhook_token" },
+    booleans: { value: true },
+  });
+  assert.match(invalid.content, /Invalid option/);
+  assert.equal(h.calls.setGuild.length, beforeInvalid);
+
+  const footer = await runCommand(h, { sub: "footer", strings: { text: "Hello" } });
+  assert.deepEqual(h.calls.setGuild.at(-1), ["g1", { embed_footer: "Hello" }]);
+  assert.match(footer.content, /reloaded/i);
+
+  await runCommand(h, { sub: "webhook", booleans: { clear: true } });
+  assert.deepEqual(h.calls.setGuild.at(-1), ["g1", { webhook_id: null, webhook_token: null }]);
+
+  await runCommand(h, {
+    sub: "webhook",
+    strings: { id: "wid", token: "wtoken" },
+    booleans: { clear: false },
+  });
+  assert.deepEqual(h.calls.setGuild.at(-1), ["g1", { webhook_id: "wid", webhook_token: "wtoken" }]);
+
+  const reload = await runCommand(h, { sub: "reload" });
+  assert.match(reload.content, /reloaded/i);
+  assert.ok(h.calls.refresh > 0);
+});
+
+test("test, pack, and setup commands send and apply route packs", async (t) => {
+  const sent = [];
+  const channel = {
+    ...commandChannel("c1", "#logs"),
+    send: async (payload) => sent.push(payload),
+  };
+  const h = commandHarness(t);
+
+  const testResponse = await runCommand(h, {
+    sub: "test",
+    channel,
+    channels: { channel },
+  });
+  assert.equal(sent.length, 1);
+  assert.equal(sent[0].embeds.length, 1);
+  assert.match(testResponse.content, /Test embed sent/);
+
+  const pack = await runCommand(h, {
+    sub: "pack",
+    strings: { name: "quiet" },
+    channels: { channel: commandChannel("c2") },
+  });
+  assert.ok(h.calls.setRoute.length > 0);
+  assert.match(pack.content, /Group `quiet`/);
+
+  const beforeUnknown = h.calls.setRoute.length;
+  const unknownPack = await runCommand(h, {
+    sub: "pack",
+    strings: { name: "not-a-pack" },
+  });
+  assert.match(unknownPack.content, /Invalid option `pack`/);
+  assert.equal(h.calls.setRoute.length, beforeUnknown);
+
+  const setup = await runCommand(h, {
+    sub: "setup",
+    channels: { channel: commandChannel("c7", "#setup") },
+  });
+  assert.deepEqual(h.calls.setGuild.at(-1), ["g1", { default_channel: "c7" }]);
+  assert.match(setup.content, /#setup/);
+});
+
+test("fields, string, color, mention, languages, watch, and events commands work", async (t) => {
+  const h = commandHarness(t);
+
+  await runCommand(h, {
+    sub: "fields",
+    strings: { key: "messageDelete", hide: "author, channel" },
+  });
+  assert.deepEqual(h.extra.hiddenFields.messageDelete, ["author", "channel"]);
+
+  await runCommand(h, { sub: "string", strings: { key: "welcome", value: "Hello" } });
+  assert.equal(h.extra.strings.welcome, "Hello");
+
+  await runCommand(h, { sub: "color", strings: { slot: "delete", hex: "#00ff00" } });
+  assert.equal(h.extra.colors.delete, 0x00ff00);
+
+  await runCommand(h, { sub: "mention", booleans: { clear: true } });
+  assert.deepEqual(h.calls.setGuild.at(-1), ["g1", { mention_role: null, mention_on_delete: 0 }]);
+
+  await runCommand(h, {
+    sub: "mention",
+    booleans: { clear: false },
+    roles: { role: { id: "r1" } },
+  });
+  assert.deepEqual(h.calls.setGuild.at(-1), ["g1", { mention_role: "r1", mention_on_delete: 1 }]);
+
+  const languages = await runCommand(h, { sub: "languages" });
+  assert.match(languages.content, /Installed locales/);
+
+  await runCommand(h, {
+    group: "watch",
+    sub: "add",
+    channels: { channel: commandChannel("c1") },
+  });
+  assert.deepEqual(h.extra.includeChannels, ["c1"]);
+
+  await runCommand(h, { group: "watch", sub: "clear" });
+  assert.deepEqual(h.extra.includeChannels, []);
+
+  const watchList = await runCommand(h, { group: "watch", sub: "list" });
+  assert.match(watchList.content, /none|—/i);
+
+  const events = await runCommand(h, { sub: "events" });
+  assert.match(events.content, /message/);
+  assert.match(events.content, /messageDelete/);
+});
+
+test("history export handles empty, JSONL, and CSV output", async (t) => {
+  const empty = commandHarness(t);
+  const emptyResponse = await runCommand(empty, { sub: "history" });
+  assert.match(emptyResponse.content, /No stored history/);
+
+  const rows = [{
+    created_at: 123,
+    event_key: "messageDelete",
+    payload: "{\"summary\":\"x\"}",
+  }];
+  const jsonl = commandHarness(t, { history: rows });
+  const jsonlResponse = await runCommand(jsonl, {
+    sub: "history",
+    strings: { key: "messageDelete" },
+    integers: { limit: 10 },
+  });
+  assert.match(jsonlResponse.content, /Exported `1` history rows/);
+  assert.equal(jsonlResponse.files[0].name, "logyazicam-g1.jsonl.txt");
+
+  const csv = commandHarness(t, { history: rows });
+  const csvResponse = await runCommand(csv, {
+    sub: "history",
+    strings: { format: "csv" },
+    integers: { limit: 10 },
+  });
+  assert.equal(csvResponse.files[0].name, "logyazicam-g1.csv");
+});
+
+test("config export and import validate files and replace config", async (t) => {
+  const source = commandHarness(t, {
+    row: { id: "g1", locale: "en", timezone: "UTC", default_channel: "c1" },
+    routes: [{ event_key: "messageDelete", enabled: 1, channel_id: "c1" }],
+    ignores: [{ kind: "user", target_id: "u9" }],
+    extra: { strings: { welcome: "Hi" } },
+  });
+  const exported = await runCommand(source, { sub: "export" });
+  assert.match(exported.content, /Exported config: 1 routes, 1 ignores/);
+  assert.equal(exported.files[0].name, "logyazicam-config-g1.json");
+
+  const invalidExt = await runCommand(source, {
+    sub: "import",
+    attachment: { name: "config.txt", size: 10 },
+  });
+  assert.match(invalidExt.content, /\.json/);
+  assert.equal(source.calls.replaceConfig.length, 0);
+
+  const tooBig = await runCommand(source, {
+    sub: "import",
+    attachment: { name: "config.json", size: MAX_BYTES + 1 },
+  });
+  assert.match(tooBig.content, /larger than/);
+  assert.equal(source.calls.replaceConfig.length, 0);
+
+  const payload = {
+    format: FORMAT,
+    version: VERSION,
+    guild: { locale: "en", timezone: "UTC", default_channel: "c1" },
+    routes: [],
+    ignores: [],
+    extra: {},
+  };
+  const previousFetch = globalThis.fetch;
+  globalThis.fetch = async () => new Response(JSON.stringify(payload), {
+    status: 200,
+    headers: { "content-type": "application/json" },
+  });
+  t.after(() => {
+    globalThis.fetch = previousFetch;
+  });
+
+  const destination = commandHarness(t);
+  const imported = await runCommand(destination, {
+    sub: "import",
+    guild: commandGuild([commandChannel("c1")], [{ id: "r1" }]),
+    attachment: {
+      name: "config.json",
+      size: JSON.stringify(payload).length,
+      url: "https://example.invalid/config.json",
+    },
+  });
+  assert.match(imported.content, /Imported config/);
+  assert.equal(destination.calls.replaceConfig.length, 1);
+  assert.equal(destination.calls.replaceConfig[0][0], "g1");
+});
+
+test("autocomplete responds with locales, groups, events, and an empty list", async () => {
+  let responded;
+  const respond = (items) => {
+    responded = items;
+  };
+  const interaction = (focused, group = null) => ({
+    options: {
+      getFocused: () => focused,
+      getSubcommandGroup: () => group,
+    },
+    respond,
+  });
+
+  await autocomplete(interaction({ name: "code", value: "e" }));
+  assert.ok(responded.some((item) => item.value === "en"));
+
+  await autocomplete(interaction({ name: "name", value: "ev" }, "group"));
+  assert.ok(responded.some((item) => item.value === "event"));
+
+  await autocomplete(interaction({ name: "key", value: "ban" }));
+  assert.ok(responded.some((item) => item.value === "guildBanAdd"));
+  assert.ok(responded.every((item) => item.name.includes("(")));
+
+  await autocomplete(interaction({ name: "other", value: "x" }));
+  assert.deepEqual(responded, []);
 });
