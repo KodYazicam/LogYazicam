@@ -1083,6 +1083,7 @@ npm test
 - Redaction: each flag independently, invite/url coupling, always-on token shapes, embed title/description/fields, and per-guild overrides; `voiceKind` covers every transition and move precedence
 - Locales: every non-English pack translates the config-transfer replies with the same placeholders as English
 - Logger: camelCase and uppercase config keys, level filtering, file output, unknown-level fallback, and unusable paths
+- Webhook delivery: succeeds without a channel fetch, falls back when enabled, and runs file/HTTP sinks before Discord
 
 CI: GitHub Actions, Node 22, `npm ci` && `npm test`.
 

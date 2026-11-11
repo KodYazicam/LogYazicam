@@ -51,6 +51,9 @@ All notable changes to this project are documented here. The format follows
 - The logger now reads `logLevel`/`logFile` from `processConfig` (while keeping
   uppercase env support), so `LOG_LEVEL` and `LOG_FILE` take effect. An
   unusable log path no longer blocks startup.
+- Webhook delivery no longer fetches the route channel first, so a transient
+  channel lookup failure cannot drop an event that the webhook could send.
+  File/HTTP sinks also run before the Discord channel lookup.
 
 ### Security
 

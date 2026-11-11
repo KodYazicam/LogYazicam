@@ -1,5 +1,8 @@
 const { test } = require("node:test");
 const assert = require("node:assert/strict");
+const fs = require("fs");
+const os = require("os");
+const path = require("path");
 const { createDispatcher } = require("../src/dispatcher");
 
 function makeItem(overrides = {}) {
@@ -20,6 +23,7 @@ function makeItem(overrides = {}) {
 function setup(options = {}) {
   const hookCalls = [];
   const channelSends = [];
+  const channelFetchCalls = [];
   const sleeps = [];
   const warnings = [];
   const errors = [];
@@ -43,7 +47,13 @@ function setup(options = {}) {
   };
   const client = {
     user: { id: "self" },
-    channels: { fetch: async () => channel },
+    channels: {
+      fetch: async (id) => {
+        channelFetchCalls.push(id);
+        if (options.channelFetch) return options.channelFetch(id);
+        return channel;
+      },
+    },
   };
   const processCfg = {
     sendIntervalMs: 25,
@@ -79,7 +89,7 @@ function setup(options = {}) {
     },
   });
   if (options.queued !== false) dispatch.queues.set("g1:c1", [options.item || makeItem()]);
-  return { dispatch, cfg, hookCalls, channelSends, sleeps, warnings, errors };
+  return { dispatch, cfg, hookCalls, channelSends, channelFetchCalls, sleeps, warnings, errors };
 }
 
 const rateLimited = () =>
@@ -187,6 +197,60 @@ test("falls back to channel.send when webhook delivery fails and fallback is ena
   assert.equal(h.channelSends.length, 1);
   assert.equal(h.channelSends[0].content, "hello");
   assert.equal(h.dispatch.queues.get("g1:c1").length, 0);
+});
+
+test("webhook delivery succeeds without fetching the channel", async () => {
+  const h = setup({
+    channelFetch: async () => {
+      throw new Error("Unknown Channel");
+    },
+  });
+
+  await h.dispatch.tick();
+  assert.equal(h.dispatch.metrics.sent, 1);
+  assert.equal(h.hookCalls.length, 1);
+  assert.deepEqual(h.channelFetchCalls, []);
+});
+
+test("webhook failure with fallback enabled fetches the channel", async () => {
+  const h = setup({
+    processCfg: { allowWebhookFallback: true },
+    send: async () => {
+      throw new Error("hook down");
+    },
+  });
+
+  await h.dispatch.tick();
+  assert.equal(h.dispatch.metrics.sent, 1);
+  assert.equal(h.channelFetchCalls.length, 1);
+  assert.equal(h.channelSends.length, 1);
+});
+
+test("file sink runs without fetching the channel when discord is not in the sinks", async (t) => {
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), "logyazicam-sink-"));
+  t.after(() => fs.rmSync(dir, { recursive: true, force: true }));
+
+  const h = setup({
+    cfg: { webhookId: null, webhookToken: null, delivery: "embed" },
+    item: makeItem({ preferWebhook: false }),
+    processCfg: { logSink: "file", fileSinkDir: dir },
+  });
+
+  await h.dispatch.tick();
+  assert.deepEqual(h.channelFetchCalls, []);
+
+  const day = new Date().toISOString().slice(0, 10);
+  const file = path.join(dir, "g1", `${day}.jsonl`);
+  let text = "";
+  for (let i = 0; i < 50; i += 1) {
+    if (fs.existsSync(file)) {
+      text = fs.readFileSync(file, "utf8");
+      if (text) break;
+    }
+    await new Promise((resolve) => setTimeout(resolve, 10));
+  }
+  assert.ok(fs.existsSync(file), "file sink should create a jsonl file");
+  assert.match(text, /"guildId":"g1"/);
 });
 
 test("enqueue routes an event into the queue and tick delivers it", async () => {

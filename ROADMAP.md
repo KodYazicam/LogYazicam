@@ -12,6 +12,7 @@ Small, shippable steps. Upvote or comment on an issue if you want something move
 - [x] Redaction and voice formatter branch coverage
 - [x] Config transfer replies translated in every locale pack
 - [x] Config import uses true replace semantics
+- [x] Webhook delivery independent of channel fetch
 
 ## Next
 
