@@ -95,6 +95,9 @@ All notable changes to this project are documented here. The format follows
   filter/webhook/footer, test/pack/setup, fields/string/color/mention,
   history CSV/JSONL, config export/import validation, watch/events, and
   autocomplete; `commands.js` line coverage is now about 97%.
+- Command edge coverage: invalid per-event cooldown/digest/actor/watch values,
+  empty override cleanup, set aliases, watch removal/default fallthrough, and
+  import read/database failures; `commands.js` line coverage is now 99.9%.
 - Fallback-path coverage for utility formatting, logger append failures,
   malformed dashboard payloads, invalid dashboard ports, and HTTP sink
   connection errors; `util.js`, `logger.js`, and `sinks.js` now have 100%
