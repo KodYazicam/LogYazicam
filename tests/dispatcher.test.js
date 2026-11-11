@@ -783,3 +783,136 @@ test("actor filters leave events without a known actor unaffected", async () => 
   await h.dispatch.enqueue({ id: "g1" }, "channelDelete", { summary: "bot", bot: true });
   assert.equal(h.dispatch.queues.get("g1:c1").length, 1);
 });
+
+test("refreshGuild rebuilds and caches the merged guild config", () => {
+  const h = setup({
+    queued: false,
+    processCfg: {
+      colors: {
+        create: 0x00ff00,
+        update: 0xffcc00,
+        delete: 0xff0000,
+        voice: 0x5865f2,
+        member: 0xff69b4,
+        mod: 0xff8800,
+        info: 0x5865f2,
+      },
+    },
+    db: {
+      ensureGuild: () => ({}),
+      getGuild: {
+        get: () => ({
+          id: "g1",
+          locale: "tr",
+          timezone: "UTC",
+          default_channel: "c1",
+          extra_json: "{}",
+        }),
+      },
+      listRoutes: {
+        all: () => [{ event_key: "messageDelete", enabled: 1, channel_id: "c1" }],
+      },
+      listIgnores: { all: () => [] },
+      extraOf: () => ({}),
+    },
+  });
+
+  const cfg = h.dispatch.refreshGuild("g1");
+  assert.equal(cfg.locale, "tr");
+  assert.equal(cfg.events.messageDelete.on, true);
+  assert.equal(cfg.events.messageDelete.channelId, "c1");
+  assert.equal(h.dispatch.guildCfg("g1"), cfg);
+});
+
+test("an old enough account passes the minimum account age filter", async () => {
+  const h = setup({
+    queued: false,
+    cfg: {
+      minAccountDays: 30,
+      events: { messageDelete: { on: true, channelId: "c1" } },
+    },
+  });
+
+  await h.dispatch.enqueue({ id: "g1" }, "messageDelete", {
+    summary: "old account",
+    createdTimestamp: Date.now() - 31 * 86400000,
+  });
+  assert.equal(h.dispatch.queues.get("g1:c1").length, 1);
+});
+
+test("digest buckets flush after the window with and without enough events", async () => {
+  const h = setup({
+    queued: false,
+    cfg: {
+      locale: "en",
+      digestMs: 20,
+      colors: { info: 0x5865f2, delete: 0xff0000 },
+      showTimestamp: false,
+      showCredit: false,
+      hiddenFields: {},
+      eventDigest: { messageUpdate: { ms: 20, min: 2 } },
+      events: {
+        messageDelete: { on: true, channelId: "c1" },
+        messageUpdate: { on: true, channelId: "c1" },
+      },
+    },
+    processCfg: { digestMin: 1 },
+  });
+
+  await h.dispatch.enqueue({ id: "g1" }, "messageDelete", { summary: "one" });
+  await h.dispatch.enqueue({ id: "g1" }, "messageUpdate", { summary: "two" });
+  assert.equal(h.dispatch.queues.get("g1:c1")?.length ?? 0, 0);
+
+  await new Promise((resolve) => setTimeout(resolve, 80));
+  assert.equal(h.dispatch.queues.get("g1:c1").length, 2);
+
+  await h.dispatch.tick();
+  await h.dispatch.tick();
+  assert.equal(h.hookCalls.length, 2);
+  const digest = h.hookCalls.find((payload) => payload.embeds?.length);
+  assert.ok(digest);
+  assert.match(digest.embeds[0].data.description, /messageDelete/);
+});
+
+test("enqueue copies to the staff channel and logs route failures", async () => {
+  const h = setup({
+    queued: false,
+    cfg: {
+      staffChannel: "staff",
+      events: { messageDelete: { on: true, channelId: "c1" } },
+    },
+  });
+
+  await h.dispatch.enqueue({ id: "g1" }, "messageDelete", { summary: "copy" });
+  assert.equal(h.dispatch.queues.get("g1:c1").length, 2);
+  assert.equal(h.dispatch.queues.get("g1:c1")[1].staff, true);
+  assert.equal(h.dispatch.queues.get("g1:c1")[1].channelId, "staff");
+
+  const failing = setup({
+    queued: false,
+    cfg: {
+      events: new Proxy({}, {
+        get() {
+          throw new Error("route failure");
+        },
+      }),
+    },
+  });
+  await failing.dispatch.enqueue({ id: "g1" }, "messageDelete", { summary: "boom" });
+  assert.equal(failing.errors.length, 1);
+  assert.match(failing.errors[0].join(" "), /route failure/);
+});
+
+test("preferWebhook without credentials warns and falls back to channel", async () => {
+  const h = setup({
+    item: makeItem({ preferWebhook: true }),
+    cfg: { webhookId: null, webhookToken: null, delivery: "channel" },
+  });
+
+  await h.dispatch.tick();
+  assert.equal(h.hookCalls.length, 0);
+  assert.deepEqual(h.channelFetchCalls, ["c1"]);
+  assert.equal(h.channelSends.length, 1);
+  assert.equal(h.dispatch.metrics.sent, 1);
+  assert.ok(h.warnings.some((warning) => warning.includes("no webhook configured")));
+});
