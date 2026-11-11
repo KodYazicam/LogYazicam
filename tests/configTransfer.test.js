@@ -275,9 +275,14 @@ test("skips invalid timezone, hidden fields, strings, colors, and redact flags",
   const payload = {
     format: FORMAT,
     version: VERSION,
-    guild: { timezone: "Not/AZone" },
+    guild: {
+      timezone: "Not/AZone",
+      embed_color_create: "not-a-color",
+      embed_footer: 123,
+      mention_role: null,
+    },
     routes: [],
-    ignores: [],
+    ignores: [{ kind: "user", targetId: {} }],
     extra: {
       hiddenFields: {
         "*": "bad",
@@ -300,19 +305,29 @@ test("skips invalid timezone, hidden fields, strings, colors, and redact flags",
         url: true,
         mention: "not-a-bool",
       },
+      webhookName: 123,
+      quietStart: "25:00",
+      actors: "aliens",
+      includeChannels: "not-an-array",
     },
   };
 
   const counts = importGuild(db, "202", payload);
-  assert.equal(counts.settings, 0);
-  assert.equal(counts.skippedSettings, 1);
-  assert.equal(counts.skippedExtra, 9);
-  assert.equal(counts.skipped, 10);
+  assert.equal(counts.settings, 1);
+  assert.equal(counts.skippedSettings, 3);
+  assert.equal(counts.skippedIgnores, 1);
+  assert.equal(counts.skippedExtra, 13);
+  assert.equal(counts.skipped, 17);
+  assert.equal(db.getGuild.get("202").mention_role, null);
   const extra = db.extraOf(db.getGuild.get("202"));
   assert.deepEqual(extra.hiddenFields, { channelCreate: ["name"] });
   assert.deepEqual(extra.strings, { good: "value" });
   assert.deepEqual(extra.colors, { create: 0x112233 });
   assert.deepEqual(extra.redact, { url: true });
+  assert.equal(extra.webhookName, undefined);
+  assert.equal(extra.quietStart, undefined);
+  assert.equal(extra.actors, undefined);
+  assert.equal(extra.includeChannels, undefined);
 });
 
 test("replaces omitted settings and clears missing mention roles", (t) => {
@@ -592,6 +607,62 @@ test("readAttachment passes an abort signal and propagates aborts", async () => 
       },
     }),
     /aborted/,
+  );
+});
+
+test("readAttachment tolerates cancel and release cleanup failures", async () => {
+  await assert.rejects(
+    readAttachment({ url: "https://cdn.example/x", size: 1 }, {
+      fetchImpl: async () => ({
+        ok: true,
+        headers: { get: () => String(MAX_BYTES + 1) },
+        body: {
+          cancel: async () => {
+            throw new Error("cancel failed");
+          },
+        },
+      }),
+    }),
+    /larger than/,
+  );
+
+  const body = JSON.stringify(sourcePayload());
+  let sent = false;
+  const reader = {
+    read: async () => {
+      if (sent) return { done: true };
+      sent = true;
+      return { done: false, value: Buffer.from(body) };
+    },
+    releaseLock() {
+      throw new Error("release failed");
+    },
+  };
+  const parsed = await readAttachment({ url: "https://cdn.example/x", size: 10 }, {
+    fetchImpl: async () => ({
+      ok: true,
+      headers: { get: () => null },
+      body: { getReader: () => reader },
+    }),
+  });
+  assert.equal(parsed.format, FORMAT);
+
+  const oversizedReader = {
+    read: async () => ({ done: false, value: Buffer.alloc(MAX_BYTES + 1) }),
+    cancel: async () => {
+      throw new Error("stream cancel failed");
+    },
+    releaseLock() {},
+  };
+  await assert.rejects(
+    readAttachment({ url: "https://cdn.example/x", size: 10 }, {
+      fetchImpl: async () => ({
+        ok: true,
+        headers: { get: () => null },
+        body: { getReader: () => oversizedReader },
+      }),
+    }),
+    /larger than/,
   );
 });
 
