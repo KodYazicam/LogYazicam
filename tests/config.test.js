@@ -206,6 +206,17 @@ test("mergeGuild keeps per-event actor modes", (t) => {
   assert.deepEqual(merged.eventActors, { messageDelete: "humans", guildBanAdd: "bots" });
 });
 
+test("mergeGuild keeps quiet-hours bypasses", (t) => {
+  const db = withDb(t);
+  if (!db) return;
+  db.setExtra("g1", { quietBypass: { guildBanAdd: true, channelDelete: true } });
+
+  const row = db.getGuild.get("g1");
+  const merged = mergeGuild(processConfig({}), row, [], [], db.extraOf(row));
+
+  assert.deepEqual(merged.quietBypass, { guildBanAdd: true, channelDelete: true });
+});
+
 test("buildEmbed prefers a per-event color over the slot color", () => {
   const cfg = {
     id: "g1",

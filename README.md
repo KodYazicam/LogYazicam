@@ -611,7 +611,8 @@ All names English. Booleans: `1` `0` `true` `false` `yes` `no` `on` `off`. Numer
 | `cooldown` | `key` (required, autocomplete), `seconds` `0`–`3600`, `clear` | Store `extra_json.eventCooldown[key]`. Overrides the guild cooldown for one event; `0` disables it, `clear` restores the guild value. |
 | `digest` | `key` (required, autocomplete), `ms` `0`–`3600000`, `min` `1`–`1000`, `clear` | Store `extra_json.eventDigest[key]`. Overrides the guild digest window and optional minimum count; `ms:0` disables digesting for that event. |
 | `actors` | `key` (required, autocomplete), `mode` (`all` `humans` `bots`), `clear` | Store `extra_json.eventActors[key]`. Overrides the guild `actors` setting for one event; `clear` restores it. |
-| `reset` | `key` (required, autocomplete) | Remove that event's color, cooldown, digest, and actor overrides; routes, channel overrides, and guild settings stay unchanged. |
+| `bypass` | `key` (required, autocomplete), `enabled` (default `true`) | Store `extra_json.quietBypass[key]`. This event still logs during quiet hours; `enabled:false` removes the bypass. Pause still applies. |
+| `reset` | `key` (required, autocomplete) | Remove that event's color, cooldown, digest, actor, and quiet-bypass overrides; routes, channel overrides, and guild settings stay unchanged. |
 
 Autocomplete matches substring of the English key (`del` → `messageDelete`, …), max 25 choices (Discord limit). `/log events` lists all keys if you cannot find one.
 
@@ -760,7 +761,7 @@ Named `key:value` tokens work in any order after the subcommand. Webhook deliver
 
 Allow-list. Empty = every channel. `add` / `remove` / `clear` / `list` a text channel or **category**. If a category is listed, its children match.
 
-Quiet hours, pause, allow-list, cooldown, and account age all run **before** the send queue. They apply without restart. `quiet_days` is evaluated in the guild timezone at send time; an empty list keeps the window active every day.
+Quiet hours, pause, allow-list, cooldown, and account age all run **before** the send queue. They apply without restart. `quiet_days` is evaluated in the guild timezone at send time; an empty list keeps the window active every day. `/log event bypass` lets selected events bypass quiet hours, but not pause.
 
 Developer maps: [`src/README.md`](src/README.md) · [`src/locales/README.md`](src/locales/README.md) · [`docs/README.md`](docs/README.md).
 
@@ -805,6 +806,7 @@ Developer maps: [`src/README.md`](src/README.md) · [`src/locales/README.md`](sr
 /log event cooldown key:messageDelete clear:true
 /log event digest key:messageUpdate ms:8000 min:3
 /log event actors key:messageDelete mode:humans
+/log event bypass key:guildBanAdd
 /log event reset key:messageDelete
 ```
 

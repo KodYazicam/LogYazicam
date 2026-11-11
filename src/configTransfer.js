@@ -439,6 +439,20 @@ function cleanEventActors(value) {
   return { value: out, skipped };
 }
 
+function cleanQuietBypass(value) {
+  if (!isPlainObject(value)) return { value: undefined, skipped: 1 };
+  const out = {};
+  let skipped = 0;
+  for (const [key, raw] of Object.entries(value)) {
+    if (!byKey[key] || raw !== true) {
+      skipped += 1;
+      continue;
+    }
+    out[key] = true;
+  }
+  return { value: out, skipped };
+}
+
 function cleanQuietDays(value) {
   if (!Array.isArray(value)) return { value: undefined, skipped: 1 };
   const out = [];
@@ -569,6 +583,12 @@ function cleanExtra(extra, resolveChannel) {
     if (key === "eventActors") {
       const cleaned = cleanEventActors(raw);
       if (cleaned.value) out.eventActors = cleaned.value;
+      skipped += cleaned.skipped;
+      continue;
+    }
+    if (key === "quietBypass") {
+      const cleaned = cleanQuietBypass(raw);
+      if (cleaned.value) out.quietBypass = cleaned.value;
       skipped += cleaned.skipped;
       continue;
     }

@@ -86,6 +86,7 @@ function sourcePayload() {
       eventCooldown: { messageDelete: 0, guildBanAdd: 60 },
       eventDigest: { messageDelete: { ms: 5000, min: 2 }, guildBanAdd: { ms: 0 } },
       eventActors: { messageDelete: "humans", guildBanAdd: "bots" },
+      quietBypass: { guildBanAdd: true },
       hiddenFields: { messageDelete: ["id", "jump"] },
       redact: { url: true },
     },
@@ -175,6 +176,7 @@ test("round-trips config into another guild and keeps its webhook", (t) => {
     guildBanAdd: { ms: 0 },
   });
   assert.deepEqual(extra.eventActors, { messageDelete: "humans", guildBanAdd: "bots" });
+  assert.deepEqual(extra.quietBypass, { guildBanAdd: true });
   assert.deepEqual(extra.hiddenFields, { messageDelete: ["id", "jump"] });
   assert.deepEqual(extra.redact, { url: true });
 });
@@ -208,14 +210,21 @@ test("skips invalid per-event overrides", (t) => {
     notAnEvent: "bots",
     messageUpdate: 1,
   };
+  payload.extra.quietBypass = {
+    messageDelete: true,
+    guildBanAdd: 1,
+    notAnEvent: true,
+    messageUpdate: false,
+  };
 
   const counts = importGuild(db, "201", payload);
-  assert.equal(counts.skipped, 14);
+  assert.equal(counts.skipped, 17);
   const extra = db.extraOf(db.getGuild.get("201"));
   assert.deepEqual(extra.eventColors, { messageDelete: 0 });
   assert.deepEqual(extra.eventCooldown, { messageDelete: 0 });
   assert.deepEqual(extra.eventDigest, { messageDelete: { ms: 0 } });
   assert.deepEqual(extra.eventActors, { messageDelete: "humans" });
+  assert.deepEqual(extra.quietBypass, { messageDelete: true });
   assert.deepEqual(extra.quietDays, ["mon"]);
 });
 

@@ -162,6 +162,7 @@ function mergeGuild(processCfg, row, routes, ignores, extra) {
   const eventCooldown = extra?.eventCooldown;
   const eventDigest = extra?.eventDigest;
   const eventActors = extra?.eventActors;
+  const quietBypass = extra?.quietBypass;
   return {
     id: row.id,
     locale: locales.LOCALES.includes(row.locale) ? row.locale : processCfg.defaultLocale,
@@ -192,6 +193,9 @@ function mergeGuild(processCfg, row, routes, ignores, extra) {
     quietStart: extra?.quietStart || processCfg.defaultQuietStart || null,
     quietEnd: extra?.quietEnd || processCfg.defaultQuietEnd || null,
     quietDays: Array.isArray(extra?.quietDays) ? extra.quietDays : [],
+    quietBypass: quietBypass && typeof quietBypass === "object" && !Array.isArray(quietBypass)
+      ? quietBypass
+      : {},
     minAccountDays: extra?.minAccountDays != null ? Number(extra.minAccountDays) : processCfg.defaultMinAccountDays,
     cooldownSec: extra?.cooldownSec != null ? Number(extra.cooldownSec) : processCfg.defaultCooldownSec,
     actors: extra?.actors || processCfg.defaultActors,
