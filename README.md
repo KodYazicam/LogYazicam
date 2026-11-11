@@ -609,6 +609,7 @@ All names English. Booleans: `1` `0` `true` `false` `yes` `no` `on` `off`. Numer
 | `off` | `key` | `enabled=0`. |
 | `color` | `key` (required, autocomplete), `hex` `#rrggbb`, `clear` | Store `extra_json.eventColors[key]`. This wins over the group slot color; `clear` restores the slot. |
 | `cooldown` | `key` (required, autocomplete), `seconds` `0`–`3600`, `clear` | Store `extra_json.eventCooldown[key]`. Overrides the guild cooldown for one event; `0` disables it, `clear` restores the guild value. |
+| `reset` | `key` (required, autocomplete) | Remove that event's color and cooldown overrides; routes, channel overrides, and guild settings stay unchanged. |
 
 Autocomplete matches substring of the English key (`del` → `messageDelete`, …), max 25 choices (Discord limit). `/log events` lists all keys if you cannot find one.
 
@@ -791,6 +792,7 @@ Developer maps: [`src/README.md`](src/README.md) · [`src/locales/README.md`](sr
 /log event cooldown key:messageUpdate seconds:30
 /log event cooldown key:messageDelete seconds:0
 /log event cooldown key:messageDelete clear:true
+/log event reset key:messageDelete
 ```
 
 **Ignore a ticket category and a noisy bot**

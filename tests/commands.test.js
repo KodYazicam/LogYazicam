@@ -83,6 +83,9 @@ test("event group exposes color overrides", () => {
     cooldown.options.map((option) => option.name).sort(),
     ["clear", "key", "seconds"],
   );
+  const reset = event.options.find((sub) => sub.name === "reset");
+  assert.ok(reset);
+  assert.deepEqual(reset.options.map((option) => option.name), ["key"]);
 });
 
 test("set command exposes quiet-day scheduling", () => {
@@ -171,6 +174,45 @@ test("event cooldown command stores zero and clears it", async () => {
 
   await execute(makeInteraction(null, true), { db, dispatch, processCfg });
   assert.equal(extra.eventCooldown, undefined);
+  assert.match(response.content, /none|—/i);
+});
+
+test("event reset clears only that event's color and cooldown", async () => {
+  let extra = {
+    eventColors: { messageDelete: 0xff0000, guildBanAdd: 0x00ff00 },
+    eventCooldown: { messageDelete: 60, messageUpdate: 30 },
+  };
+  const db = {
+    ensureGuild: () => ({ id: "g1" }),
+    extraOf: () => extra,
+    setExtra: (id, next) => {
+      extra = next;
+    },
+  };
+  let response;
+  const dispatch = {
+    guildCfg: () => ({ locale: "en" }),
+    refreshGuild: () => {},
+  };
+  const processCfg = { owners: [], defaultLocale: "en", slashEphemeral: true };
+  const interaction = {
+    guildId: "g1",
+    user: { id: "u1" },
+    memberPermissions: { has: () => true },
+    options: {
+      getSubcommandGroup: () => "event",
+      getSubcommand: () => "reset",
+      getString: () => "messageDelete",
+    },
+    reply: async (payload) => {
+      response = payload;
+      return payload;
+    },
+  };
+
+  await execute(interaction, { db, dispatch, processCfg });
+  assert.deepEqual(extra.eventColors, { guildBanAdd: 0x00ff00 });
+  assert.deepEqual(extra.eventCooldown, { messageUpdate: 30 });
   assert.match(response.content, /none|—/i);
 });
 

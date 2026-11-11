@@ -54,6 +54,8 @@ All notable changes to this project are documented here. The format follows
   `all` or `clear` restores every-day behavior.
 - Dashboard event/time filters: `/api/events` accepts validated `event` and
   `since` parameters, and the page exposes event-key and recency controls.
+- `/log event reset` clears both color and cooldown overrides for one event
+  without touching its route, channel, or guild defaults.
 - All 18 locale packs now translate the `/log export` and `/log import` replies;
   a placeholder-consistency test keeps future additions honest.
 - `/log import` now resets every importable setting to `null` before applying

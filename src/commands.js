@@ -101,6 +101,14 @@ function data(config = {}) {
               o.setName("seconds").setDescription("0-3600; 0 disables").setMinValue(0).setMaxValue(3600),
             )
             .addBooleanOption((o) => o.setName("clear").setDescription("Use the guild cooldown")),
+        )
+        .addSubcommand((s) =>
+          s
+            .setName("reset")
+            .setDescription("Clear color and cooldown overrides for one event")
+            .addStringOption((o) =>
+              o.setName("key").setDescription("Event key").setRequired(true).setAutocomplete(true),
+            ),
         ),
     )
     .addSubcommandGroup((g) =>
@@ -486,6 +494,25 @@ async function execute(interaction, { db, dispatch, processCfg }) {
   if (group === "event") {
     const key = interaction.options.getString("key", true);
     if (!byKey[key]) return interaction.reply({ content: t(locale, "cmd.unknown_event", { key }), ephemeral: true });
+    if (sub === "reset") {
+      const row = db.ensureGuild(interaction.guildId);
+      const extra = db.extraOf(row);
+      let changed = false;
+      for (const mapKey of ["eventColors", "eventCooldown"]) {
+        if (!extra[mapKey] || typeof extra[mapKey] !== "object" || Array.isArray(extra[mapKey])) continue;
+        if (Object.prototype.hasOwnProperty.call(extra[mapKey], key)) changed = true;
+        delete extra[mapKey][key];
+        if (!Object.keys(extra[mapKey]).length) delete extra[mapKey];
+      }
+      if (changed) {
+        db.setExtra(interaction.guildId, extra);
+        dispatch.refreshGuild(interaction.guildId);
+      }
+      return interaction.reply({
+        content: t(locale, "cmd.filter_set", { name: `event.${key}`, value: t(locale, "none") }),
+        ephemeral: true,
+      });
+    }
     if (sub === "color") {
       const hex = interaction.options.getString("hex");
       const clear = interaction.options.getBoolean("clear");
