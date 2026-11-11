@@ -27,6 +27,7 @@ Small, shippable steps. Upvote or comment on an issue if you want something move
 - [x] Correct, localized member-join labels
 - [x] Bounded integer env parsing
 - [x] Sinks mirror webhook deliveries exactly once
+- [x] Staff copies bypass webhooks
 
 ## Next
 

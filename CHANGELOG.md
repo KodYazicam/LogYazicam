@@ -88,6 +88,8 @@ All notable changes to this project are documented here. The format follows
 - File/HTTP sinks now run before webhook delivery and only once per event, so a
   configured webhook no longer disables sink mirroring and a 429 retry no
   longer writes duplicate sink rows.
+- Staff-channel copies now always use `channel.send`, even when the guild has a
+  webhook configured, matching the documented staff-channel behavior.
 
 ### Security
 

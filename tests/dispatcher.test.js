@@ -337,3 +337,14 @@ test("sink output is written once across a 429 retry", async (t) => {
   const text = await readFileWhenReady(path.join(dir, "g1", `${day}.jsonl`));
   assert.equal(text.trim().split("\n").length, 1);
 });
+test("staff-channel copies bypass a configured webhook", async () => {
+  const h = setup({
+    item: makeItem({ staff: true, channelId: "staff", preferWebhook: false }),
+  });
+
+  await h.dispatch.tick();
+  assert.equal(h.hookCalls.length, 0);
+  assert.deepEqual(h.channelFetchCalls, ["staff"]);
+  assert.equal(h.channelSends.length, 1);
+  assert.equal(h.dispatch.metrics.sent, 1);
+});
