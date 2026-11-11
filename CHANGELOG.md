@@ -63,6 +63,8 @@ All notable changes to this project are documented here. The format follows
 - SQLite backups now use better-sqlite3's online backup API, so WAL contents
   are included and a running bot produces a consistent snapshot. Overlapping
   intervals are skipped and failures are logged.
+- Hot reload now reconfigures the logger, so `LOG_LEVEL` and `LOG_FILE` changes
+  apply without a restart.
 
 ### Security
 

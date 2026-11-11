@@ -16,6 +16,7 @@ Small, shippable steps. Upvote or comment on an issue if you want something move
 - [x] Optional sink failures isolated from Discord delivery
 - [x] Deploy honors `.env` permission settings
 - [x] WAL-consistent online SQLite backups
+- [x] Logger reconfigures on hot reload
 
 ## Next
 

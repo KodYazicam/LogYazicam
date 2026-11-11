@@ -530,7 +530,7 @@ All names English. Booleans: `1` `0` `true` `false` `yes` `no` `on` `off`. Guild
 | `DEFAULT_LOCALE` | `en` | hot | Fallback for new guild rows. Invalid values become `en`. |
 | `DEFAULT_TIMEZONE` | `UTC` | hot | Fallback IANA tz. |
 | `LOG_LEVEL` | `info` | hot | `error` `warn` `info` `debug`. |
-| `LOG_FILE` | `./data/process.log` | process* | Append-only process log. |
+| `LOG_FILE` | `./data/process.log` | hot | Append-only process log. |
 | `ERROR_CHANNEL_ID` | empty | hot | Text channel for unhandled errors. |
 | `ERROR_DM_OWNER` | `false` | hot | DM `OWNER_IDS[0]` on fatal errors. |
 | `HOT_RELOAD_MS` | `15000` | process* | `0` disables the timer. Changing the interval needs restart; contents of `.env` do not. |
@@ -1082,7 +1082,7 @@ npm test
 - History retention: cutoff boundaries, per-guild overrides, unknown-guild defaults, untouched non-history tables, and config transfer
 - Redaction: each flag independently, invite/url coupling, always-on token shapes, embed title/description/fields, and per-guild overrides; `voiceKind` covers every transition and move precedence
 - Locales: every non-English pack translates the config-transfer replies with the same placeholders as English
-- Logger: camelCase and uppercase config keys, level filtering, file output, unknown-level fallback, and unusable paths
+- Logger: camelCase and uppercase config keys, hot level/file reconfiguration, level filtering, unknown-level fallback, and unusable paths
 - Webhook delivery: succeeds without a channel fetch, falls back when enabled, and runs file/HTTP sinks before Discord
 - Sink isolation: unwritable file directories cannot drop Discord delivery
 - SQLite backup: WAL-consistent online snapshots, nested directories, and logged failures
