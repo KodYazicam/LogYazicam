@@ -47,4 +47,9 @@ module.exports = {
   "event.guildAvailable": "Server tersedia",
   "event.guildUnavailable": "Server tidak tersedia",
   "event.guildMemberPending": "Pemeriksaan anggota",
+  "cmd.config_export": "Konfigurasi diekspor: {routes} rute, {ignores} pengecualian.",
+  "cmd.config_import": "Konfigurasi diimpor: {routes} rute, {ignores} pengecualian, {settings} pengaturan; {skipped} dilewati.",
+  "cmd.config_import_invalid": "Impor gagal: {error}",
+  "cmd.config_import_too_big": "Berkas konfigurasi lebih besar dari {max} KB.",
+  "cmd.config_import_file": "Lampirkan berkas `.json` yang diekspor oleh `/log export`.",
 };

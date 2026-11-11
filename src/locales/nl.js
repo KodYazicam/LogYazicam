@@ -47,4 +47,9 @@ module.exports = {
   "event.guildAvailable": "Server beschikbaar",
   "event.guildUnavailable": "Server onbeschikbaar",
   "event.guildMemberPending": "Lidmaatschapscheck",
+  "cmd.config_export": "Configuratie geëxporteerd: {routes} routes, {ignores} genegeerd.",
+  "cmd.config_import": "Configuratie geïmporteerd: {routes} routes, {ignores} genegeerd, {settings} instellingen; {skipped} overgeslagen.",
+  "cmd.config_import_invalid": "Import mislukt: {error}",
+  "cmd.config_import_too_big": "Configuratiebestand is groter dan {max} KB.",
+  "cmd.config_import_file": "Voeg een `.json`-bestand toe dat is geëxporteerd met `/log export`.",
 };

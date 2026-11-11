@@ -47,4 +47,9 @@ module.exports = {
   "event.guildAvailable": "Сервер доступний",
   "event.guildUnavailable": "Сервер недоступний",
   "event.guildMemberPending": "Перевірка учасника",
+  "cmd.config_export": "Конфігурацію експортовано: маршрутів — {routes}, винятків — {ignores}.",
+  "cmd.config_import": "Конфігурацію імпортовано: маршрутів — {routes}, винятків — {ignores}, налаштувань — {settings}; пропущено — {skipped}.",
+  "cmd.config_import_invalid": "Не вдалося імпортувати: {error}",
+  "cmd.config_import_too_big": "Файл конфігурації більший за {max} КБ.",
+  "cmd.config_import_file": "Додайте файл `.json`, експортований командою `/log export`.",
 };

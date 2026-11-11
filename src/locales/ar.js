@@ -47,4 +47,9 @@ module.exports = {
   "event.guildAvailable": "الخادم متاح",
   "event.guildUnavailable": "الخادم غير متاح",
   "event.guildMemberPending": "فحص العضوية",
+  "cmd.config_export": "تم تصدير الإعدادات: {routes} مسارًا، {ignores} استثناءً.",
+  "cmd.config_import": "تم استيراد الإعدادات: {routes} مسارًا، {ignores} استثناءً، {settings} إعدادًا؛ تم تخطي {skipped}.",
+  "cmd.config_import_invalid": "فشل الاستيراد: {error}",
+  "cmd.config_import_too_big": "ملف الإعدادات أكبر من {max} كيلوبايت.",
+  "cmd.config_import_file": "أرفق ملف `.json` تم تصديره بواسطة `/log export`.",
 };

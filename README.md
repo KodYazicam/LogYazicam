@@ -131,7 +131,7 @@ Nothing is logged until you **turn an event or group on**. A fresh guild is sile
 | --- | --- |
 | Events | 60 English keys in 20 groups — all have a real `client.on` (or a split of `voiceStateUpdate` / `guildMemberUpdate` / `guildAuditLogEntryCreate`) |
 | Routing | Default channel + per-event override + per-group enable |
-| Locale | `en` `tr` `de` `fr` `es` per guild |
+| Locale | 18 UI packs per guild (`en` complete; others override) |
 | Timezone | Any IANA id (`Europe/Istanbul`), validated |
 | Filters | ignore bots / webhooks / self; ignore list by snowflake |
 | Embed | show ids, jump URLs, compact inline fields, footer prefix, color per create/update/delete |
@@ -983,7 +983,7 @@ The page reads the `history` table only: guild, event key, time, channel, and su
 | `hi` | [docs/README.hi.md](./docs/README.hi.md) | `src/locales/hi.js` |
 | `id` | [docs/README.id.md](./docs/README.id.md) | `src/locales/id.js` |
 
-Missing UI strings fall back to English. `/log locale code:ja` does not require a process restart.
+Missing UI strings fall back to English. `/log locale code:ja` does not require a process restart. All 18 packs translate the `/log export` and `/log import` replies; a test enforces matching placeholders.
 
 Slash **option names** stay English (`key`, `channel`, `kind`) so `/log` is scriptable across languages.
 
@@ -1081,6 +1081,7 @@ npm test
 - Dashboard: newest-first events, guild filter, limit cap, reduced payloads, bearer-token auth, non-loopback refusal, no external assets, health, 404, and 405
 - History retention: cutoff boundaries, per-guild overrides, unknown-guild defaults, untouched non-history tables, and config transfer
 - Redaction: each flag independently, invite/url coupling, always-on token shapes, embed title/description/fields, and per-guild overrides; `voiceKind` covers every transition and move precedence
+- Locales: every non-English pack translates the config-transfer replies with the same placeholders as English
 
 CI: GitHub Actions, Node 22, `npm ci` && `npm test`.
 
