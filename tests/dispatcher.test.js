@@ -68,7 +68,7 @@ function setup(options = {}) {
   let clock = Number.isFinite(options.now) ? options.now : 0;
   const dispatch = createDispatcher({
     client,
-    db: {},
+    db: options.db || {},
     processCfg,
     log: {
       warn: (...args) => warnings.push(args.join(" ")),
@@ -586,6 +586,46 @@ test("a per-event delivery mode overrides the guild mode", async () => {
   const hook = h.dispatch.queues.get("g1:c1").at(-1);
   assert.equal(hook.preferWebhook, true);
   assert.equal(hook.embeds[0].data.title, "Deleted");
+});
+
+test("per-event history overrides the guild storeHistory setting", async () => {
+  const pushes = [];
+  const db = { pushHistory: (...args) => pushes.push(args) };
+  const events = {
+    messageDelete: { on: true, channelId: "c1" },
+    guildBanAdd: { on: true, channelId: "c1" },
+    messageUpdate: { on: true, channelId: "c1" },
+  };
+
+  const off = setup({
+    queued: false,
+    db,
+    cfg: {
+      storeHistory: false,
+      eventHistory: { messageDelete: true, guildBanAdd: false },
+      events,
+    },
+  });
+  await off.dispatch.enqueue({ id: "g1" }, "messageDelete", { summary: "force on" });
+  await off.dispatch.enqueue({ id: "g1" }, "guildBanAdd", { summary: "force off" });
+  await off.dispatch.enqueue({ id: "g1" }, "messageUpdate", { summary: "guild off" });
+  assert.equal(pushes.length, 1);
+  assert.equal(pushes[0][1], "messageDelete");
+
+  pushes.length = 0;
+  const on = setup({
+    queued: false,
+    db,
+    cfg: {
+      storeHistory: true,
+      eventHistory: { guildBanAdd: false },
+      events,
+    },
+  });
+  await on.dispatch.enqueue({ id: "g1" }, "messageDelete", { summary: "guild on" });
+  await on.dispatch.enqueue({ id: "g1" }, "guildBanAdd", { summary: "force off" });
+  assert.equal(pushes.length, 1);
+  assert.equal(pushes[0][1], "messageDelete");
 });
 
 test("a per-event cooldown applies only to that event key", async () => {

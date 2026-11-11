@@ -170,6 +170,7 @@ function mergeGuild(processCfg, row, routes, ignores, extra) {
   const quietBypass = extra?.quietBypass;
   const eventIncludeChannels = extra?.eventIncludeChannels;
   const eventDelivery = extra?.eventDelivery;
+  const eventHistory = extra?.eventHistory;
   const eventRedact = extra?.eventRedact;
   return {
     id: row.id,
@@ -213,6 +214,9 @@ function mergeGuild(processCfg, row, routes, ignores, extra) {
       : {},
     eventDelivery: eventDelivery && typeof eventDelivery === "object" && !Array.isArray(eventDelivery)
       ? eventDelivery
+      : {},
+    eventHistory: eventHistory && typeof eventHistory === "object" && !Array.isArray(eventHistory)
+      ? eventHistory
       : {},
     eventRedact: eventRedact && typeof eventRedact === "object" && !Array.isArray(eventRedact)
       ? eventRedact

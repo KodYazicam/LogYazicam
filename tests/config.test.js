@@ -292,6 +292,17 @@ test("mergeGuild keeps per-event delivery modes", (t) => {
   assert.deepEqual(merged.eventDelivery, { messageDelete: "plain", guildBanAdd: "webhook" });
 });
 
+test("mergeGuild keeps per-event history overrides", (t) => {
+  const db = withDb(t);
+  if (!db) return;
+  db.setExtra("g1", { eventHistory: { messageDelete: true, guildBanAdd: false } });
+
+  const row = db.getGuild.get("g1");
+  const merged = mergeGuild(processConfig({}), row, [], [], db.extraOf(row));
+
+  assert.deepEqual(merged.eventHistory, { messageDelete: true, guildBanAdd: false });
+});
+
 test("mergeGuild keeps per-event redaction overrides", (t) => {
   const db = withDb(t);
   if (!db) return;

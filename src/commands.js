@@ -267,6 +267,25 @@ function data(config = {}) {
         )
         .addSubcommand((s) =>
           s
+            .setName("history")
+            .setDescription("History storage for one event")
+            .addStringOption((o) =>
+              o.setName("key").setDescription("Event key").setRequired(true).setAutocomplete(true),
+            )
+            .addStringOption((o) =>
+              o
+                .setName("mode")
+                .setDescription("Store, skip, or use the guild setting")
+                .setRequired(true)
+                .addChoices(
+                  { name: "default", value: "default" },
+                  { name: "on", value: "on" },
+                  { name: "off", value: "off" },
+                ),
+            ),
+        )
+        .addSubcommand((s) =>
+          s
             .setName("redact")
             .setDescription("Redaction flags for one event")
             .addStringOption((o) =>
@@ -683,7 +702,7 @@ async function execute(interaction, { db, dispatch, processCfg }) {
       const row = db.ensureGuild(interaction.guildId);
       const extra = db.extraOf(row);
       let changed = false;
-      for (const mapKey of ["eventColors", "eventCooldown", "eventDigest", "eventActors", "quietBypass", "eventIncludeChannels", "eventDelivery", "eventRedact"]) {
+      for (const mapKey of ["eventColors", "eventCooldown", "eventDigest", "eventActors", "quietBypass", "eventIncludeChannels", "eventDelivery", "eventHistory", "eventRedact"]) {
         if (!extra[mapKey] || typeof extra[mapKey] !== "object" || Array.isArray(extra[mapKey])) continue;
         if (Object.prototype.hasOwnProperty.call(extra[mapKey], key)) changed = true;
         delete extra[mapKey][key];
@@ -892,6 +911,30 @@ async function execute(interaction, { db, dispatch, processCfg }) {
       return interaction.reply({
         content: t(locale, "cmd.filter_set", {
           name: `event.${key}.delivery`,
+          value: mode === "default" ? t(locale, "none") : mode,
+        }),
+        ephemeral: true,
+      });
+    }
+    if (sub === "history") {
+      const mode = interaction.options.getString("mode", true);
+      if (!["default", "on", "off"].includes(mode)) {
+        return interaction.reply({ content: t(locale, "cmd.invalid_option", { name: "mode" }), ephemeral: true });
+      }
+      const row = db.ensureGuild(interaction.guildId);
+      const extra = db.extraOf(row);
+      const eventHistory = extra.eventHistory && typeof extra.eventHistory === "object" && !Array.isArray(extra.eventHistory)
+        ? { ...extra.eventHistory }
+        : {};
+      if (mode === "default") delete eventHistory[key];
+      else eventHistory[key] = mode === "on";
+      if (Object.keys(eventHistory).length) extra.eventHistory = eventHistory;
+      else delete extra.eventHistory;
+      db.setExtra(interaction.guildId, extra);
+      dispatch.refreshGuild(interaction.guildId);
+      return interaction.reply({
+        content: t(locale, "cmd.filter_set", {
+          name: `event.${key}.history`,
           value: mode === "default" ? t(locale, "none") : mode,
         }),
         ephemeral: true,

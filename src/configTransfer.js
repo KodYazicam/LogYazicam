@@ -486,6 +486,20 @@ function cleanEventDelivery(value) {
   return { value: out, skipped };
 }
 
+function cleanEventHistory(value) {
+  if (!isPlainObject(value)) return { value: undefined, skipped: 1 };
+  const out = {};
+  let skipped = 0;
+  for (const [key, raw] of Object.entries(value)) {
+    if (!byKey[key] || typeof raw !== "boolean") {
+      skipped += 1;
+      continue;
+    }
+    out[key] = raw;
+  }
+  return { value: out, skipped };
+}
+
 const EVENT_REDACT_FLAGS = new Set(["url", "mention", "email", "invite"]);
 
 function cleanEventRedact(value) {
@@ -660,6 +674,12 @@ function cleanExtra(extra, resolveChannel) {
     if (key === "eventDelivery") {
       const cleaned = cleanEventDelivery(raw);
       if (cleaned.value) out.eventDelivery = cleaned.value;
+      skipped += cleaned.skipped;
+      continue;
+    }
+    if (key === "eventHistory") {
+      const cleaned = cleanEventHistory(raw);
+      if (cleaned.value) out.eventHistory = cleaned.value;
       skipped += cleaned.skipped;
       continue;
     }

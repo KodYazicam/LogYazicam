@@ -98,6 +98,10 @@ All notable changes to this project are documented here. The format follows
   `extra_json.eventDelivery`. One event can stay an embed while the guild uses
   plain text, flatten only that event, or prefer the webhook for it; `default`
   restores guild behavior.
+- Per-event history toggles via `/log event history`, stored in
+  `extra_json.eventHistory`. `on` keeps one event in history when guild
+  `store_history` is off, `off` skips a noisy event while the rest keep the
+  guild setting, and `default` removes the override.
 - Per-event redaction overrides via `/log event redact`, stored in
   `extra_json.eventRedact`. One event can strip URLs, mentions, emails, or
   invites while the guild keeps its default, or keep a field the guild
@@ -108,8 +112,8 @@ All notable changes to this project are documented here. The format follows
 - Dashboard event/time filters: `/api/events` accepts validated `event` and
   `since` parameters, and the page exposes event-key and recency controls.
 - `/log event reset` clears color, cooldown, digest, actor, quiet-bypass,
-  channel allow-list, delivery, and redaction overrides for one event without
-  touching its route, channel, or guild defaults.
+  channel allow-list, delivery, history, and redaction overrides for one event
+  without touching its route, channel, or guild defaults.
 - All 18 locale packs now translate the `/log export` and `/log import` replies;
   a placeholder-consistency test keeps future additions honest.
 - `/log import` now resets every importable setting to `null` before applying

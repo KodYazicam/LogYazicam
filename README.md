@@ -621,8 +621,9 @@ All names English. Booleans: `1` `0` `true` `false` `yes` `no` `on` `off`. Numer
 | `bypass` | `key` (required, autocomplete), `enabled` (default `true`) | Store `extra_json.quietBypass[key]`. This event still logs during quiet hours; `enabled:false` removes the bypass. Pause still applies. |
 | `watch` | `key` (required, autocomplete), `action` (`add` `remove` `clear` `list`), `channel` (optional text/announcement/category) | Store `extra_json.eventIncludeChannels[key]`. When set, only those channels (or children of a listed category) log that event; other events keep the guild allow-list. `clear` removes the per-event list. |
 | `delivery` | `key` (required, autocomplete), `mode` (`default` `embed` `plain` `webhook`) | Store `extra_json.eventDelivery[key]`. The event override beats the guild `delivery` and `plain_text` settings. `default` removes it and restores guild behavior. |
+| `history` | `key` (required, autocomplete), `mode` (`default` `on` `off`) | Store `extra_json.eventHistory[key]` as a boolean. `on` keeps that event in history even when guild `store_history` is off; `off` skips it while other events follow the guild setting. `default` removes the override. |
 | `redact` | `key` (required, autocomplete), `flag` (`url` `mention` `email` `invite`), `enabled` (default `true`), `clear` | Store `extra_json.eventRedact[key][flag]`. The event flag beats the guild `redact` setting and env defaults. `clear` removes only that flag; secret-token patterns stay always on. |
-| `reset` | `key` (required, autocomplete) | Remove that event's color, cooldown, digest, actor, quiet-bypass, channel allow-list, delivery, and redaction overrides; routes, channel overrides, and guild settings stay unchanged. |
+| `reset` | `key` (required, autocomplete) | Remove that event's color, cooldown, digest, actor, quiet-bypass, channel allow-list, delivery, history, and redaction overrides; routes, channel overrides, and guild settings stay unchanged. |
 
 Autocomplete matches substring of the English key (`del` → `messageDelete`, …), max 25 choices (Discord limit). `/log events` lists all keys if you cannot find one.
 
@@ -753,7 +754,7 @@ One command for the remaining guild knobs (`extra_json`). `name` + `value`:
 | `prefix` | e.g. `!` | Guild prefix for `!log …` |
 | `prefix_on` / `slash_on` | `true` / `false` | Enable prefix and/or slash |
 
-Numeric values are validated, not silently clamped: `cooldown_sec` `0`–`3600`, `min_account_days` `0`–`3650`, `digest_ms` `0`–`3600000`, `history_days` `0`–`3650`, `field_max` `1`–`1024`, and `attach_min` `0`–`100000`. Booleans accept `true`/`false`, `1`/`0`, `yes`/`no`, and `on`/`off`. Unknown names and internal maps (`eventColors`, `eventCooldown`, `eventDigest`, `eventActors`, `eventDelivery`, `eventIncludeChannels`, `eventRedact`, `colors`, `strings`, `hiddenFields`) are rejected. Discord caps slash choices at 25, so `field_max` and `attach_min` use the prefix form (`!log set name:field_max value:900`) or config import.
+Numeric values are validated, not silently clamped: `cooldown_sec` `0`–`3600`, `min_account_days` `0`–`3650`, `digest_ms` `0`–`3600000`, `history_days` `0`–`3650`, `field_max` `1`–`1024`, and `attach_min` `0`–`100000`. Booleans accept `true`/`false`, `1`/`0`, `yes`/`no`, and `on`/`off`. Unknown names and internal maps (`eventColors`, `eventCooldown`, `eventDigest`, `eventActors`, `eventDelivery`, `eventHistory`, `eventIncludeChannels`, `eventRedact`, `colors`, `strings`, `hiddenFields`) are rejected. Discord caps slash choices at 25, so `field_max` and `attach_min` use the prefix form (`!log set name:field_max value:900`) or config import.
 
 Prefix uses the **same** execute path as slash. Examples (prefix `!`):
 
@@ -995,6 +996,8 @@ Channel send: uses the bot user. Simpler. Rate limits are per-channel; the queue
 ## History
 
 Not a compliance archive. Rows are `{ eventKey, channelId, at, summary }` e.g. `delete 123456`. Message **bodies are not stored** in SQLite (they were already posted in the embed). Turn `store_history` off if even summaries are too much.
+
+Per-event history overrides work in both directions. With guild history off, `/log event history key:messageCreate mode:on` keeps that event's summaries; with guild history on, `mode:off` skips a noisy event without losing the rest of the audit trail. `mode:default` removes the override, and `/log event reset` clears it with the other event overrides.
 
 **Retention:** `HISTORY_RETENTION_DAYS=30` deletes rows older than 30 days at startup and every `HISTORY_PRUNE_MS` (default 1 hour; `0` = startup only). Override per guild with `/log set name:history_days value:30`; `0` keeps forever for that guild. Only `history` rows are touched — routes, ignores, snapshots, and invites stay.
 
