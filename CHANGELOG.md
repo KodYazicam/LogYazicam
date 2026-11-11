@@ -48,6 +48,9 @@ All notable changes to this project are documented here. The format follows
 - `/log import` now resets every importable setting to `null` before applying
   the file, so omitted settings fall back to env defaults instead of the target
   guild's old values. Missing `mention_role` ids are cleared and counted.
+- The logger now reads `logLevel`/`logFile` from `processConfig` (while keeping
+  uppercase env support), so `LOG_LEVEL` and `LOG_FILE` take effect. An
+  unusable log path no longer blocks startup.
 
 ### Security
 

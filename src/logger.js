@@ -3,11 +3,19 @@ const path = require("path");
 
 const LEVELS = { error: 0, warn: 1, info: 2, debug: 3 };
 
-function createLogger(env) {
-  const levelName = String(env.LOG_LEVEL || "info").toLowerCase();
+function createLogger(env = {}) {
+  const levelName = String(env.LOG_LEVEL ?? env.logLevel ?? "info").toLowerCase();
   const level = LEVELS[levelName] ?? 2;
-  const file = env.LOG_FILE ? path.resolve(env.LOG_FILE) : null;
-  if (file) fs.mkdirSync(path.dirname(file), { recursive: true });
+  const fileValue = env.LOG_FILE ?? env.logFile;
+  let file = fileValue ? path.resolve(fileValue) : null;
+  if (file) {
+    try {
+      fs.mkdirSync(path.dirname(file), { recursive: true });
+    } catch {
+      // Logging must never stop startup; fall back to stdout/stderr only.
+      file = null;
+    }
+  }
 
   const write = (name, args) => {
     if ((LEVELS[name] ?? 9) > level) return;
