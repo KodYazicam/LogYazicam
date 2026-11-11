@@ -39,6 +39,7 @@ Small, shippable steps. Upvote or comment on an issue if you want something move
 - [x] Per-event digest overrides
 - [x] Per-event actor filters
 - [x] Per-event quiet-hours bypass
+- [x] Per-event channel allow-lists
 
 ## Next
 

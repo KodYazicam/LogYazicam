@@ -88,7 +88,7 @@ function createDispatcher({ client, db, processCfg, log, cache, deps = {} }) {
       if (cfg.ignoreWebhooks && payload.webhook) return;
       if (!actorOk(cfg, payload, eventKey)) return;
       if (!accountAgeOk(cfg, payload)) return;
-      if (!includeOk(cfg, payload.ignore?.channel)) return;
+      if (!includeOk(cfg, payload.ignore?.channel, eventKey)) return;
       if (ignored(cfg, payload.ignore || {})) return;
       const eventDigest = digestFor(cfg, eventKey);
       const digestMs = eventDigest ? eventDigest.ms : (cfg.digestMs || 0);

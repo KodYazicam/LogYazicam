@@ -147,8 +147,9 @@ function inQuietHours(cfg, now = new Date()) {
   return hm >= start || hm < end;
 }
 
-function includeOk(cfg, channel) {
-  const list = cfg.includeChannels || [];
+function includeOk(cfg, channel, eventKey) {
+  const scoped = eventKey ? cfg.eventIncludeChannels?.[eventKey] : null;
+  const list = Array.isArray(scoped) && scoped.length ? scoped : (cfg.includeChannels || []);
   if (!list.length) return true;
   if (!channel) return false;
   return list.includes(channel.id) || Boolean(channel.parentId && list.includes(channel.parentId));

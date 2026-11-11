@@ -391,6 +391,41 @@ test("a quiet-hours bypass applies only to the selected event and not pause", as
   assert.equal(paused.dispatch.queues.get("g1:c1"), undefined);
 });
 
+test("a per-event include list restricts only that event", async () => {
+  const h = setup({
+    queued: false,
+    cfg: {
+      includeChannels: ["c1"],
+      eventIncludeChannels: { messageDelete: ["c2"] },
+      events: {
+        messageDelete: { on: true, channelId: "c1" },
+        messageUpdate: { on: true, channelId: "c1" },
+      },
+    },
+  });
+
+  await h.dispatch.enqueue({ id: "g1" }, "messageDelete", {
+    summary: "wrong channel",
+    ignore: { channel: { id: "c1" } },
+  });
+  assert.equal(h.dispatch.queues.get("g1:c1"), undefined);
+  await h.dispatch.enqueue({ id: "g1" }, "messageDelete", {
+    summary: "event channel",
+    ignore: { channel: { id: "c2" } },
+  });
+  assert.equal(h.dispatch.queues.get("g1:c1").length, 1);
+  await h.dispatch.enqueue({ id: "g1" }, "messageUpdate", {
+    summary: "guild channel",
+    ignore: { channel: { id: "c1" } },
+  });
+  assert.equal(h.dispatch.queues.get("g1:c1").length, 2);
+  await h.dispatch.enqueue({ id: "g1" }, "messageUpdate", {
+    summary: "outside guild list",
+    ignore: { channel: { id: "c2" } },
+  });
+  assert.equal(h.dispatch.queues.get("g1:c1").length, 2);
+});
+
 test("a per-event cooldown applies only to that event key", async () => {
   const h = setup({
     queued: false,

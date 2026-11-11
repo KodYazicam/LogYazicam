@@ -220,6 +220,32 @@ function data(config = {}) {
         )
         .addSubcommand((s) =>
           s
+            .setName("watch")
+            .setDescription("Channel allow-list for one event")
+            .addStringOption((o) =>
+              o.setName("key").setDescription("Event key").setRequired(true).setAutocomplete(true),
+            )
+            .addStringOption((o) =>
+              o
+                .setName("action")
+                .setDescription("Change the list")
+                .setRequired(true)
+                .addChoices(
+                  { name: "add", value: "add" },
+                  { name: "remove", value: "remove" },
+                  { name: "clear", value: "clear" },
+                  { name: "list", value: "list" },
+                ),
+            )
+            .addChannelOption((o) =>
+              o
+                .setName("channel")
+                .setDescription("Channel or category")
+                .addChannelTypes(ChannelType.GuildText, ChannelType.GuildAnnouncement, ChannelType.GuildCategory),
+            ),
+        )
+        .addSubcommand((s) =>
+          s
             .setName("reset")
             .setDescription("Clear color and cooldown overrides for one event")
             .addStringOption((o) =>
@@ -614,7 +640,7 @@ async function execute(interaction, { db, dispatch, processCfg }) {
       const row = db.ensureGuild(interaction.guildId);
       const extra = db.extraOf(row);
       let changed = false;
-      for (const mapKey of ["eventColors", "eventCooldown", "eventDigest", "eventActors", "quietBypass"]) {
+      for (const mapKey of ["eventColors", "eventCooldown", "eventDigest", "eventActors", "quietBypass", "eventIncludeChannels"]) {
         if (!extra[mapKey] || typeof extra[mapKey] !== "object" || Array.isArray(extra[mapKey])) continue;
         if (Object.prototype.hasOwnProperty.call(extra[mapKey], key)) changed = true;
         delete extra[mapKey][key];
@@ -757,6 +783,50 @@ async function execute(interaction, { db, dispatch, processCfg }) {
       dispatch.refreshGuild(interaction.guildId);
       return interaction.reply({
         content: t(locale, "cmd.filter_set", { name: `event.${key}.quietBypass`, value: String(enabled) }),
+        ephemeral: true,
+      });
+    }
+    if (sub === "watch") {
+      const action = interaction.options.getString("action", true);
+      const channel = interaction.options.getChannel("channel");
+      const row = db.ensureGuild(interaction.guildId);
+      const extra = db.extraOf(row);
+      const eventIncludeChannels = extra.eventIncludeChannels && typeof extra.eventIncludeChannels === "object" && !Array.isArray(extra.eventIncludeChannels)
+        ? { ...extra.eventIncludeChannels }
+        : {};
+      if (!["add", "remove", "clear", "list"].includes(action)) {
+        return interaction.reply({ content: t(locale, "cmd.invalid_option", { name: "action" }), ephemeral: true });
+      }
+      let ids = Array.isArray(eventIncludeChannels[key]) ? [...eventIncludeChannels[key]] : [];
+      if (action === "list") {
+        return interaction.reply({
+          content: t(locale, "cmd.filter_set", {
+            name: `event.${key}.watch`,
+            value: ids.map((id) => `<#${id}>`).join(" ") || t(locale, "none"),
+          }),
+          ephemeral: true,
+        });
+      }
+      if (action === "clear") {
+        ids = [];
+      } else {
+        if (!channel) {
+          return interaction.reply({ content: t(locale, "cmd.invalid_option", { name: "channel" }), ephemeral: true });
+        }
+        if (action === "add") ids = [...new Set([...ids, channel.id])];
+        else ids = ids.filter((id) => id !== channel.id);
+      }
+      if (ids.length) eventIncludeChannels[key] = ids;
+      else delete eventIncludeChannels[key];
+      if (Object.keys(eventIncludeChannels).length) extra.eventIncludeChannels = eventIncludeChannels;
+      else delete extra.eventIncludeChannels;
+      db.setExtra(interaction.guildId, extra);
+      dispatch.refreshGuild(interaction.guildId);
+      return interaction.reply({
+        content: t(locale, "cmd.filter_set", {
+          name: `event.${key}.watch`,
+          value: ids.map((id) => `<#${id}>`).join(" ") || t(locale, "none"),
+        }),
         ephemeral: true,
       });
     }

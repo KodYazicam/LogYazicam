@@ -72,13 +72,14 @@ Bag for per-guild overrides without a migration:
   "eventCooldown": { "messageUpdate": 30 },
   "eventDigest": { "messageUpdate": { "ms": 8000, "min": 3 } },
   "eventActors": { "messageDelete": "humans" },
-  "quietBypass": { "guildBanAdd": true }
+  "quietBypass": { "guildBanAdd": true },
+  "eventIncludeChannels": { "messageDelete": ["123456789012345678"] }
 }
 ```
 
-Set via `/log string`, `/log color`, `/log event color`, `/log event cooldown`, `/log event digest`, `/log event actors`, `/log event bypass`, `/log set`, `/log watch`. `mergeGuild` applies `extra.colors` on top of columns / env. `buildEmbed` prefers `extra.eventColors[eventKey]`, then the slot color, and passes `extra.strings` into `t()`. The dispatcher uses `extra.eventCooldown[eventKey]` before the guild `cooldownSec`, `extra.eventDigest[eventKey]` before the guild `digestMs`/`DIGEST_MIN`, `extra.eventActors[eventKey]` before the guild `actors`, and `extra.quietBypass[eventKey]` before dropping events for quiet hours.
+Set via `/log string`, `/log color`, `/log event color`, `/log event cooldown`, `/log event digest`, `/log event actors`, `/log event bypass`, `/log event watch`, `/log set`, `/log watch`. `mergeGuild` applies `extra.colors` on top of columns / env. `buildEmbed` prefers `extra.eventColors[eventKey]`, then the slot color, and passes `extra.strings` into `t()`. The dispatcher uses `extra.eventCooldown[eventKey]` before the guild `cooldownSec`, `extra.eventDigest[eventKey]` before the guild `digestMs`/`DIGEST_MIN`, `extra.eventActors[eventKey]` before the guild `actors`, `extra.quietBypass[eventKey]` before dropping events for quiet hours, and `extra.eventIncludeChannels[eventKey]` before the guild `includeChannels` list. A non-empty per-event channel list replaces the guild list for that event only; an empty or missing entry falls back to the guild list.
 
-Other `extra_json` knobs: `eventColors`, `eventCooldown`, `eventDigest`, `eventActors`, `quietBypass`, `paused`, `plainText`, `showThumbnails`, `showTimestamp`, `attachLong`, `quietStart`, `quietEnd`, `quietDays`, `minAccountDays`, `cooldownSec`, `actors`, `includeChannels`, `webhookName`, `webhookAvatar`, `delivery` (`embed|plain|webhook`), `prefix`, `prefixOn`, `slashOn`.
+Other `extra_json` knobs: `eventColors`, `eventCooldown`, `eventDigest`, `eventActors`, `quietBypass`, `eventIncludeChannels`, `paused`, `plainText`, `showThumbnails`, `showTimestamp`, `attachLong`, `quietStart`, `quietEnd`, `quietDays`, `minAccountDays`, `cooldownSec`, `actors`, `includeChannels`, `webhookName`, `webhookAvatar`, `delivery` (`embed|plain|webhook`), `prefix`, `prefixOn`, `slashOn`.
 
 Control plane: slash `/log` and prefix `{PREFIX}{COMMAND_NAME} …` share `commands.execute`. `COMMAND_NAME` (default `log`) needs `npm run deploy` if you change it. `CONFIG_PERMISSION` is the Discord permission name (`ManageGuild` default). `SLASH_EPHEMERAL` / guild `ephemeral` hide slash replies. `SHOW_CREDIT` / guild `credit` toggle the footer credit. `/log set` accepts only `SETTING_NAMES`, validates numeric/time/boolean ranges, and cannot write internal maps such as `eventColors` or `hiddenFields`. Apache-2.0 does not require attribution. Truncation: `EMBED_*_MAX`, `PLAIN_MAX`, `ATTACH_MIN_CHARS`, `AUDIT_FETCH_LIMIT`, `BULK_LINE_LIMIT`.
 

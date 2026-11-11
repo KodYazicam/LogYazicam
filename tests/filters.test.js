@@ -41,6 +41,19 @@ test("include list treats empty as all", () => {
   assert.equal(includeOk({ includeChannels: ["a"] }, { id: "b" }), false);
 });
 
+test("a per-event include list replaces the guild list for that event", () => {
+  const cfg = {
+    includeChannels: ["global"],
+    eventIncludeChannels: { messageDelete: ["event"] },
+  };
+  assert.equal(includeOk(cfg, { id: "event" }, "messageDelete"), true);
+  assert.equal(includeOk(cfg, { id: "global" }, "messageDelete"), false);
+  assert.equal(includeOk(cfg, { id: "global" }, "messageUpdate"), true);
+  assert.equal(includeOk(cfg, { id: "event" }, "messageUpdate"), false);
+  assert.equal(includeOk(cfg, { id: "child", parentId: "event" }, "messageDelete"), true);
+  assert.equal(includeOk({ ...cfg, eventIncludeChannels: { messageDelete: [] } }, { id: "global" }, "messageDelete"), true);
+});
+
 test("plain text flattening keeps title", () => {
   const text = embedToPlain({ title: "Message deleted", fields: [{ name: "Author", value: "x" }] });
   assert.match(text, /Message deleted/);

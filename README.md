@@ -612,7 +612,8 @@ All names English. Booleans: `1` `0` `true` `false` `yes` `no` `on` `off`. Numer
 | `digest` | `key` (required, autocomplete), `ms` `0`–`3600000`, `min` `1`–`1000`, `clear` | Store `extra_json.eventDigest[key]`. Overrides the guild digest window and optional minimum count; `ms:0` disables digesting for that event. |
 | `actors` | `key` (required, autocomplete), `mode` (`all` `humans` `bots`), `clear` | Store `extra_json.eventActors[key]`. Overrides the guild `actors` setting for one event; `clear` restores it. |
 | `bypass` | `key` (required, autocomplete), `enabled` (default `true`) | Store `extra_json.quietBypass[key]`. This event still logs during quiet hours; `enabled:false` removes the bypass. Pause still applies. |
-| `reset` | `key` (required, autocomplete) | Remove that event's color, cooldown, digest, actor, and quiet-bypass overrides; routes, channel overrides, and guild settings stay unchanged. |
+| `watch` | `key` (required, autocomplete), `action` (`add` `remove` `clear` `list`), `channel` (optional text/announcement/category) | Store `extra_json.eventIncludeChannels[key]`. When set, only those channels (or children of a listed category) log that event; other events keep the guild allow-list. `clear` removes the per-event list. |
+| `reset` | `key` (required, autocomplete) | Remove that event's color, cooldown, digest, actor, quiet-bypass, and channel allow-list overrides; routes, channel overrides, and guild settings stay unchanged. |
 
 Autocomplete matches substring of the English key (`del` → `messageDelete`, …), max 25 choices (Discord limit). `/log events` lists all keys if you cannot find one.
 
@@ -761,6 +762,8 @@ Named `key:value` tokens work in any order after the subcommand. Webhook deliver
 
 Allow-list. Empty = every channel. `add` / `remove` / `clear` / `list` a text channel or **category**. If a category is listed, its children match.
 
+`/log event watch` narrows the allow-list for one event. For example, keep `messageDelete` in `#tickets` while every other event follows the guild list. An event with its own non-empty list ignores the guild list; `clear` (or `reset`) restores the guild allow-list for that event.
+
 Quiet hours, pause, allow-list, cooldown, and account age all run **before** the send queue. They apply without restart. `quiet_days` is evaluated in the guild timezone at send time; an empty list keeps the window active every day. `/log event bypass` lets selected events bypass quiet hours, but not pause.
 
 Developer maps: [`src/README.md`](src/README.md) · [`src/locales/README.md`](src/locales/README.md) · [`docs/README.md`](docs/README.md).
@@ -807,6 +810,9 @@ Developer maps: [`src/README.md`](src/README.md) · [`src/locales/README.md`](sr
 /log event digest key:messageUpdate ms:8000 min:3
 /log event actors key:messageDelete mode:humans
 /log event bypass key:guildBanAdd
+/log event watch key:messageDelete action:add channel:#tickets
+/log event watch key:messageDelete action:list
+/log event watch key:messageDelete action:clear
 /log event reset key:messageDelete
 ```
 
