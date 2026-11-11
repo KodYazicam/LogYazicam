@@ -9,8 +9,26 @@ const BOOL = (v, fallback) => {
   return ["1", "true", "yes", "on"].includes(String(v).toLowerCase());
 };
 const INT = (v, fallback) => {
-  const n = Number(v);
-  return Number.isFinite(n) ? n : fallback;
+  const text = typeof v === "string" ? v.trim() : v;
+  if (text == null || text === "") return fallback;
+  const n = Number(text);
+  return Number.isFinite(n) ? Math.trunc(n) : fallback;
+};
+const UINT = (v, fallback) => {
+  const n = INT(v, fallback);
+  return n >= 0 ? n : fallback;
+};
+const POS = (v, fallback) => {
+  const n = INT(v, fallback);
+  return n > 0 ? n : fallback;
+};
+const PORT = (v, fallback) => {
+  const n = INT(v, fallback);
+  return n >= 0 && n <= 65535 ? n : fallback;
+};
+const COLOR = (v, fallback) => {
+  const n = INT(v, fallback);
+  return n >= 0 && n <= 0xffffff ? n : fallback;
 };
 
 function loadEnvFile(file = path.resolve(process.cwd(), ".env")) {
@@ -37,10 +55,10 @@ function processConfig(env) {
     logFile: env.LOG_FILE || "./data/process.log",
     errorChannelId: env.ERROR_CHANNEL_ID || "",
     errorDmOwner: BOOL(env.ERROR_DM_OWNER, false),
-    hotReloadMs: INT(env.HOT_RELOAD_MS, 15000),
-    maxQueue: INT(env.MAX_QUEUE_PER_CHANNEL, 20),
-    sendIntervalMs: INT(env.SEND_INTERVAL_MS, 350),
-    auditMaxAgeMs: INT(env.AUDIT_MAX_AGE_MS, 12000),
+    hotReloadMs: UINT(env.HOT_RELOAD_MS, 15000),
+    maxQueue: UINT(env.MAX_QUEUE_PER_CHANNEL, 20),
+    sendIntervalMs: POS(env.SEND_INTERVAL_MS, 350),
+    auditMaxAgeMs: UINT(env.AUDIT_MAX_AGE_MS, 12000),
     webhookName: env.WEBHOOK_NAME || "LogYazicam",
     webhookAvatarUrl: env.WEBHOOK_AVATAR_URL || "",
     embedShowIds: BOOL(env.EMBED_SHOW_IDS, true),
@@ -51,9 +69,9 @@ function processConfig(env) {
     ignoreWebhooks: BOOL(env.IGNORE_WEBHOOKS, true),
     ignoreSelf: BOOL(env.IGNORE_SELF, true),
     storeHistory: BOOL(env.STORE_HISTORY, true),
-    historyLimit: INT(env.HISTORY_LIMIT, 200),
-    historyRetentionDays: INT(env.HISTORY_RETENTION_DAYS, 0),
-    historyPruneMs: INT(env.HISTORY_PRUNE_MS, 3600000),
+    historyLimit: UINT(env.HISTORY_LIMIT, 200),
+    historyRetentionDays: UINT(env.HISTORY_RETENTION_DAYS, 0),
+    historyPruneMs: UINT(env.HISTORY_PRUNE_MS, 3600000),
     defaultPaused: BOOL(env.DEFAULT_PAUSED, false),
     defaultPlainText: BOOL(env.DEFAULT_PLAIN_TEXT, false),
     defaultShowThumbnails: BOOL(env.DEFAULT_SHOW_THUMBNAILS, true),
@@ -61,8 +79,8 @@ function processConfig(env) {
     defaultAttachLong: BOOL(env.DEFAULT_ATTACH_LONG, true),
     defaultQuietStart: env.DEFAULT_QUIET_START || "",
     defaultQuietEnd: env.DEFAULT_QUIET_END || "",
-    defaultMinAccountDays: INT(env.DEFAULT_MIN_ACCOUNT_DAYS, 0),
-    defaultCooldownSec: INT(env.DEFAULT_COOLDOWN_SEC, 0),
+    defaultMinAccountDays: UINT(env.DEFAULT_MIN_ACCOUNT_DAYS, 0),
+    defaultCooldownSec: UINT(env.DEFAULT_COOLDOWN_SEC, 0),
     defaultActors: env.DEFAULT_ACTORS || "all",
     defaultWebhookUsername: env.WEBHOOK_USERNAME || env.WEBHOOK_NAME || "LogYazicam",
     activityType: env.ACTIVITY_TYPE || "Watching",
@@ -79,31 +97,31 @@ function processConfig(env) {
     configPermission: env.CONFIG_PERMISSION || "ManageGuild",
     slashEphemeral: BOOL(env.SLASH_EPHEMERAL, true),
     showCredit: BOOL(env.SHOW_CREDIT, true),
-    fieldMax: INT(env.EMBED_FIELD_MAX, 1024),
-    descMax: INT(env.EMBED_DESC_MAX, 4000),
-    footerMax: INT(env.EMBED_FOOTER_MAX, 2048),
-    plainMax: INT(env.PLAIN_MAX, 1900),
-    errorMax: INT(env.ERROR_MESSAGE_MAX, 1900),
-    attachMin: INT(env.ATTACH_MIN_CHARS, 1800),
-    auditFetchLimit: INT(env.AUDIT_FETCH_LIMIT, 6),
-    bulkLineLimit: INT(env.BULK_LINE_LIMIT, 40),
-    historyExportDefault: INT(env.HISTORY_EXPORT_DEFAULT, 50),
+    fieldMax: UINT(env.EMBED_FIELD_MAX, 1024),
+    descMax: UINT(env.EMBED_DESC_MAX, 4000),
+    footerMax: UINT(env.EMBED_FOOTER_MAX, 2048),
+    plainMax: UINT(env.PLAIN_MAX, 1900),
+    errorMax: UINT(env.ERROR_MESSAGE_MAX, 1900),
+    attachMin: UINT(env.ATTACH_MIN_CHARS, 1800),
+    auditFetchLimit: UINT(env.AUDIT_FETCH_LIMIT, 6),
+    bulkLineLimit: UINT(env.BULK_LINE_LIMIT, 40),
+    historyExportDefault: UINT(env.HISTORY_EXPORT_DEFAULT, 50),
     snapshotEnabled: BOOL(env.SNAPSHOT_ENABLED, true),
-    snapshotLimit: INT(env.SNAPSHOT_LIMIT, 2000),
-    digestMs: INT(env.DIGEST_MS, 0),
-    digestMin: INT(env.DIGEST_MIN, 5),
+    snapshotLimit: UINT(env.SNAPSHOT_LIMIT, 2000),
+    digestMs: UINT(env.DIGEST_MS, 0),
+    digestMin: UINT(env.DIGEST_MIN, 5),
     logSink: env.LOG_SINK || "discord",
     fileSinkDir: env.FILE_SINK_DIR || "./data/logs",
     httpSinkUrl: env.HTTP_SINK_URL || "",
     dashboardEnabled: BOOL(env.DASHBOARD_ENABLED, false),
     dashboardHost: env.DASHBOARD_HOST || "127.0.0.1",
-    dashboardPort: INT(env.DASHBOARD_PORT, 8787),
+    dashboardPort: PORT(env.DASHBOARD_PORT, 8787),
     dashboardToken: env.DASHBOARD_TOKEN || "",
-    dashboardLimit: INT(env.DASHBOARD_LIMIT, 50),
+    dashboardLimit: UINT(env.DASHBOARD_LIMIT, 50),
     backupDir: env.BACKUP_DIR || "",
-    backupMs: INT(env.BACKUP_MS, 0),
+    backupMs: UINT(env.BACKUP_MS, 0),
     inviteTrack: BOOL(env.INVITE_TRACK, true),
-    snapshotTtlMs: INT(env.SNAPSHOT_TTL_MS, 0),
+    snapshotTtlMs: UINT(env.SNAPSHOT_TTL_MS, 0),
     snapshotBots: BOOL(env.SNAPSHOT_BOTS, false),
     redactUrls: BOOL(env.REDACT_URLS, false),
     redactMentions: BOOL(env.REDACT_MENTIONS, false),
@@ -111,13 +129,13 @@ function processConfig(env) {
     redactInvites: BOOL(env.REDACT_INVITES, false),
     retry429: BOOL(env.RETRY_429, true),
     colors: {
-      create: INT(env.COLOR_CREATE, COLORS.create),
-      update: INT(env.COLOR_UPDATE, COLORS.update),
-      delete: INT(env.COLOR_DELETE, COLORS.delete),
-      voice: INT(env.COLOR_VOICE, COLORS.voice),
-      member: INT(env.COLOR_MEMBER, COLORS.member),
-      mod: INT(env.COLOR_MOD, COLORS.mod),
-      info: INT(env.COLOR_INFO, COLORS.info),
+      create: COLOR(env.COLOR_CREATE, COLORS.create),
+      update: COLOR(env.COLOR_UPDATE, COLORS.update),
+      delete: COLOR(env.COLOR_DELETE, COLORS.delete),
+      voice: COLOR(env.COLOR_VOICE, COLORS.voice),
+      member: COLOR(env.COLOR_MEMBER, COLORS.member),
+      mod: COLOR(env.COLOR_MOD, COLORS.mod),
+      info: COLOR(env.COLOR_INFO, COLORS.info),
     },
   };
 }
@@ -193,4 +211,4 @@ function mergeGuild(processCfg, row, routes, ignores, extra) {
   };
 }
 
-module.exports = { loadEnvFile, processConfig, mergeGuild, BOOL, INT };
+module.exports = { loadEnvFile, processConfig, mergeGuild, BOOL, INT, UINT, POS, PORT, COLOR };
