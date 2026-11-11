@@ -302,7 +302,13 @@ test("skips unknown event keys, ignore kinds, settings, and extra keys", (t) => 
       { kind: "guild", targetId: "g1" },
       { kind: "role", targetId: "" },
     ],
-    extra: { paused: true, unknownKey: "ignored", delivery: "carrier-pigeon" },
+    extra: {
+      paused: true,
+      unknownKey: "ignored",
+      delivery: "carrier-pigeon",
+      fieldMax: 4000,
+      digestMs: 86400000,
+    },
   });
 
   assert.equal(counts.routes, 1);
@@ -310,8 +316,8 @@ test("skips unknown event keys, ignore kinds, settings, and extra keys", (t) => 
   assert.equal(counts.skippedRoutes, 2);
   assert.equal(counts.skippedIgnores, 2);
   assert.equal(counts.skippedSettings, 3);
-  assert.equal(counts.skippedExtra, 2);
-  assert.equal(counts.skipped, 9);
+  assert.equal(counts.skippedExtra, 4);
+  assert.equal(counts.skipped, 11);
 
   assert.equal(db.listRoutes.all("400").length, 1);
   assert.equal(db.listIgnores.all("400").length, 1);

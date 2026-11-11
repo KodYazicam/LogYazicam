@@ -1,7 +1,7 @@
 const { test } = require("node:test");
 const assert = require("node:assert/strict");
 const { PermissionFlagsBits } = require("discord.js");
-const { data, execute, clampHistoryLimit, MAX_HISTORY_LIMIT, FILTER_NAMES } = require("../src/commands");
+const { data, execute, clampHistoryLimit, MAX_HISTORY_LIMIT, FILTER_NAMES, SETTING_NAMES } = require("../src/commands");
 
 function permission(json) {
   return json.default_member_permissions;
@@ -65,6 +65,15 @@ test("filter allowlist rejects guild columns and unknown names", () => {
   }
   for (const name of ["webhook_id", "webhook_token", "locale", "timezone", "default_channel", "unknown"]) {
     assert.equal(FILTER_NAMES.has(name), false, name);
+  }
+});
+
+test("setting allowlist excludes internal maps and unknown names", () => {
+  for (const name of ["cooldownSec", "quietDays", "fieldMax", "attachMin", "showCredit"]) {
+    assert.equal(SETTING_NAMES.has(name), true, name);
+  }
+  for (const name of ["eventColors", "eventCooldown", "colors", "strings", "hiddenFields", "unknown"]) {
+    assert.equal(SETTING_NAMES.has(name), false, name);
   }
 });
 
@@ -253,4 +262,57 @@ test("quiet_days setting accepts aliases and clears with all", async () => {
   await execute(makeInteraction("all"), { db, dispatch, processCfg });
   assert.deepEqual(extra.quietDays, []);
   assert.match(response.content, /all/);
+});
+
+test("set command rejects unknown names and out-of-range values", async () => {
+  let extra = {};
+  const db = {
+    ensureGuild: () => ({ id: "g1" }),
+    extraOf: () => extra,
+    setExtra: (id, next) => {
+      extra = next;
+    },
+  };
+  let response;
+  const dispatch = {
+    guildCfg: () => ({ locale: "en" }),
+    refreshGuild: () => {},
+  };
+  const processCfg = { owners: [], defaultLocale: "en", slashEphemeral: true };
+  const run = async (name, value) => {
+    const interaction = {
+      guildId: "g1",
+      user: { id: "u1" },
+      memberPermissions: { has: () => true },
+      options: {
+        getSubcommandGroup: () => null,
+        getSubcommand: () => "set",
+        getString: (option) => (option === "name" ? name : value),
+      },
+      reply: async (payload) => {
+        response = payload;
+        return payload;
+      },
+    };
+    await execute(interaction, { db, dispatch, processCfg });
+    return response.content;
+  };
+
+  assert.match(await run("eventColors", "{}"), /Invalid option/);
+  assert.match(await run("__proto__", "{}"), /Invalid option/);
+  assert.match(await run("constructor", "{}"), /Invalid option/);
+  assert.deepEqual(extra, {});
+  assert.match(await run("field_max", "5000"), /Invalid option/);
+  assert.match(await run("plain_text", "maybe"), /Invalid option/);
+  assert.match(await run("quiet_start", "25:00"), /Invalid option/);
+  assert.deepEqual(extra, {});
+
+  assert.match(await run("field_max", "512"), /field_max/);
+  assert.equal(extra.fieldMax, 512);
+  await run("plain_text", "false");
+  assert.equal(extra.plainText, false);
+  await run("cooldown_sec", "30");
+  assert.equal(extra.cooldownSec, 30);
+  await run("history_days", "0");
+  assert.equal(extra.historyRetentionDays, 0);
 });

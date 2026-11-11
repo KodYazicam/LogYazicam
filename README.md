@@ -727,9 +727,18 @@ One command for the remaining guild knobs (`extra_json`). `name` + `value`:
 | `webhook_name` / `webhook_avatar` | string / URL | Per-guild webhook identity |
 | `show_timestamp` | `true` / `false` | Embed timestamp |
 | `attach_long` | `true` / `false` | `.txt` dump for long deleted messages |
+| `field_max` | `1`–`1024` | Per-guild embed field length (prefix form; import accepts `fieldMax`) |
+| `attach_min` | `0`–`100000` | Deleted-content length before `.txt` attach (prefix form; import accepts `attachMin`) |
+| `digest_ms` | `0`–`3600000` | Aggregate bursts per channel/event for this window; `0` disables |
+| `snapshot` | `true` / `false` | Snapshot cache for deleted-message context |
+| `credit` | `true` / `false` | Footer credit |
+| `staff_ch` | channel id or `#channel` | Staff-copy channel |
+| `redact_url` | `true` / `false` | Strip URLs from logged text |
 | `delivery` | `embed` `plain` `webhook` | How logs are posted |
 | `prefix` | e.g. `!` | Guild prefix for `!log …` |
 | `prefix_on` / `slash_on` | `true` / `false` | Enable prefix and/or slash |
+
+Numeric values are validated, not silently clamped: `cooldown_sec` `0`–`3600`, `min_account_days` `0`–`3650`, `digest_ms` `0`–`3600000`, `history_days` `0`–`3650`, `field_max` `1`–`1024`, and `attach_min` `0`–`100000`. Booleans accept `true`/`false`, `1`/`0`, `yes`/`no`, and `on`/`off`. Unknown names and internal maps (`eventColors`, `colors`, `strings`, `hiddenFields`) are rejected. Discord caps slash choices at 25, so `field_max` and `attach_min` use the prefix form (`!log set name:field_max value:900`) or config import.
 
 Prefix uses the **same** execute path as slash. Examples (prefix `!`):
 
