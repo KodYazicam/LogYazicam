@@ -211,6 +211,15 @@ function data(config = {}) {
         )
         .addSubcommand((s) =>
           s
+            .setName("bypass")
+            .setDescription("Let one event bypass quiet hours")
+            .addStringOption((o) =>
+              o.setName("key").setDescription("Event key").setRequired(true).setAutocomplete(true),
+            )
+            .addBooleanOption((o) => o.setName("enabled").setDescription("Default true")),
+        )
+        .addSubcommand((s) =>
+          s
             .setName("reset")
             .setDescription("Clear color and cooldown overrides for one event")
             .addStringOption((o) =>
@@ -605,7 +614,7 @@ async function execute(interaction, { db, dispatch, processCfg }) {
       const row = db.ensureGuild(interaction.guildId);
       const extra = db.extraOf(row);
       let changed = false;
-      for (const mapKey of ["eventColors", "eventCooldown", "eventDigest", "eventActors"]) {
+      for (const mapKey of ["eventColors", "eventCooldown", "eventDigest", "eventActors", "quietBypass"]) {
         if (!extra[mapKey] || typeof extra[mapKey] !== "object" || Array.isArray(extra[mapKey])) continue;
         if (Object.prototype.hasOwnProperty.call(extra[mapKey], key)) changed = true;
         delete extra[mapKey][key];
@@ -729,6 +738,25 @@ async function execute(interaction, { db, dispatch, processCfg }) {
       dispatch.refreshGuild(interaction.guildId);
       return interaction.reply({
         content: t(locale, "cmd.filter_set", { name: `event.${key}.actors`, value }),
+        ephemeral: true,
+      });
+    }
+    if (sub === "bypass") {
+      const enabledOption = interaction.options.getBoolean("enabled");
+      const enabled = enabledOption == null ? true : enabledOption;
+      const row = db.ensureGuild(interaction.guildId);
+      const extra = db.extraOf(row);
+      const quietBypass = extra.quietBypass && typeof extra.quietBypass === "object" && !Array.isArray(extra.quietBypass)
+        ? { ...extra.quietBypass }
+        : {};
+      if (enabled) quietBypass[key] = true;
+      else delete quietBypass[key];
+      if (Object.keys(quietBypass).length) extra.quietBypass = quietBypass;
+      else delete extra.quietBypass;
+      db.setExtra(interaction.guildId, extra);
+      dispatch.refreshGuild(interaction.guildId);
+      return interaction.reply({
+        content: t(locale, "cmd.filter_set", { name: `event.${key}.quietBypass`, value: String(enabled) }),
         ephemeral: true,
       });
     }

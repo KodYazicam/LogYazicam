@@ -80,7 +80,7 @@ function createDispatcher({ client, db, processCfg, log, cache, deps = {} }) {
       if (!guild) return;
       const cfg = guildCfg(guild.id) || refreshGuild(guild.id);
       if (cfg.paused) return;
-      if (inQuietHours(cfg)) return;
+      if (inQuietHours(cfg) && !cfg.quietBypass?.[eventKey]) return;
       const channelId = routeFor(cfg, eventKey);
       if (!channelId) return;
       if (cfg.ignoreSelf && payload.userId && payload.userId === client.user.id) return;

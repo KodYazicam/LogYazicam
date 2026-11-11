@@ -355,6 +355,42 @@ test("a per-event actor mode filters only that event", async () => {
   assert.equal(h.dispatch.queues.get("g1:c1").length, 2);
 });
 
+test("a quiet-hours bypass applies only to the selected event and not pause", async () => {
+  const events = {
+    messageDelete: { on: true, channelId: "c1" },
+    guildBanAdd: { on: true, channelId: "c1" },
+  };
+  const h = setup({
+    queued: false,
+    cfg: {
+      quietStart: "00:00",
+      quietEnd: "00:00",
+      timezone: "UTC",
+      quietBypass: { guildBanAdd: true },
+      events,
+    },
+  });
+
+  await h.dispatch.enqueue({ id: "g1" }, "messageDelete", { summary: "quiet drop" });
+  assert.equal(h.dispatch.queues.get("g1:c1"), undefined);
+  await h.dispatch.enqueue({ id: "g1" }, "guildBanAdd", { summary: "critical" });
+  assert.equal(h.dispatch.queues.get("g1:c1").length, 1);
+
+  const paused = setup({
+    queued: false,
+    cfg: {
+      paused: true,
+      quietStart: "00:00",
+      quietEnd: "00:00",
+      timezone: "UTC",
+      quietBypass: { guildBanAdd: true },
+      events,
+    },
+  });
+  await paused.dispatch.enqueue({ id: "g1" }, "guildBanAdd", { summary: "paused" });
+  assert.equal(paused.dispatch.queues.get("g1:c1"), undefined);
+});
+
 test("a per-event cooldown applies only to that event key", async () => {
   const h = setup({
     queued: false,
