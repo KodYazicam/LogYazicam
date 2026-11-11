@@ -62,14 +62,18 @@ All notable changes to this project are documented here. The format follows
 - Per-event quiet-hours bypass via `/log event bypass`, stored in
   `extra_json.quietBypass`. Selected events still log during quiet hours;
   pause and the other filters still apply.
+- Per-event channel allow-lists via `/log event watch`, stored in
+  `extra_json.eventIncludeChannels`. One event can watch a dedicated channel or
+  category while the rest of the guild keeps its normal allow-list; `clear`
+  restores the guild list.
 - Optional quiet-day scheduling via `/log set name:quiet_days value:mon,tue`.
   The existing quiet window can now apply only on selected local weekdays;
   `all` or `clear` restores every-day behavior.
 - Dashboard event/time filters: `/api/events` accepts validated `event` and
   `since` parameters, and the page exposes event-key and recency controls.
-- `/log event reset` clears color, cooldown, digest, actor, and quiet-bypass
-  overrides for one event without touching its route, channel, or guild
-  defaults.
+- `/log event reset` clears color, cooldown, digest, actor, quiet-bypass, and
+  channel allow-list overrides for one event without touching its route,
+  channel, or guild defaults.
 - All 18 locale packs now translate the `/log export` and `/log import` replies;
   a placeholder-consistency test keeps future additions honest.
 - `/log import` now resets every importable setting to `null` before applying

@@ -453,6 +453,25 @@ function cleanQuietBypass(value) {
   return { value: out, skipped };
 }
 
+function cleanEventIncludeChannels(value, resolveChannel) {
+  if (!isPlainObject(value)) return { value: undefined, skipped: 1 };
+  const out = {};
+  let skipped = 0;
+  for (const [key, raw] of Object.entries(value)) {
+    if (!byKey[key] || !Array.isArray(raw)) {
+      skipped += 1;
+      continue;
+    }
+    const ids = [];
+    for (const id of raw) {
+      const resolved = resolveId(id, resolveChannel);
+      if (resolved) ids.push(resolved);
+    }
+    out[key] = [...new Set(ids)];
+  }
+  return { value: out, skipped };
+}
+
 function cleanQuietDays(value) {
   if (!Array.isArray(value)) return { value: undefined, skipped: 1 };
   const out = [];
@@ -589,6 +608,12 @@ function cleanExtra(extra, resolveChannel) {
     if (key === "quietBypass") {
       const cleaned = cleanQuietBypass(raw);
       if (cleaned.value) out.quietBypass = cleaned.value;
+      skipped += cleaned.skipped;
+      continue;
+    }
+    if (key === "eventIncludeChannels") {
+      const cleaned = cleanEventIncludeChannels(raw, resolveChannel);
+      if (cleaned.value) out.eventIncludeChannels = cleaned.value;
       skipped += cleaned.skipped;
       continue;
     }

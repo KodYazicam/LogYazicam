@@ -113,6 +113,17 @@ test("event group exposes color overrides", () => {
     bypass.options.map((option) => option.name).sort(),
     ["enabled", "key"],
   );
+  const watch = event.options.find((sub) => sub.name === "watch");
+  assert.ok(watch);
+  assert.deepEqual(
+    watch.options.map((option) => option.name).sort(),
+    ["action", "channel", "key"],
+  );
+  const action = watch.options.find((option) => option.name === "action");
+  assert.deepEqual(
+    action.choices.map((choice) => choice.value).sort(),
+    ["add", "clear", "list", "remove"],
+  );
 });
 
 test("set command exposes quiet-day scheduling", () => {
@@ -329,6 +340,61 @@ test("event bypass command enables and disables quiet-hours bypass", async () =>
   assert.match(response.content, /false/);
 });
 
+test("event watch command adds, removes, lists and clears channels", async () => {
+  let extra = {};
+  const db = {
+    ensureGuild: () => ({ id: "g1" }),
+    extraOf: () => extra,
+    setExtra: (id, next) => {
+      extra = next;
+    },
+  };
+  let response;
+  const dispatch = {
+    guildCfg: () => ({ locale: "en" }),
+    refreshGuild: () => {},
+  };
+  const processCfg = { owners: [], defaultLocale: "en", slashEphemeral: true };
+  const makeInteraction = (action, channel) => ({
+    guildId: "g1",
+    user: { id: "u1" },
+    memberPermissions: { has: () => true },
+    options: {
+      getSubcommandGroup: () => "event",
+      getSubcommand: () => "watch",
+      getString: (name) => (name === "key" ? "messageDelete" : action),
+      getChannel: () => channel,
+    },
+    reply: async (payload) => {
+      response = payload;
+      return payload;
+    },
+  });
+
+  await execute(makeInteraction("add", { id: "c1" }), { db, dispatch, processCfg });
+  assert.deepEqual(extra.eventIncludeChannels, { messageDelete: ["c1"] });
+  assert.match(response.content, /c1/);
+
+  await execute(makeInteraction("add", { id: "c2" }), { db, dispatch, processCfg });
+  await execute(makeInteraction("add", { id: "c1" }), { db, dispatch, processCfg });
+  assert.deepEqual(extra.eventIncludeChannels, { messageDelete: ["c1", "c2"] });
+
+  await execute(makeInteraction("list"), { db, dispatch, processCfg });
+  assert.match(response.content, /c1/);
+  assert.match(response.content, /c2/);
+
+  await execute(makeInteraction("remove", { id: "c1" }), { db, dispatch, processCfg });
+  assert.deepEqual(extra.eventIncludeChannels, { messageDelete: ["c2"] });
+
+  await execute(makeInteraction("add"), { db, dispatch, processCfg });
+  assert.deepEqual(extra.eventIncludeChannels, { messageDelete: ["c2"] });
+  assert.match(response.content, /channel/i);
+
+  await execute(makeInteraction("clear"), { db, dispatch, processCfg });
+  assert.equal(extra.eventIncludeChannels, undefined);
+  assert.match(response.content, /none|—/i);
+});
+
 test("event reset clears only that event's overrides", async () => {
   let extra = {
     eventColors: { messageDelete: 0xff0000, guildBanAdd: 0x00ff00 },
@@ -336,6 +402,7 @@ test("event reset clears only that event's overrides", async () => {
     eventDigest: { messageDelete: { ms: 5000 }, messageUpdate: { ms: 1000, min: 2 } },
     eventActors: { messageDelete: "humans", messageUpdate: "bots" },
     quietBypass: { messageDelete: true, messageUpdate: true },
+    eventIncludeChannels: { messageDelete: ["c1"], messageUpdate: ["c2"] },
   };
   const db = {
     ensureGuild: () => ({ id: "g1" }),
@@ -371,6 +438,7 @@ test("event reset clears only that event's overrides", async () => {
   assert.deepEqual(extra.eventDigest, { messageUpdate: { ms: 1000, min: 2 } });
   assert.deepEqual(extra.eventActors, { messageUpdate: "bots" });
   assert.deepEqual(extra.quietBypass, { messageUpdate: true });
+  assert.deepEqual(extra.eventIncludeChannels, { messageUpdate: ["c2"] });
   assert.match(response.content, /none|—/i);
 });
 
