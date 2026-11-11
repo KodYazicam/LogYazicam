@@ -50,7 +50,7 @@ function when(ts, timezone = "UTC") {
 
 function buildEmbed(guildCfg, eventKey, fields, { description, thumbnail, url } = {}) {
   const meta = byKey[eventKey] || { color: "info" };
-  const color = guildCfg.colors[meta.color] || guildCfg.colors.info;
+  const color = guildCfg.colors[meta.color] ?? guildCfg.colors.info;
   const locale = guildCfg.locale;
   const embed = new EmbedBuilder()
     .setColor(color)

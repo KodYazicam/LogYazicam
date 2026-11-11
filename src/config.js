@@ -182,13 +182,13 @@ function mergeGuild(processCfg, row, routes, ignores, extra) {
     ignores: ignores || [],
     events: enabled,
     colors: {
-      create: extraColors.create || row.embed_color_create || processCfg.colors.create,
-      update: extraColors.update || row.embed_color_update || processCfg.colors.update,
-      delete: extraColors.delete || row.embed_color_delete || processCfg.colors.delete,
-      voice: extraColors.voice || processCfg.colors.voice,
-      member: extraColors.member || processCfg.colors.member,
-      mod: extraColors.mod || processCfg.colors.mod,
-      info: extraColors.info || processCfg.colors.info,
+      create: extraColors.create ?? row.embed_color_create ?? processCfg.colors.create,
+      update: extraColors.update ?? row.embed_color_update ?? processCfg.colors.update,
+      delete: extraColors.delete ?? row.embed_color_delete ?? processCfg.colors.delete,
+      voice: extraColors.voice ?? processCfg.colors.voice,
+      member: extraColors.member ?? processCfg.colors.member,
+      mod: extraColors.mod ?? processCfg.colors.mod,
+      info: extraColors.info ?? processCfg.colors.info,
     },
   };
 }
