@@ -98,6 +98,10 @@ All notable changes to this project are documented here. The format follows
 - Command edge coverage: invalid per-event cooldown/digest/actor/watch values,
   empty override cleanup, set aliases, watch removal/default fallthrough, and
   import read/database failures; `commands.js` line coverage is now 99.9%.
+- Dispatcher edge coverage: cache refresh from DB rows, old-account acceptance,
+  digest window flush with and without the minimum count, staff-copy enqueue,
+  route-failure logging, and missing-webhook fallback warnings;
+  `dispatcher.js` line coverage is now about 98%.
 - Fallback-path coverage for utility formatting, logger append failures,
   malformed dashboard payloads, invalid dashboard ports, and HTTP sink
   connection errors; `util.js`, `logger.js`, and `sinks.js` now have 100%
