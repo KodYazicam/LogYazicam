@@ -31,10 +31,13 @@ const COLOR = (v, fallback) => {
   return n >= 0 && n <= 0xffffff ? n : fallback;
 };
 
-function loadEnvFile(file = path.resolve(process.cwd(), ".env")) {
+function loadEnvFile(file = path.resolve(process.cwd(), ".env"), { fileWins = false } = {}) {
   if (!fs.existsSync(file)) return { ...process.env };
   const parsed = dotenv.parse(fs.readFileSync(file));
-  return { ...parsed, ...process.env };
+  // Docker injects env_file values into process.env once. Mounting .env and
+  // enabling ENV_FILE_WINS lets HOT_RELOAD_MS actually observe file edits.
+  const preferFile = fileWins || BOOL(parsed.ENV_FILE_WINS, false) || BOOL(process.env.ENV_FILE_WINS, false);
+  return preferFile ? { ...process.env, ...parsed } : { ...parsed, ...process.env };
 }
 
 function processConfig(env) {
@@ -86,6 +89,7 @@ function processConfig(env) {
     activityType: env.ACTIVITY_TYPE || "Watching",
     activityText: env.ACTIVITY_TEXT || "guild logs · /log",
     activityStatus: env.ACTIVITY_STATUS || "online",
+    presenceIntent: BOOL(env.PRESENCE_INTENT, false),
     shardList: env.SHARD_LIST || "",
     prefixEnabled: BOOL(env.PREFIX_ENABLED, true),
     prefix: env.PREFIX || "!",
@@ -106,7 +110,7 @@ function processConfig(env) {
     auditFetchLimit: UINT(env.AUDIT_FETCH_LIMIT, 6),
     bulkLineLimit: UINT(env.BULK_LINE_LIMIT, 40),
     historyExportDefault: UINT(env.HISTORY_EXPORT_DEFAULT, 50),
-    snapshotEnabled: BOOL(env.SNAPSHOT_ENABLED, true),
+    snapshotEnabled: BOOL(env.SNAPSHOT_ENABLED, false),
     snapshotLimit: UINT(env.SNAPSHOT_LIMIT, 2000),
     digestMs: UINT(env.DIGEST_MS, 0),
     digestMin: UINT(env.DIGEST_MIN, 5),

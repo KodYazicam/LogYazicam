@@ -1,11 +1,11 @@
 const path = require("path");
 const {
   Client,
-  GatewayIntentBits,
   Partials,
   ActivityType,
 } = require("discord.js");
 const { loadEnvFile, processConfig, applyConfig } = require("./config");
+const { buildIntents } = require("./intents");
 const { openDb } = require("./db");
 const { createLogger } = require("./logger");
 const { createDispatcher } = require("./dispatcher");
@@ -36,25 +36,11 @@ if (processCfg.shardList && !process.env.SHARDING_MANAGER) {
 const log = createLogger(processCfg);
 const db = openDb(processCfg.databasePath);
 const cache = new Map();
+let dashboard = null;
+let shuttingDown = false;
 
 const client = new Client({
-  intents: [
-    GatewayIntentBits.Guilds,
-    GatewayIntentBits.GuildMembers,
-    GatewayIntentBits.GuildMessages,
-    GatewayIntentBits.GuildMessageTyping,
-    GatewayIntentBits.GuildMessageReactions,
-    GatewayIntentBits.MessageContent,
-    GatewayIntentBits.GuildVoiceStates,
-    GatewayIntentBits.GuildInvites,
-    GatewayIntentBits.GuildModeration,
-    GatewayIntentBits.GuildEmojisAndStickers,
-    GatewayIntentBits.GuildWebhooks,
-    GatewayIntentBits.GuildScheduledEvents,
-    GatewayIntentBits.GuildPresences,
-    GatewayIntentBits.AutoModerationConfiguration,
-    GatewayIntentBits.AutoModerationExecution,
-  ],
+  intents: buildIntents(processCfg),
   partials: [
     Partials.Message,
     Partials.Channel,
@@ -85,7 +71,7 @@ if (processCfg.historyPruneMs > 0) {
 
 if (processCfg.dashboardEnabled) {
   const { createDashboard } = require("./dashboard");
-  const dashboard = createDashboard({ db, processCfg, log });
+  dashboard = createDashboard({ db, processCfg, log });
   dashboard
     .start()
     .then((address) => log.info(`dashboard listening on http://${address.address}:${address.port}`))
@@ -109,8 +95,45 @@ function reportError(error, where) {
   }
 }
 
+async function shutdown(code, reason) {
+  if (shuttingDown) return;
+  shuttingDown = true;
+  try {
+    log.info("shutdown", reason);
+  } catch {
+    // logging is best-effort during shutdown
+  }
+  try {
+    if (dashboard) await dashboard.close();
+  } catch (error) {
+    try { log.warn("dashboard close failed", error.message); } catch { /* ignore */ }
+  }
+  try {
+    await client.destroy();
+  } catch (error) {
+    try { log.warn("client destroy failed", error.message); } catch { /* ignore */ }
+  }
+  try {
+    db.raw.close();
+  } catch (error) {
+    try { log.warn("database close failed", error.message); } catch { /* ignore */ }
+  }
+  process.exit(code);
+}
+
 process.on("unhandledRejection", (error) => reportError(error, "unhandledRejection"));
-process.on("uncaughtException", (error) => reportError(error, "uncaughtException"));
+process.on("uncaughtException", (error) => {
+  try {
+    reportError(error, "uncaughtException");
+  } catch {
+    // shutdown must still run even if reporting fails
+  }
+  // An uncaught exception leaves the process in an unknown state. Stop
+  // accepting events, flush SQLite, and let the supervisor restart us.
+  shutdown(1, "uncaughtException");
+});
+process.once("SIGTERM", () => shutdown(0, "SIGTERM"));
+process.once("SIGINT", () => shutdown(0, "SIGINT"));
 
 bindEvents(client, { dispatch, processCfg, log });
 
