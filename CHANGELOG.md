@@ -19,6 +19,10 @@ All notable changes to this project are documented here. The format follows
 - Webhook send failures now reach the retry/drop path when
   `ALLOW_WEBHOOK_FALLBACK=false` instead of being counted as sent. A 429 is
   retried; other failures increment `metrics.dropped`.
+- A 429 no longer blocks the send loop while waiting: the item stores a
+  `retryAt` timestamp, other channels continue, and `RETRY_MAX` (default `5`)
+  bounds attempts before the item is dropped. Overlapping ticks cannot deliver
+  the same item twice.
 - The Docker image now creates `/app/data` with UID `10001` ownership before
   dropping privileges.
 - `/log set` now uses one allowlist for slash and prefix names, rejects unknown

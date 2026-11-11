@@ -42,6 +42,7 @@ Small, shippable steps. Upvote or comment on an issue if you want something move
 - [x] Per-event channel allow-lists
 - [x] Per-event delivery modes
 - [x] Per-event redaction overrides
+- [x] Bounded, non-blocking 429 retries
 
 ## Next
 
