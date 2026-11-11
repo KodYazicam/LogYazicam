@@ -18,7 +18,7 @@ const { t } = require("./locales");
 
 function bindEvents(client, { dispatch, processCfg, log }) {
   const safe = (name, fn) => (...args) => {
-    Promise.resolve(fn(...args)).catch((error) => log.error(name, error));
+    return Promise.resolve(fn(...args)).catch((error) => log.error(name, error));
   };
 
   const run = async (guild, key, payload) => {

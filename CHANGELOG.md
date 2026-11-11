@@ -79,6 +79,11 @@ All notable changes to this project are documented here. The format follows
   stored snapshots, moderation audit context, voice state labels, named
   create/delete/update payloads, and `applyPack`; `format.js` line coverage is
   now 100%.
+- Gateway binding coverage with a fake Discord client: every listener is
+  registered, all event families dispatch their catalog keys, derived member
+  events are asserted individually, and snapshot/self/snapshot-off guards are
+  exercised. The `safe()` wrapper now returns its handler promise so callers
+  can await completion; `events.js` line coverage is 98.5%.
 - Per-event embed color overrides via `/log event color`, stored in
   `extra_json.eventColors` and validated during config import. A black override
   is preserved; clearing it restores the semantic slot color.
