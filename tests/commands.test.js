@@ -142,6 +142,17 @@ test("event group exposes color overrides", () => {
     mode.choices.map((choice) => choice.value),
     ["default", "embed", "plain", "webhook"],
   );
+  const history = event.options.find((sub) => sub.name === "history");
+  assert.ok(history);
+  assert.deepEqual(
+    history.options.map((option) => option.name).sort(),
+    ["key", "mode"],
+  );
+  const historyMode = history.options.find((option) => option.name === "mode");
+  assert.deepEqual(
+    historyMode.choices.map((choice) => choice.value),
+    ["default", "on", "off"],
+  );
   const redact = event.options.find((sub) => sub.name === "redact");
   assert.ok(redact);
   assert.deepEqual(
@@ -467,6 +478,58 @@ test("event delivery command stores and restores a per-event mode", async () => 
   assert.match(response.content, /mode/i);
 });
 
+test("event history command stores, disables, and restores a per-event mode", async () => {
+  let extra = { eventHistory: { guildBanAdd: true } };
+  let writes = 0;
+  const db = {
+    ensureGuild: () => ({ id: "g1" }),
+    extraOf: () => extra,
+    setExtra: (id, next) => {
+      writes += 1;
+      extra = next;
+    },
+  };
+  let response;
+  const dispatch = {
+    guildCfg: () => ({ locale: "en" }),
+    refreshGuild: () => {},
+  };
+  const processCfg = { owners: [], defaultLocale: "en", slashEphemeral: true };
+  const makeInteraction = (mode) => ({
+    guildId: "g1",
+    user: { id: "u1" },
+    memberPermissions: { has: () => true },
+    options: {
+      getSubcommandGroup: () => "event",
+      getSubcommand: () => "history",
+      getString: (name) => (name === "key" ? "messageDelete" : mode),
+    },
+    reply: async (payload) => {
+      response = payload;
+      return payload;
+    },
+  });
+
+  await execute(makeInteraction("on"), { db, dispatch, processCfg });
+  assert.equal(writes, 1);
+  assert.deepEqual(extra.eventHistory, { guildBanAdd: true, messageDelete: true });
+  assert.match(response.content, /event\.messageDelete\.history/);
+
+  await execute(makeInteraction("off"), { db, dispatch, processCfg });
+  assert.equal(writes, 2);
+  assert.deepEqual(extra.eventHistory, { guildBanAdd: true, messageDelete: false });
+
+  await execute(makeInteraction("default"), { db, dispatch, processCfg });
+  assert.equal(writes, 3);
+  assert.deepEqual(extra.eventHistory, { guildBanAdd: true });
+  assert.match(response.content, /none|—/i);
+
+  await execute(makeInteraction("aliens"), { db, dispatch, processCfg });
+  assert.equal(writes, 3);
+  assert.deepEqual(extra.eventHistory, { guildBanAdd: true });
+  assert.match(response.content, /mode/i);
+});
+
 test("event redact command stores, disables, and clears one flag", async () => {
   let extra = { eventRedact: { messageUpdate: { url: true } } };
   const db = {
@@ -530,6 +593,7 @@ test("event reset clears only that event's overrides", async () => {
     quietBypass: { messageDelete: true, messageUpdate: true },
     eventIncludeChannels: { messageDelete: ["c1"], messageUpdate: ["c2"] },
     eventDelivery: { messageDelete: "plain", messageUpdate: "webhook" },
+    eventHistory: { messageDelete: true, messageUpdate: false },
     eventRedact: { messageDelete: { url: true }, messageUpdate: { mention: false } },
   };
   const db = {
@@ -568,6 +632,7 @@ test("event reset clears only that event's overrides", async () => {
   assert.deepEqual(extra.quietBypass, { messageUpdate: true });
   assert.deepEqual(extra.eventIncludeChannels, { messageUpdate: ["c2"] });
   assert.deepEqual(extra.eventDelivery, { messageUpdate: "webhook" });
+  assert.deepEqual(extra.eventHistory, { messageUpdate: false });
   assert.deepEqual(extra.eventRedact, { messageUpdate: { mention: false } });
   assert.match(response.content, /none|—/i);
 });

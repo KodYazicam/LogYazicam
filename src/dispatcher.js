@@ -149,7 +149,8 @@ function createDispatcher({ client, db, processCfg, log, cache, deps = {} }) {
         embeds = [];
       }
 
-      if (cfg.storeHistory) {
+      const historyMode = cfg.eventHistory?.[eventKey];
+      if (historyMode === true || (historyMode !== false && cfg.storeHistory)) {
         db.pushHistory(guild.id, eventKey, {
           eventKey,
           channelId,
