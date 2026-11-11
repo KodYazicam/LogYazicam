@@ -41,6 +41,7 @@ test("processConfig truncates and bounds numeric environment values", () => {
     COLOR_UPDATE: "16777216",
     COLOR_DELETE: "0",
     COLOR_INFO: "16777215",
+    RETRY_MAX: "-2",
   });
 
   assert.equal(cfg.historyLimit, 2);
@@ -55,6 +56,7 @@ test("processConfig truncates and bounds numeric environment values", () => {
   assert.equal(cfg.colors.update, COLORS.update);
   assert.equal(cfg.colors.delete, 0);
   assert.equal(cfg.colors.info, 0xffffff);
+  assert.equal(cfg.retryMax, 5);
 });
 
 test("processConfig keeps zero for values that disable features", () => {
@@ -63,12 +65,14 @@ test("processConfig keeps zero for values that disable features", () => {
     BACKUP_MS: "0",
     SNAPSHOT_TTL_MS: "0",
     DASHBOARD_PORT: "0",
+    RETRY_MAX: "0",
   });
 
   assert.equal(cfg.historyRetentionDays, 0);
   assert.equal(cfg.backupMs, 0);
   assert.equal(cfg.snapshotTtlMs, 0);
   assert.equal(cfg.dashboardPort, 0);
+  assert.equal(cfg.retryMax, 0);
 });
 
 test("applyConfig updates the captured object and preserves the live token", () => {

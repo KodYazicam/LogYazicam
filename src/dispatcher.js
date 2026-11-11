@@ -8,7 +8,7 @@ function createDispatcher({ client, db, processCfg, log, cache, deps = {} }) {
   const digestBuckets = new Map();
   const metrics = { sent: 0, dropped: 0, retries: 0 };
   const makeWebhook = deps.createWebhookClient || ((options) => new WebhookClient(options));
-  const sleep = deps.sleep || ((ms) => new Promise((resolve) => setTimeout(resolve, ms)));
+  const now = deps.now || Date.now;
   const schedule = deps.setInterval || setInterval;
 
   function guildCfg(guildId) {
@@ -233,26 +233,41 @@ function createDispatcher({ client, db, processCfg, log, cache, deps = {} }) {
     });
   }
 
+  let flushing = false;
+
   async function flushQueues() {
-    for (const [key, q] of queues) {
-      const item = q.shift();
-      if (!item) continue;
-      try {
-        await flushOne(item);
-        metrics.sent += 1;
-      } catch (error) {
-        const retryAfter = error?.retryAfter || error?.httpStatus === 429;
-        if (processCfg.retry429 && retryAfter) {
-          metrics.retries += 1;
-          q.unshift(item);
-          await sleep(Math.ceil((Number(error.retryAfter) || 1) * 1000));
-        } else {
-          metrics.dropped += 1;
-          log.error("flush", key, error);
-          const cfg = guildCfg(item.guildId);
-          if (cfg) cfg.lastError = error.message;
+    if (flushing) return;
+    flushing = true;
+    try {
+      for (const [key, q] of queues) {
+        const item = q[0];
+        if (!item) continue;
+        if (item.retryAt && item.retryAt > now()) continue;
+        q.shift();
+        try {
+          await flushOne(item);
+          metrics.sent += 1;
+        } catch (error) {
+          const retryAfter = error?.retryAfter || error?.httpStatus === 429;
+          const configured = Number(processCfg.retryMax);
+          const limit = Number.isInteger(configured) && configured >= 0 ? configured : 5;
+          const attempts = Number(item.retries) || 0;
+          if (processCfg.retry429 && retryAfter && attempts < limit) {
+            const delay = Math.max(0, Math.ceil((Number(error.retryAfter) || 1) * 1000));
+            metrics.retries += 1;
+            item.retries = attempts + 1;
+            item.retryAt = now() + delay;
+            q.unshift(item);
+          } else {
+            metrics.dropped += 1;
+            log.error("flush", key, error);
+            const cfg = guildCfg(item.guildId);
+            if (cfg) cfg.lastError = error.message;
+          }
         }
       }
+    } finally {
+      flushing = false;
     }
   }
 

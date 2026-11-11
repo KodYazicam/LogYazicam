@@ -65,6 +65,7 @@ function setup(options = {}) {
     ...(options.processCfg || {}),
   };
   let sendCall = 0;
+  let clock = Number.isFinite(options.now) ? options.now : 0;
   const dispatch = createDispatcher({
     client,
     db: {},
@@ -76,6 +77,7 @@ function setup(options = {}) {
     cache: new Map([["g1", cfg]]),
     deps: {
       setInterval: () => ({ unref() {} }),
+      now: () => clock,
       sleep: async (ms) => {
         sleeps.push(ms);
       },
@@ -89,7 +91,7 @@ function setup(options = {}) {
     },
   });
   if (options.queued !== false) dispatch.queues.set("g1:c1", [options.item || makeItem()]);
-  return { dispatch, cfg, hookCalls, channelSends, channelFetchCalls, sleeps, warnings, errors };
+  return { dispatch, cfg, hookCalls, channelSends, channelFetchCalls, sleeps, warnings, errors, advance: (ms) => { clock += ms; } };
 }
 
 async function readFileWhenReady(file) {
@@ -133,9 +135,14 @@ test("retries a 429 once and does not duplicate the delivered message", async ()
   assert.equal(h.dispatch.metrics.sent, 0);
   assert.equal(h.dispatch.metrics.retries, 1);
   assert.equal(h.dispatch.metrics.dropped, 0);
-  assert.deepEqual(h.sleeps, [20]);
+  assert.deepEqual(h.sleeps, []);
   assert.equal(h.dispatch.queues.get("g1:c1").length, 1);
 
+  await h.dispatch.tick();
+  assert.equal(h.dispatch.metrics.retries, 1);
+  assert.equal(attempts, 1);
+
+  h.advance(20);
   await h.dispatch.tick();
   assert.equal(h.dispatch.metrics.sent, 1);
   assert.equal(h.dispatch.metrics.retries, 1);
@@ -159,6 +166,89 @@ test("does not retry a 429 when RETRY_429 is off", async () => {
   assert.equal(h.dispatch.metrics.retries, 0);
   assert.equal(h.dispatch.metrics.dropped, 1);
   assert.deepEqual(h.sleeps, []);
+  assert.equal(h.dispatch.queues.get("g1:c1").length, 0);
+});
+
+test("drops an item after RETRY_MAX retries", async () => {
+  let attempts = 0;
+  const h = setup({
+    processCfg: { retryMax: 2 },
+    send: async () => {
+      attempts += 1;
+      throw rateLimited();
+    },
+  });
+
+  await h.dispatch.tick();
+  assert.equal(h.dispatch.metrics.retries, 1);
+  assert.equal(h.dispatch.queues.get("g1:c1").length, 1);
+
+  h.advance(20);
+  await h.dispatch.tick();
+  assert.equal(h.dispatch.metrics.retries, 2);
+  assert.equal(h.dispatch.queues.get("g1:c1").length, 1);
+
+  h.advance(20);
+  await h.dispatch.tick();
+  assert.equal(attempts, 3);
+  assert.equal(h.dispatch.metrics.retries, 2);
+  assert.equal(h.dispatch.metrics.dropped, 1);
+  assert.equal(h.dispatch.queues.get("g1:c1").length, 0);
+  assert.equal(h.cfg.lastError, "rate limited");
+});
+
+test("RETRY_MAX=0 drops a 429 without retrying", async () => {
+  const h = setup({
+    processCfg: { retryMax: 0 },
+    send: async () => {
+      throw rateLimited();
+    },
+  });
+
+  await h.dispatch.tick();
+  assert.equal(h.dispatch.metrics.retries, 0);
+  assert.equal(h.dispatch.metrics.dropped, 1);
+  assert.equal(h.dispatch.queues.get("g1:c1").length, 0);
+});
+
+test("a rate-limited channel does not block other queues", async () => {
+  const h = setup({
+    queued: false,
+    send: async (payload) => {
+      if (payload.content === "slow") throw rateLimited();
+      return payload;
+    },
+  });
+  h.dispatch.queues.set("g1:c1", [makeItem({ content: "slow" })]);
+  h.dispatch.queues.set("g1:c2", [makeItem({ content: "fast", channelId: "c2" })]);
+
+  await h.dispatch.tick();
+  assert.equal(h.dispatch.queues.get("g1:c1").length, 1);
+  assert.equal(h.dispatch.queues.get("g1:c2").length, 0);
+  assert.equal(h.dispatch.metrics.sent, 1);
+  assert.equal(h.dispatch.metrics.retries, 1);
+  assert.deepEqual(h.sleeps, []);
+});
+
+test("a second tick does not deliver an in-flight item twice", async () => {
+  let release;
+  const gate = new Promise((resolve) => {
+    release = resolve;
+  });
+  const h = setup({
+    send: async (payload) => {
+      await gate;
+      return payload;
+    },
+  });
+
+  const first = h.dispatch.tick();
+  const second = h.dispatch.tick();
+  release();
+  await Promise.all([first, second]);
+
+  assert.equal(h.hookCalls.length, 1);
+  assert.equal(h.dispatch.metrics.sent, 1);
   assert.equal(h.dispatch.queues.get("g1:c1").length, 0);
 });
 

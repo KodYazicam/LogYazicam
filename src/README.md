@@ -50,7 +50,9 @@ index.js
    - optional `history` row (`summary` only, not full body)
    - push queue (`MAX_QUEUE_PER_CHANNEL`, drop oldest)
 4. Timer (`SEND_INTERVAL_MS`) sends webhook or `channel.send`. Tests call the
-   exposed `tick()` with an injected webhook client and clock.
+   exposed `tick()` with an injected webhook client and clock. A 429 sets
+   `retryAt` on the item and re-queues it without sleeping; `RETRY_MAX` bounds
+   attempts, and a `flushing` guard prevents overlapping ticks.
 
 ## Adding an event
 

@@ -128,6 +128,7 @@ function processConfig(env) {
     redactEmails: BOOL(env.REDACT_EMAILS, false),
     redactInvites: BOOL(env.REDACT_INVITES, false),
     retry429: BOOL(env.RETRY_429, true),
+    retryMax: UINT(env.RETRY_MAX, 5),
     colors: {
       create: COLOR(env.COLOR_CREATE, COLORS.create),
       update: COLOR(env.COLOR_UPDATE, COLORS.update),
