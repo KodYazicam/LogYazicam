@@ -38,10 +38,40 @@ test("processConfig reads env with english keys", () => {
   assert.deepEqual(cfg.owners, ["1", "2"]);
 });
 
-test("voiceKind maps discord voice states", () => {
-  assert.equal(voiceKind({ channelId: null }, { channelId: "a" }), "voiceJoin");
-  assert.equal(voiceKind({ channelId: "a" }, { channelId: null }), "voiceLeave");
-  assert.equal(voiceKind({ channelId: "a" }, { channelId: "b" }), "voiceMove");
-  assert.equal(voiceKind({ channelId: "a", serverMute: false }, { channelId: "a", serverMute: true }), "voiceServerMute");
-  assert.equal(voiceKind({ channelId: "a", selfMute: false }, { channelId: "a", selfMute: true }), "voiceSelfMute");
+test("voiceKind maps every discord voice transition", () => {
+  const base = {
+    channelId: "a",
+    serverMute: false,
+    serverDeaf: false,
+    streaming: false,
+    selfVideo: false,
+    selfMute: false,
+    selfDeaf: false,
+    suppress: false,
+  };
+
+  assert.equal(voiceKind({ ...base, channelId: null }, base), "voiceJoin");
+  assert.equal(voiceKind(base, { ...base, channelId: null }), "voiceLeave");
+  assert.equal(voiceKind(base, { ...base, channelId: "b" }), "voiceMove");
+
+  const transitions = [
+    ["serverMute", "voiceServerMute"],
+    ["serverDeaf", "voiceServerDeafen"],
+    ["streaming", "voiceStream"],
+    ["selfVideo", "voiceVideo"],
+    ["selfMute", "voiceSelfMute"],
+    ["selfDeaf", "voiceSelfDeaf"],
+    ["suppress", "voiceSuppress"],
+  ];
+  for (const [key, kind] of transitions) {
+    assert.equal(voiceKind(base, { ...base, [key]: true }), kind, key);
+  }
+
+  assert.equal(voiceKind(base, { ...base }), null);
+
+  // A channel change wins over simultaneous mute state changes.
+  assert.equal(
+    voiceKind(base, { ...base, channelId: "b", serverMute: true, selfMute: true }),
+    "voiceMove",
+  );
 });

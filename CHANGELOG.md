@@ -41,6 +41,8 @@ All notable changes to this project are documented here. The format follows
   no external assets, and no write routes.
 - History retention: global `HISTORY_RETENTION_DAYS` / `HISTORY_PRUNE_MS` and
   a per-guild `history_days` override. Only `history` rows are pruned.
+- Branch coverage for redaction (all optional and always-on patterns, embed
+  fields, per-guild overrides) and every `voiceKind` transition.
 
 ### Security
 
