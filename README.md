@@ -356,7 +356,7 @@ These are **not** fake Discord events. They sit on top of the catalog.
 
 **Snapshot TTL / bots:** `SNAPSHOT_TTL_MS` drops old rows; `SNAPSHOT_BOTS=false` (default) skips bot messages in the cache.
 
-**Redaction:** `REDACT_URLS` `REDACT_MENTIONS` `REDACT_EMAILS` `REDACT_INVITES` (all default **false**). Discord/GitHub/OpenAI/Anthropic/AWS/Stripe/Slack token shapes are always stripped. Guild: `/log set name:redact_url value:true`.
+**Redaction:** `REDACT_URLS` `REDACT_MENTIONS` `REDACT_EMAILS` `REDACT_INVITES` (all default **false**). Discord/GitHub/OpenAI/Anthropic/AWS/Stripe/Slack token shapes are always stripped. Guild: `/log set name:redact_url value:true`. Per event: `/log event redact`.
 
 **Staff channel:** `/log set name:staff_ch value:CHANNEL_ID` posts a second copy (never via webhook). Empty = off.
 
@@ -614,7 +614,8 @@ All names English. Booleans: `1` `0` `true` `false` `yes` `no` `on` `off`. Numer
 | `bypass` | `key` (required, autocomplete), `enabled` (default `true`) | Store `extra_json.quietBypass[key]`. This event still logs during quiet hours; `enabled:false` removes the bypass. Pause still applies. |
 | `watch` | `key` (required, autocomplete), `action` (`add` `remove` `clear` `list`), `channel` (optional text/announcement/category) | Store `extra_json.eventIncludeChannels[key]`. When set, only those channels (or children of a listed category) log that event; other events keep the guild allow-list. `clear` removes the per-event list. |
 | `delivery` | `key` (required, autocomplete), `mode` (`default` `embed` `plain` `webhook`) | Store `extra_json.eventDelivery[key]`. The event override beats the guild `delivery` and `plain_text` settings. `default` removes it and restores guild behavior. |
-| `reset` | `key` (required, autocomplete) | Remove that event's color, cooldown, digest, actor, quiet-bypass, channel allow-list, and delivery overrides; routes, channel overrides, and guild settings stay unchanged. |
+| `redact` | `key` (required, autocomplete), `flag` (`url` `mention` `email` `invite`), `enabled` (default `true`), `clear` | Store `extra_json.eventRedact[key][flag]`. The event flag beats the guild `redact` setting and env defaults. `clear` removes only that flag; secret-token patterns stay always on. |
+| `reset` | `key` (required, autocomplete) | Remove that event's color, cooldown, digest, actor, quiet-bypass, channel allow-list, delivery, and redaction overrides; routes, channel overrides, and guild settings stay unchanged. |
 
 Autocomplete matches substring of the English key (`del` → `messageDelete`, …), max 25 choices (Discord limit). `/log events` lists all keys if you cannot find one.
 
@@ -743,7 +744,7 @@ One command for the remaining guild knobs (`extra_json`). `name` + `value`:
 | `prefix` | e.g. `!` | Guild prefix for `!log …` |
 | `prefix_on` / `slash_on` | `true` / `false` | Enable prefix and/or slash |
 
-Numeric values are validated, not silently clamped: `cooldown_sec` `0`–`3600`, `min_account_days` `0`–`3650`, `digest_ms` `0`–`3600000`, `history_days` `0`–`3650`, `field_max` `1`–`1024`, and `attach_min` `0`–`100000`. Booleans accept `true`/`false`, `1`/`0`, `yes`/`no`, and `on`/`off`. Unknown names and internal maps (`eventColors`, `eventCooldown`, `eventDigest`, `eventActors`, `eventDelivery`, `eventIncludeChannels`, `colors`, `strings`, `hiddenFields`) are rejected. Discord caps slash choices at 25, so `field_max` and `attach_min` use the prefix form (`!log set name:field_max value:900`) or config import.
+Numeric values are validated, not silently clamped: `cooldown_sec` `0`–`3600`, `min_account_days` `0`–`3650`, `digest_ms` `0`–`3600000`, `history_days` `0`–`3650`, `field_max` `1`–`1024`, and `attach_min` `0`–`100000`. Booleans accept `true`/`false`, `1`/`0`, `yes`/`no`, and `on`/`off`. Unknown names and internal maps (`eventColors`, `eventCooldown`, `eventDigest`, `eventActors`, `eventDelivery`, `eventIncludeChannels`, `eventRedact`, `colors`, `strings`, `hiddenFields`) are rejected. Discord caps slash choices at 25, so `field_max` and `attach_min` use the prefix form (`!log set name:field_max value:900`) or config import.
 
 Prefix uses the **same** execute path as slash. Examples (prefix `!`):
 
@@ -766,6 +767,8 @@ Allow-list. Empty = every channel. `add` / `remove` / `clear` / `list` a text ch
 `/log event watch` narrows the allow-list for one event. For example, keep `messageDelete` in `#tickets` while every other event follows the guild list. An event with its own non-empty list ignores the guild list; `clear` (or `reset`) restores the guild allow-list for that event.
 
 `/log event delivery` controls how one event is rendered. `plain` flattens that event's embeds to text, `embed` keeps embeds even when the guild uses `plain_text`, and `webhook` prefers the guild webhook for that event. `default` removes the override. The event mode beats both the guild `delivery` setting and `plain_text`.
+
+`/log event redact` controls optional redaction per event. An event `url:true` strips links from that event even if the guild default is off; `url:false` keeps links for that event even when the guild redacts them. Secret-token patterns (Discord, GitHub, OpenAI, Anthropic, AWS, Stripe, Slack) are always on and cannot be disabled.
 
 Quiet hours, pause, allow-list, cooldown, and account age all run **before** the send queue. They apply without restart. `quiet_days` is evaluated in the guild timezone at send time; an empty list keeps the window active every day. `/log event bypass` lets selected events bypass quiet hours, but not pause.
 
@@ -816,6 +819,9 @@ Developer maps: [`src/README.md`](src/README.md) · [`src/locales/README.md`](sr
 /log event delivery key:messageCreate mode:plain
 /log event delivery key:guildBanAdd mode:embed
 /log event delivery key:messageCreate mode:default
+/log event redact key:messageCreate flag:url enabled:true
+/log event redact key:guildBanAdd flag:mention enabled:false
+/log event redact key:messageCreate flag:url clear:true
 /log event watch key:messageDelete action:add channel:#tickets
 /log event watch key:messageDelete action:list
 /log event watch key:messageDelete action:clear

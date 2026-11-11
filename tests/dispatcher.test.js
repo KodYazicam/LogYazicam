@@ -426,6 +426,39 @@ test("a per-event include list restricts only that event", async () => {
   assert.equal(h.dispatch.queues.get("g1:c1").length, 2);
 });
 
+test("a per-event redaction override applies only to that event", async () => {
+  const h = setup({
+    queued: false,
+    cfg: {
+      delivery: "embed",
+      extra: { redact: { url: true } },
+      eventRedact: {
+        messageDelete: { url: false },
+        guildBanAdd: { url: true },
+      },
+      events: {
+        messageDelete: { on: true, channelId: "c1" },
+        guildBanAdd: { on: true, channelId: "c1" },
+      },
+    },
+  });
+
+  await h.dispatch.enqueue({ id: "g1" }, "messageDelete", {
+    summary: "delete",
+    content: "see https://example.com/delete",
+  });
+  const kept = h.dispatch.queues.get("g1:c1").at(-1);
+  assert.match(kept.content, /https:\/\/example\.com\/delete/);
+
+  await h.dispatch.enqueue({ id: "g1" }, "guildBanAdd", {
+    summary: "ban",
+    content: "see https://example.com/ban",
+  });
+  const redacted = h.dispatch.queues.get("g1:c1").at(-1);
+  assert.match(redacted.content, /\[url\]/);
+  assert.doesNotMatch(redacted.content, /https:\/\/example\.com\/ban/);
+});
+
 test("a per-event delivery mode overrides the guild mode", async () => {
   const events = {
     messageDelete: { on: true, channelId: "c1" },

@@ -64,4 +64,16 @@ function flagsFrom(cfg, processCfg) {
   };
 }
 
-module.exports = { redactText, redactEmbeds, flagsFrom, PATTERNS };
+const EVENT_FLAGS = ["url", "mention", "email", "invite"];
+
+function eventRedactFlags(cfg, eventKey, base) {
+  const flags = { ...base };
+  const overrides = cfg?.eventRedact?.[eventKey];
+  if (!overrides || typeof overrides !== "object" || Array.isArray(overrides)) return flags;
+  for (const flag of EVENT_FLAGS) {
+    if (typeof overrides[flag] === "boolean") flags[flag] = overrides[flag];
+  }
+  return flags;
+}
+
+module.exports = { redactText, redactEmbeds, flagsFrom, eventRedactFlags, EVENT_FLAGS, PATTERNS };

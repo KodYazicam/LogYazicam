@@ -1,7 +1,7 @@
 const { test } = require("node:test");
 const assert = require("node:assert/strict");
 const { EmbedBuilder } = require("discord.js");
-const { redactText, redactEmbeds, flagsFrom } = require("../src/redact");
+const { redactText, redactEmbeds, flagsFrom, eventRedactFlags } = require("../src/redact");
 
 const BASE_FLAGS = {
   redactUrls: false,
@@ -156,4 +156,28 @@ test("redactEmbeds passes through empty lists and missing flags", () => {
   assert.equal(redactEmbeds(empty, alwaysOn), empty);
   assert.equal(redactEmbeds(embeds, null), embeds);
   assert.notEqual(redactEmbeds(embeds, alwaysOn), embeds);
+});
+
+test("eventRedactFlags overrides only optional per-event flags", () => {
+  const base = { ...alwaysOn, url: true, email: false };
+  const cfg = {
+    eventRedact: {
+      messageDelete: {
+        url: false,
+        email: true,
+        invite: "true",
+        "discord-token": false,
+        unknown: true,
+      },
+    },
+  };
+
+  const flags = eventRedactFlags(cfg, "messageDelete", base);
+  assert.equal(flags.url, false);
+  assert.equal(flags.email, true);
+  assert.equal(flags.invite, false);
+  assert.equal(flags["discord-token"], true);
+  assert.equal(flags.unknown, undefined);
+  assert.equal(base.url, true);
+  assert.deepEqual(eventRedactFlags({}, "messageDelete", base), base);
 });

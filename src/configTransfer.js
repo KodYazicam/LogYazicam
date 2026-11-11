@@ -486,6 +486,32 @@ function cleanEventDelivery(value) {
   return { value: out, skipped };
 }
 
+const EVENT_REDACT_FLAGS = new Set(["url", "mention", "email", "invite"]);
+
+function cleanEventRedact(value) {
+  if (!isPlainObject(value)) return { value: undefined, skipped: 1 };
+  const out = {};
+  let skipped = 0;
+  for (const [key, raw] of Object.entries(value)) {
+    if (!byKey[key] || !isPlainObject(raw)) {
+      skipped += 1;
+      continue;
+    }
+    const flags = {};
+    for (const [flag, enabled] of Object.entries(raw)) {
+      if (!EVENT_REDACT_FLAGS.has(flag)) {
+        skipped += 1;
+        continue;
+      }
+      const parsed = toBoolean(enabled);
+      if (parsed == null) skipped += 1;
+      else flags[flag] = Boolean(parsed);
+    }
+    if (Object.keys(flags).length) out[key] = flags;
+  }
+  return { value: out, skipped };
+}
+
 function cleanQuietDays(value) {
   if (!Array.isArray(value)) return { value: undefined, skipped: 1 };
   const out = [];
@@ -634,6 +660,12 @@ function cleanExtra(extra, resolveChannel) {
     if (key === "eventDelivery") {
       const cleaned = cleanEventDelivery(raw);
       if (cleaned.value) out.eventDelivery = cleaned.value;
+      skipped += cleaned.skipped;
+      continue;
+    }
+    if (key === "eventRedact") {
+      const cleaned = cleanEventRedact(raw);
+      if (cleaned.value) out.eventRedact = cleaned.value;
       skipped += cleaned.skipped;
       continue;
     }

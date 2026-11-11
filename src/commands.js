@@ -7,6 +7,7 @@ const {
 const { EVENTS, GROUPS, byKey } = require("./catalog");
 const { LOCALES, t } = require("./locales");
 const { buildEmbed, parseHexColor } = require("./util");
+const { EVENT_FLAGS } = require("./redact");
 
 const MAX_HISTORY_LIMIT = 500;
 const QUIET_DAYS = ["sun", "mon", "tue", "wed", "thu", "fri", "sat"];
@@ -263,6 +264,28 @@ function data(config = {}) {
                   { name: "webhook", value: "webhook" },
                 ),
             ),
+        )
+        .addSubcommand((s) =>
+          s
+            .setName("redact")
+            .setDescription("Redaction flags for one event")
+            .addStringOption((o) =>
+              o.setName("key").setDescription("Event key").setRequired(true).setAutocomplete(true),
+            )
+            .addStringOption((o) =>
+              o
+                .setName("flag")
+                .setDescription("Optional redaction flag")
+                .setRequired(true)
+                .addChoices(
+                  { name: "url", value: "url" },
+                  { name: "mention", value: "mention" },
+                  { name: "email", value: "email" },
+                  { name: "invite", value: "invite" },
+                ),
+            )
+            .addBooleanOption((o) => o.setName("enabled").setDescription("Default true"))
+            .addBooleanOption((o) => o.setName("clear").setDescription("Remove the event override")),
         )
         .addSubcommand((s) =>
           s
@@ -660,7 +683,7 @@ async function execute(interaction, { db, dispatch, processCfg }) {
       const row = db.ensureGuild(interaction.guildId);
       const extra = db.extraOf(row);
       let changed = false;
-      for (const mapKey of ["eventColors", "eventCooldown", "eventDigest", "eventActors", "quietBypass", "eventIncludeChannels", "eventDelivery"]) {
+      for (const mapKey of ["eventColors", "eventCooldown", "eventDigest", "eventActors", "quietBypass", "eventIncludeChannels", "eventDelivery", "eventRedact"]) {
         if (!extra[mapKey] || typeof extra[mapKey] !== "object" || Array.isArray(extra[mapKey])) continue;
         if (Object.prototype.hasOwnProperty.call(extra[mapKey], key)) changed = true;
         delete extra[mapKey][key];
@@ -871,6 +894,41 @@ async function execute(interaction, { db, dispatch, processCfg }) {
           name: `event.${key}.delivery`,
           value: mode === "default" ? t(locale, "none") : mode,
         }),
+        ephemeral: true,
+      });
+    }
+    if (sub === "redact") {
+      const flag = interaction.options.getString("flag", true);
+      const enabledOption = interaction.options.getBoolean("enabled");
+      const clear = interaction.options.getBoolean("clear");
+      if (!EVENT_FLAGS.includes(flag)) {
+        return interaction.reply({ content: t(locale, "cmd.invalid_option", { name: "flag" }), ephemeral: true });
+      }
+      const row = db.ensureGuild(interaction.guildId);
+      const extra = db.extraOf(row);
+      const eventRedact = extra.eventRedact && typeof extra.eventRedact === "object" && !Array.isArray(extra.eventRedact)
+        ? { ...extra.eventRedact }
+        : {};
+      const perEvent = eventRedact[key] && typeof eventRedact[key] === "object" && !Array.isArray(eventRedact[key])
+        ? { ...eventRedact[key] }
+        : {};
+      let value;
+      if (clear) {
+        delete perEvent[flag];
+        value = t(locale, "none");
+      } else {
+        const enabled = enabledOption == null ? true : enabledOption;
+        perEvent[flag] = enabled;
+        value = String(enabled);
+      }
+      if (Object.keys(perEvent).length) eventRedact[key] = perEvent;
+      else delete eventRedact[key];
+      if (Object.keys(eventRedact).length) extra.eventRedact = eventRedact;
+      else delete extra.eventRedact;
+      db.setExtra(interaction.guildId, extra);
+      dispatch.refreshGuild(interaction.guildId);
+      return interaction.reply({
+        content: t(locale, "cmd.filter_set", { name: `event.${key}.redact.${flag}`, value }),
         ephemeral: true,
       });
     }

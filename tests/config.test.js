@@ -239,6 +239,20 @@ test("mergeGuild keeps per-event delivery modes", (t) => {
   assert.deepEqual(merged.eventDelivery, { messageDelete: "plain", guildBanAdd: "webhook" });
 });
 
+test("mergeGuild keeps per-event redaction overrides", (t) => {
+  const db = withDb(t);
+  if (!db) return;
+  db.setExtra("g1", { eventRedact: { messageDelete: { url: true }, guildBanAdd: { mention: false } } });
+
+  const row = db.getGuild.get("g1");
+  const merged = mergeGuild(processConfig({}), row, [], [], db.extraOf(row));
+
+  assert.deepEqual(merged.eventRedact, {
+    messageDelete: { url: true },
+    guildBanAdd: { mention: false },
+  });
+});
+
 test("buildEmbed prefers a per-event color over the slot color", () => {
   const cfg = {
     id: "g1",
