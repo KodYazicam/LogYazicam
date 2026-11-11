@@ -47,4 +47,9 @@ module.exports = {
   "event.guildAvailable": "서버 사용 가능",
   "event.guildUnavailable": "서버 사용 불가",
   "event.guildMemberPending": "멤버십 심사",
+  "cmd.config_export": "설정을 내보냈습니다: 라우트 {routes}개, 무시 {ignores}개.",
+  "cmd.config_import": "설정을 가져왔습니다: 라우트 {routes}개, 무시 {ignores}개, 설정 {settings}개, 건너뜀 {skipped}개.",
+  "cmd.config_import_invalid": "가져오기 실패: {error}",
+  "cmd.config_import_too_big": "설정 파일이 {max} KB보다 큽니다.",
+  "cmd.config_import_file": "`/log export`에서 내보낸 `.json` 파일을 첨부하세요.",
 };

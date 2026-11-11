@@ -47,4 +47,9 @@ module.exports = {
   "event.guildAvailable": "サーバー利用可",
   "event.guildUnavailable": "サーバー利用不可",
   "event.guildMemberPending": "メンバー審査",
+  "cmd.config_export": "設定をエクスポートしました: {routes} ルート、{ignores} 除外。",
+  "cmd.config_import": "設定をインポートしました: {routes} ルート、{ignores} 除外、{settings} 設定、{skipped} 件スキップ。",
+  "cmd.config_import_invalid": "インポートに失敗しました: {error}",
+  "cmd.config_import_too_big": "設定ファイルが {max} KB を超えています。",
+  "cmd.config_import_file": "`/log export` でエクスポートした `.json` ファイルを添付してください。",
 };

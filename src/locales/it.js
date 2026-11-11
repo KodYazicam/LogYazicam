@@ -47,4 +47,9 @@ module.exports = {
   "event.guildAvailable": "Server disponibile",
   "event.guildUnavailable": "Server non disponibile",
   "event.guildMemberPending": "Verifica iscrizione",
+  "cmd.config_export": "Configurazione esportata: {routes} route, {ignores} esclusioni.",
+  "cmd.config_import": "Configurazione importata: {routes} route, {ignores} esclusioni, {settings} impostazioni; {skipped} saltate.",
+  "cmd.config_import_invalid": "Importazione non riuscita: {error}",
+  "cmd.config_import_too_big": "Il file di configurazione supera {max} KB.",
+  "cmd.config_import_file": "Allega un file `.json` esportato da `/log export`.",
 };

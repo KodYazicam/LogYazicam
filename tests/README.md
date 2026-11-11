@@ -12,5 +12,6 @@ No Discord token. Runner: `node --test` (CI and `npm test`).
 | `dashboard.test.js` | Events are newest-first, filtered by guild, limit-capped, and reduced to summary fields; token auth, non-loopback refusal, HTML without external assets, health, 404, and 405 |
 | `retention.test.js` | Days normalization, cutoff boundaries, per-guild overrides, unknown-guild defaults, untouched routes/ignores/snapshots/invites, and config transfer round-trip |
 | `redact.test.js` | Each optional flag independently, invite/url coupling, no-flag passthrough, all always-on token shapes, ordinary-text false positives, embed title/description/field redaction without mutation, and `flagsFrom` per-guild overrides |
+| `locales.test.js` | Every non-English pack translates the five config-transfer replies and keeps the same placeholder set as English; interpolation drops no placeholders |
 
 When you add a locale file, update the sorted array in `catalog.test.js`. When you add an event, `en.js` + catalog uniqueness is enough — no new test file required unless the formatter has branches (`voiceKind`).

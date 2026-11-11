@@ -47,4 +47,9 @@ module.exports = {
   "event.guildAvailable": "服务器可用",
   "event.guildUnavailable": "服务器不可用",
   "event.guildMemberPending": "成员审核",
+  "cmd.config_export": "配置已导出：{routes} 条路由，{ignores} 条忽略。",
+  "cmd.config_import": "配置已导入：{routes} 条路由，{ignores} 条忽略，{settings} 项设置；跳过 {skipped} 项。",
+  "cmd.config_import_invalid": "导入失败：{error}",
+  "cmd.config_import_too_big": "配置文件大于 {max} KB。",
+  "cmd.config_import_file": "请附上由 `/log export` 导出的 `.json` 文件。",
 };

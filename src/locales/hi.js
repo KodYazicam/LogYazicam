@@ -47,4 +47,9 @@ module.exports = {
   "event.guildAvailable": "सर्वर उपलब्ध",
   "event.guildUnavailable": "सर्वर अनुपलब्ध",
   "event.guildMemberPending": "सदस्य जाँच",
+  "cmd.config_export": "कॉन्फ़िग निर्यात किया गया: {routes} रूट, {ignores} इग्नोर।",
+  "cmd.config_import": "कॉन्फ़िग आयात किया गया: {routes} रूट, {ignores} इग्नोर, {settings} सेटिंग्स; {skipped} छोड़े गए।",
+  "cmd.config_import_invalid": "आयात विफल: {error}",
+  "cmd.config_import_too_big": "कॉन्फ़िग फ़ाइल {max} KB से बड़ी है।",
+  "cmd.config_import_file": "`/log export` से निर्यात की गई `.json` फ़ाइल संलग्न करें।",
 };

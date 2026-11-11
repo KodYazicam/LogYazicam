@@ -16,6 +16,10 @@ module.exports = { ...en, "cmd.denied": "…" };
 
 Missing keys fall back to English inside `t()`.
 
+The five `cmd.config_*` keys used by `/log export` and `/log import` are
+translated in **every** pack. `tests/locales.test.js` checks that each value
+differs from English and uses the same placeholders.
+
 ## How packs load
 
 `index.js` **reads the directory**. Any `xx.js` besides `index.js` becomes locale `xx`. You do **not** edit a hardcoded list when adding a language.

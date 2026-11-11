@@ -10,6 +10,7 @@ Small, shippable steps. Upvote or comment on an issue if you want something move
 - [x] A one-command Docker Compose example in the README
 - [x] More tests around the webhook delivery path
 - [x] Redaction and voice formatter branch coverage
+- [x] Config transfer replies translated in every locale pack
 
 ## Next
 

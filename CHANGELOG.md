@@ -43,6 +43,8 @@ All notable changes to this project are documented here. The format follows
   a per-guild `history_days` override. Only `history` rows are pruned.
 - Branch coverage for redaction (all optional and always-on patterns, embed
   fields, per-guild overrides) and every `voiceKind` transition.
+- All 18 locale packs now translate the `/log export` and `/log import` replies;
+  a placeholder-consistency test keeps future additions honest.
 
 ### Security
 

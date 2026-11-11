@@ -47,4 +47,9 @@ module.exports = {
   "event.guildAvailable": "Server tillgänglig",
   "event.guildUnavailable": "Server otillgänglig",
   "event.guildMemberPending": "Medlemskontroll",
+  "cmd.config_export": "Konfigurationen exporterades: {routes} rutter, {ignores} undantag.",
+  "cmd.config_import": "Konfigurationen importerades: {routes} rutter, {ignores} undantag, {settings} inställningar; {skipped} överhoppade.",
+  "cmd.config_import_invalid": "Importen misslyckades: {error}",
+  "cmd.config_import_too_big": "Konfigurationsfilen är större än {max} KB.",
+  "cmd.config_import_file": "Bifoga en `.json`-fil som exporterats med `/log export`.",
 };
