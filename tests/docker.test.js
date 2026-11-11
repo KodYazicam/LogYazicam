@@ -14,6 +14,9 @@ test("compose uses a named data volume that the image user can write", () => {
   assert.match(compose, /^volumes:\s*$/m);
   assert.match(compose, /name:\s*logyazicam-data/);
   assert.doesNotMatch(compose, /\.\/data:\/app\/data/);
+  assert.match(compose, /\.\/\.env:\/app\/\.env:ro/);
+  assert.match(compose, /ENV_FILE_WINS:\s*"true"/);
+  assert.match(read(".dockerignore"), /^\.env$/m);
 
   const userIndex = dockerfile.indexOf("USER 10001");
   const dataIndex = dockerfile.indexOf("chown -R 10001:10001 /app/data");

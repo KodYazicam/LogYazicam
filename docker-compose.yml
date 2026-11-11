@@ -3,8 +3,12 @@ services:
     build: .
     restart: unless-stopped
     env_file: .env
+    environment:
+      # Let HOT_RELOAD_MS read the mounted .env instead of the frozen env_file.
+      ENV_FILE_WINS: "true"
     volumes:
       - logyazicam-data:/app/data
+      - ./.env:/app/.env:ro
 
 volumes:
   logyazicam-data:
