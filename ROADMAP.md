@@ -19,6 +19,7 @@ Small, shippable steps. Upvote or comment on an issue if you want something move
 - [x] Logger reconfigures on hot reload
 - [x] All command replies translated
 - [x] Prefix integer bounds match slash options
+- [x] Black embed colors preserved
 
 ## Next
 

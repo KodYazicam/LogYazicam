@@ -16,6 +16,7 @@ No Discord token. Runner: `node --test` (CI and `npm test`).
 | `logger.test.js` | `logLevel`/`logFile` and uppercase env keys, hot reconfiguration, level filtering, file output, unknown-level fallback, no-file mode, and unusable paths |
 | `sinks.test.js` | `writeFileSink` returns `false` for blocked/missing destinations instead of throwing |
 | `backup.test.js` | `backupTo` creates nested directories and a readable snapshot that includes rows still in WAL; missing destinations reject |
+| `config.test.js` | Guild color merging preserves `0`/black, extra colors win over row colors, and `buildEmbed` uses a black event color |
 | `commands.test.js` | Slash default permission uses the supplied `processConfig`, falls back to `ManageGuild` for invalid names, keeps the `process.env` fallback, and clamps history limits |
 
 When you add a locale file, update the sorted array in `catalog.test.js`. When you add an event, `en.js` + catalog uniqueness is enough — no new test file required unless the formatter has branches (`voiceKind`).
