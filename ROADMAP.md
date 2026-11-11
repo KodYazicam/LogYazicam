@@ -23,6 +23,7 @@ Small, shippable steps. Upvote or comment on an issue if you want something move
 - [x] Strict hex color validation
 - [x] Filter command column allowlist
 - [x] Bounded config attachment downloads
+- [x] Logger safe value formatting
 
 ## Next
 

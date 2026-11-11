@@ -128,3 +128,28 @@ test("configure falls back for invalid levels and blocked paths", (t) => {
   assert.match(captured.out, /INFO info lives/);
   assert.doesNotMatch(captured.out, /hidden debug/);
 });
+
+test("logger safely handles circular, BigInt, and throwing values", (t) => {
+  const dir = tempDir(t);
+  const file = path.join(dir, "safe.log");
+  const log = createLogger({ logLevel: "info", logFile: file });
+  const circular = {};
+  circular.self = circular;
+  const bad = {
+    toJSON() {
+      throw new Error("no json");
+    },
+    toString() {
+      throw new Error("no string");
+    },
+  };
+
+  capture(() => {
+    assert.doesNotThrow(() => log.info("values", circular, 1n, bad));
+  });
+
+  const text = fs.readFileSync(file, "utf8");
+  assert.match(text, /INFO values/);
+  assert.match(text, /1/);
+  assert.match(text, /\[unloggable\]/);
+});
