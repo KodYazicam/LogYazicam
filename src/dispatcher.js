@@ -161,8 +161,6 @@ function createDispatcher({ client, db, processCfg, log, cache, deps = {} }) {
   }
 
   async function flushOne(item) {
-    const channel = await client.channels.fetch(item.channelId).catch(() => null);
-    if (!channel || !channel.isTextBased()) return;
     const cfg = guildCfg(item.guildId);
     const wantHook = item.preferWebhook || (cfg?.delivery === "webhook") || Boolean(cfg?.webhookId && cfg?.webhookToken);
     if (wantHook && cfg?.webhookId && cfg?.webhookToken) {
@@ -192,6 +190,8 @@ function createDispatcher({ client, db, processCfg, log, cache, deps = {} }) {
       if (sinks.includes("http")) postHttpSink(processCfg.httpSinkUrl, body);
     }
     if (!sinks.includes("discord") && sinks.length) return;
+    const channel = await client.channels.fetch(item.channelId).catch(() => null);
+    if (!channel || !channel.isTextBased()) return;
     await channel.send({
       content: item.content || undefined,
       embeds: item.embeds?.length ? item.embeds : undefined,
