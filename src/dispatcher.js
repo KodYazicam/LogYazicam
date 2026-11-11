@@ -49,7 +49,11 @@ function createDispatcher({ client, db, processCfg, log, cache, deps = {} }) {
   }
 
   function cooldownOk(cfg, guildId, eventKey) {
-    const sec = cfg.cooldownSec || 0;
+    const raw = cfg.eventCooldown?.[eventKey];
+    const override = Number(raw);
+    const sec = Number.isInteger(override) && override >= 0 && override <= 3600
+      ? override
+      : (cfg.cooldownSec || 0);
     if (!sec) return true;
     const stamp = `${guildId}:${eventKey}`;
     const last = lastSent.get(stamp) || 0;

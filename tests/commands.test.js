@@ -77,6 +77,12 @@ test("event group exposes color overrides", () => {
     color.options.map((option) => option.name).sort(),
     ["clear", "hex", "key"],
   );
+  const cooldown = event.options.find((sub) => sub.name === "cooldown");
+  assert.ok(cooldown);
+  assert.deepEqual(
+    cooldown.options.map((option) => option.name).sort(),
+    ["clear", "key", "seconds"],
+  );
 });
 
 test("event color command stores and clears a black override", async () => {
@@ -116,5 +122,46 @@ test("event color command stores and clears a black override", async () => {
 
   await execute(makeInteraction(null, true), { db, dispatch, processCfg });
   assert.equal(extra.eventColors, undefined);
+  assert.match(response.content, /none|—/i);
+});
+
+test("event cooldown command stores zero and clears it", async () => {
+  let extra = {};
+  const db = {
+    ensureGuild: () => ({ id: "g1" }),
+    extraOf: () => extra,
+    setExtra: (id, next) => {
+      extra = next;
+    },
+  };
+  let response;
+  const dispatch = {
+    guildCfg: () => ({ locale: "en" }),
+    refreshGuild: () => {},
+  };
+  const processCfg = { owners: [], defaultLocale: "en", slashEphemeral: true };
+  const makeInteraction = (seconds, clear) => ({
+    guildId: "g1",
+    user: { id: "u1" },
+    memberPermissions: { has: () => true },
+    options: {
+      getSubcommandGroup: () => "event",
+      getSubcommand: () => "cooldown",
+      getString: () => "messageDelete",
+      getInteger: () => seconds,
+      getBoolean: () => clear,
+    },
+    reply: async (payload) => {
+      response = payload;
+      return payload;
+    },
+  });
+
+  await execute(makeInteraction(0, false), { db, dispatch, processCfg });
+  assert.deepEqual(extra.eventCooldown, { messageDelete: 0 });
+  assert.match(response.content, /0/);
+
+  await execute(makeInteraction(null, true), { db, dispatch, processCfg });
+  assert.equal(extra.eventCooldown, undefined);
   assert.match(response.content, /none|—/i);
 });

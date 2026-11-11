@@ -46,6 +46,9 @@ All notable changes to this project are documented here. The format follows
 - Per-event embed color overrides via `/log event color`, stored in
   `extra_json.eventColors` and validated during config import. A black override
   is preserved; clearing it restores the semantic slot color.
+- Per-event cooldown overrides via `/log event cooldown`, stored in
+  `extra_json.eventCooldown`. `0` disables the cooldown for one event while
+  other events keep the guild default.
 - All 18 locale packs now translate the `/log export` and `/log import` replies;
   a placeholder-consistency test keeps future additions honest.
 - `/log import` now resets every importable setting to `null` before applying

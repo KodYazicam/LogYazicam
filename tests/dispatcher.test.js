@@ -300,6 +300,40 @@ test("enqueue routes an event into the queue and tick delivers it", async () => 
   assert.equal(h.hookCalls.length, 1);
   assert.equal(h.dispatch.queues.get("g1:c1").length, 0);
 });
+test("per-event cooldown zero disables the guild cooldown", async () => {
+  const h = setup({
+    queued: false,
+    cfg: {
+      cooldownSec: 60,
+      eventCooldown: { messageDelete: 0 },
+      events: { messageDelete: { on: true, channelId: "c1" } },
+    },
+  });
+
+  await h.dispatch.enqueue({ id: "g1" }, "messageDelete", { summary: "one" });
+  await h.dispatch.enqueue({ id: "g1" }, "messageDelete", { summary: "two" });
+  assert.equal(h.dispatch.queues.get("g1:c1").length, 2);
+});
+
+test("a per-event cooldown applies only to that event key", async () => {
+  const h = setup({
+    queued: false,
+    cfg: {
+      cooldownSec: 0,
+      eventCooldown: { messageDelete: 60 },
+      events: {
+        messageDelete: { on: true, channelId: "c1" },
+        messageUpdate: { on: true, channelId: "c1" },
+      },
+    },
+  });
+
+  await h.dispatch.enqueue({ id: "g1" }, "messageDelete", { summary: "one" });
+  await h.dispatch.enqueue({ id: "g1" }, "messageUpdate", { summary: "two" });
+  await h.dispatch.enqueue({ id: "g1" }, "messageDelete", { summary: "three" });
+  assert.equal(h.dispatch.queues.get("g1:c1").length, 2);
+});
+
 test("file sink runs before a successful webhook delivery", async (t) => {
   const dir = fs.mkdtempSync(path.join(os.tmpdir(), "logyazicam-sink-webhook-"));
   t.after(() => fs.rmSync(dir, { recursive: true, force: true }));
