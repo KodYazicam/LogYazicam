@@ -13,7 +13,8 @@ No Discord token. Runner: `node --test` (CI and `npm test`).
 | `retention.test.js` | Days normalization, cutoff boundaries, per-guild overrides, unknown-guild defaults, untouched routes/ignores/snapshots/invites, and config transfer round-trip |
 | `redact.test.js` | Each optional flag independently, invite/url coupling, no-flag passthrough, all always-on token shapes, ordinary-text false positives, embed title/description/field redaction without mutation, per-guild overrides, and per-event flag precedence including always-on patterns |
 | `locales.test.js` | Every non-English pack translates config-transfer, validation, and member-join labels, keeps the same placeholder sets as English, and interpolates values |
-| `format.test.js` | Member-join embeds label account age separately from channel, and the new labels follow the guild locale |
+| `format.test.js` | Message snapshots, delete/update/bulk payloads, partial-message fetches and stored snapshots, member-remove/ban audit context, voice join/leave/state labels, named create/delete/update payloads, member-join account-age labels, and guild-locale output |
+| `packs.test.js` | Every pack key exists in the catalog, `applyPack` enables the expected routes, and unknown pack names return `null` without writes |
 | `filters.test.js` | Quiet-hour midnight wrapping, quiet-day weekday/timezone gating, global and per-event include lists, plain-text flattening, and strict hex parsing |
 | `logger.test.js` | `logLevel`/`logFile` and uppercase env keys, hot reconfiguration, level filtering, file output, unknown-level fallback, no-file mode, unusable paths, and circular/BigInt/throwing values |
 | `sinks.test.js` | `writeFileSink` returns `false` for blocked/missing destinations instead of throwing |

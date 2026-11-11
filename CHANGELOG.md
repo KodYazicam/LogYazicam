@@ -75,6 +75,10 @@ All notable changes to this project are documented here. The format follows
   a per-guild `history_days` override. Only `history` rows are pruned.
 - Branch coverage for redaction (all optional and always-on patterns, embed
   fields, per-guild overrides) and every `voiceKind` transition.
+- Formatter and pack coverage for message delete/update/bulk, partial fetches,
+  stored snapshots, moderation audit context, voice state labels, named
+  create/delete/update payloads, and `applyPack`; `format.js` line coverage is
+  now 100%.
 - Per-event embed color overrides via `/log event color`, stored in
   `extra_json.eventColors` and validated during config import. A black override
   is preserved; clearing it restores the semantic slot color.
