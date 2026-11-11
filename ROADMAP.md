@@ -29,6 +29,7 @@ Small, shippable steps. Upvote or comment on an issue if you want something move
 - [x] Sinks mirror webhook deliveries exactly once
 - [x] Staff copies bypass webhooks
 - [x] Hot reload reaches dispatcher/events
+- [x] Streamed config downloads are size-capped
 
 ## Next
 

@@ -133,6 +133,50 @@ function parseConfig(input) {
   return validateConfig(data);
 }
 
+async function cancelBody(response) {
+  try {
+    await response.body?.cancel?.();
+  } catch {
+    // Best effort: the caller is already rejecting the download.
+  }
+}
+
+async function readBoundedBody(response) {
+  const body = response.body;
+  if (body && typeof body.getReader === "function") {
+    const reader = body.getReader();
+    const chunks = [];
+    let total = 0;
+    try {
+      for (;;) {
+        const { done, value } = await reader.read();
+        if (done) break;
+        const chunk = Buffer.from(value);
+        total += chunk.length;
+        if (total > MAX_BYTES) {
+          try {
+            await reader.cancel();
+          } catch {
+            // Ignore cancellation errors; the size limit is the real error.
+          }
+          throw new Error(`config is larger than ${MAX_BYTES / 1024} KB`);
+        }
+        chunks.push(chunk);
+      }
+    } finally {
+      try {
+        reader.releaseLock?.();
+      } catch {
+        // Releasing a cancelled reader is best effort.
+      }
+    }
+    return Buffer.concat(chunks, total);
+  }
+  const buffer = Buffer.from(await response.arrayBuffer());
+  if (buffer.length > MAX_BYTES) throw new Error(`config is larger than ${MAX_BYTES / 1024} KB`);
+  return buffer;
+}
+
 async function readAttachment(attachment, {
   fetchImpl = globalThis.fetch,
   timeoutMs = FETCH_TIMEOUT_MS,
@@ -146,9 +190,13 @@ async function readAttachment(attachment, {
   const signal = typeof AbortSignal?.timeout === "function" ? AbortSignal.timeout(timeoutMs) : undefined;
   const response = await fetchImpl(attachment.url, signal ? { signal } : undefined);
   if (!response.ok) throw new Error(`attachment download failed: ${response.status}`);
-  const buffer = Buffer.from(await response.arrayBuffer());
-  if (buffer.length > MAX_BYTES) throw new Error(`config is larger than ${MAX_BYTES / 1024} KB`);
-  return parseConfig(buffer);
+  const rawLength = response.headers?.get?.("content-length");
+  const contentLength = rawLength == null || rawLength === "" ? NaN : Number(rawLength);
+  if (Number.isFinite(contentLength) && contentLength > MAX_BYTES) {
+    await cancelBody(response);
+    throw new Error(`config is larger than ${MAX_BYTES / 1024} KB`);
+  }
+  return parseConfig(await readBoundedBody(response));
 }
 
 function resolveId(value, resolveChannel) {
