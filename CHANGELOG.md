@@ -45,6 +45,9 @@ All notable changes to this project are documented here. The format follows
   fields, per-guild overrides) and every `voiceKind` transition.
 - All 18 locale packs now translate the `/log export` and `/log import` replies;
   a placeholder-consistency test keeps future additions honest.
+- `/log import` now resets every importable setting to `null` before applying
+  the file, so omitted settings fall back to env defaults instead of the target
+  guild's old values. Missing `mention_role` ids are cleared and counted.
 
 ### Security
 

@@ -680,7 +680,7 @@ Downloads `logyazicam-config-{guildId}.json` with a format marker, version, guil
 
 ### `/log import`
 
-`file` is a `.json` from `/log export`; `channel` is an optional fallback. The file is validated (format, version, 1 MiB limit) and applied in one SQLite transaction, replacing the guild's settings, routes, ignores, and `extra_json`. Unknown event keys, ignore kinds, settings, and extra keys are skipped and counted. Channel/role/category snowflakes that do not exist in the target guild use the `channel` option or become `null`. Webhook credentials already set on the target guild are left untouched.
+`file` is a `.json` from `/log export`; `channel` is an optional fallback. The file is validated (format, version, 1 MiB limit) and applied in one SQLite transaction. Import **replaces** settings, routes, ignores, and `extra_json`: any setting omitted by the file is reset to `null`, so `mergeGuild` falls back to env defaults instead of inheriting the target guild's old value. Unknown event keys, ignore kinds, settings, and extra keys are skipped and counted. Missing channel/category ids use the `channel` option or become `null`; a `mention_role` that is not in the target guild becomes `null` and counts as skipped. Webhook credentials already set on the target guild are left untouched.
 
 ### `/log reload`
 

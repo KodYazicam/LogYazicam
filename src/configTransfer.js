@@ -155,7 +155,7 @@ function resolveId(value, resolveChannel) {
   return resolved == null || resolved === "" ? null : String(resolved);
 }
 
-function cleanSettings(guild, resolveChannel) {
+function cleanSettings(guild, resolveChannel, resolveRole) {
   const patch = {};
   let skipped = 0;
   if (!isPlainObject(guild)) return { patch, skipped };
@@ -195,8 +195,16 @@ function cleanSettings(guild, resolveChannel) {
       if (raw == null || validString(raw, 2048)) patch.embed_footer = raw;
       else skipped += 1;
     } else if (key === "mention_role") {
-      if (raw == null || validString(raw, 64)) patch.mention_role = raw;
-      else skipped += 1;
+      if (raw == null) {
+        patch.mention_role = null;
+      } else if (typeof raw === "string" || typeof raw === "number") {
+        const resolved = resolveId(raw, resolveRole);
+        if (resolved) patch.mention_role = resolved;
+        else {
+          patch.mention_role = null;
+          skipped += 1;
+        }
+      } else skipped += 1;
     }
   }
   return { patch, skipped };
@@ -409,15 +417,23 @@ function cleanExtra(extra, resolveChannel) {
   return { extra: out, skipped };
 }
 
-function importGuild(db, guildId, data, { resolveChannel = (id) => id } = {}) {
+function importGuild(db, guildId, data, {
+  resolveChannel = (id) => id,
+  resolveRole = (id) => id,
+} = {}) {
   validateConfig(data);
-  const settings = cleanSettings(data.guild, resolveChannel);
+  const settings = cleanSettings(data.guild, resolveChannel, resolveRole);
   const routes = cleanRoutes(data.routes, resolveChannel);
   const ignores = cleanIgnores(data.ignores, resolveChannel);
   const extra = cleanExtra(data.extra, resolveChannel);
 
+  // Replace semantics: omitted settings fall back to env/defaults instead of
+  // inheriting whatever the target guild had before the import.
+  const patch = Object.fromEntries(SETTINGS.map((key) => [key, null]));
+  Object.assign(patch, settings.patch);
+
   db.replaceConfig(guildId, {
-    patch: settings.patch,
+    patch,
     routes: routes.routes,
     ignores: ignores.ignores,
     extra: extra.extra,

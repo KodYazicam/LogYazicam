@@ -643,9 +643,10 @@ async function execute(interaction, { db, dispatch, processCfg }) {
     }
     const fallback = interaction.options.getChannel("channel")?.id || null;
     const resolveChannel = (id) => (interaction.guild.channels.cache.has(id) ? id : fallback);
+    const resolveRole = (id) => (interaction.guild.roles.cache.has(id) ? id : null);
     let result;
     try {
-      result = importGuild(db, interaction.guildId, payload, { resolveChannel });
+      result = importGuild(db, interaction.guildId, payload, { resolveChannel, resolveRole });
     } catch (error) {
       return interaction.reply({
         content: t(locale, "cmd.config_import_invalid", { error: error.message }),
