@@ -608,6 +608,7 @@ All names English. Booleans: `1` `0` `true` `false` `yes` `no` `on` `off`. Numer
 | `on` | `key` (required, autocomplete), `channel` (optional) | `event_routes.enabled=1`. Optional `channel_id` override. |
 | `off` | `key` | `enabled=0`. |
 | `color` | `key` (required, autocomplete), `hex` `#rrggbb`, `clear` | Store `extra_json.eventColors[key]`. This wins over the group slot color; `clear` restores the slot. |
+| `cooldown` | `key` (required, autocomplete), `seconds` `0`–`3600`, `clear` | Store `extra_json.eventCooldown[key]`. Overrides the guild cooldown for one event; `0` disables it, `clear` restores the guild value. |
 
 Autocomplete matches substring of the English key (`del` → `messageDelete`, …), max 25 choices (Discord limit). `/log events` lists all keys if you cannot find one.
 
@@ -717,7 +718,7 @@ One command for the remaining guild knobs (`extra_json`). `name` + `value`:
 | `plain_text` | `true` / `false` | Flatten embeds to markdown text |
 | `thumbnails` | `true` / `false` | Avatar on embeds |
 | `actors` | `all` `humans` `bots` | Who is logged |
-| `cooldown_sec` | `0`–`3600` | Min seconds between two logs of the **same event key** |
+| `cooldown_sec` | `0`–`3600` | Min seconds between two logs of the **same event key**. Per-event override: `/log event cooldown`. |
 | `history_days` | `0`–`3650` | Delete stored history older than N days; `0` keeps forever |
 | `min_account_days` | `0`–`3650` | Skip members whose account is younger |
 | `quiet_start` / `quiet_end` | `HH:MM` in guild timezone | Drop events in that window (wraps midnight). `value:clear` unsets |
@@ -780,6 +781,14 @@ Developer maps: [`src/README.md`](src/README.md) · [`src/locales/README.md`](sr
 /log event color key:messageDelete hex:#e74c3c
 /log event color key:guildBanAdd hex:#000000
 /log event color key:messageDelete clear:true
+```
+
+**Tune noisy events**
+
+```
+/log event cooldown key:messageUpdate seconds:30
+/log event cooldown key:messageDelete seconds:0
+/log event cooldown key:messageDelete clear:true
 ```
 
 **Ignore a ticket category and a noisy bot**

@@ -385,6 +385,21 @@ function cleanEventColors(value) {
   return { value: out, skipped };
 }
 
+function cleanEventCooldown(value) {
+  if (!isPlainObject(value)) return { value: undefined, skipped: 1 };
+  const out = {};
+  let skipped = 0;
+  for (const [key, raw] of Object.entries(value)) {
+    const seconds = Number(raw);
+    if (!byKey[key] || !Number.isInteger(seconds) || seconds < 0 || seconds > 3600) {
+      skipped += 1;
+      continue;
+    }
+    out[key] = seconds;
+  }
+  return { value: out, skipped };
+}
+
 function cleanRedact(value) {
   if (!isPlainObject(value)) return { value: undefined, skipped: 1 };
   const out = {};
@@ -476,6 +491,12 @@ function cleanExtra(extra, resolveChannel) {
     if (key === "eventColors") {
       const cleaned = cleanEventColors(raw);
       if (cleaned.value) out.eventColors = cleaned.value;
+      skipped += cleaned.skipped;
+      continue;
+    }
+    if (key === "eventCooldown") {
+      const cleaned = cleanEventCooldown(raw);
+      if (cleaned.value) out.eventCooldown = cleaned.value;
       skipped += cleaned.skipped;
       continue;
     }

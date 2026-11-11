@@ -159,6 +159,17 @@ test("mergeGuild keeps per-event color overrides", (t) => {
   assert.deepEqual(merged.eventColors, { messageDelete: 0x000000, guildBanAdd: 0x123456 });
 });
 
+test("mergeGuild keeps per-event cooldown overrides", (t) => {
+  const db = withDb(t);
+  if (!db) return;
+  db.setExtra("g1", { eventCooldown: { messageDelete: 0, guildBanAdd: 60 } });
+
+  const row = db.getGuild.get("g1");
+  const merged = mergeGuild(processConfig({}), row, [], [], db.extraOf(row));
+
+  assert.deepEqual(merged.eventCooldown, { messageDelete: 0, guildBanAdd: 60 });
+});
+
 test("buildEmbed prefers a per-event color over the slot color", () => {
   const cfg = {
     id: "g1",

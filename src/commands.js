@@ -67,6 +67,18 @@ function data(config = {}) {
             )
             .addStringOption((o) => o.setName("hex").setDescription("#rrggbb"))
             .addBooleanOption((o) => o.setName("clear").setDescription("Restore the slot color")),
+        )
+        .addSubcommand((s) =>
+          s
+            .setName("cooldown")
+            .setDescription("Override one event's send cooldown")
+            .addStringOption((o) =>
+              o.setName("key").setDescription("Event key").setRequired(true).setAutocomplete(true),
+            )
+            .addIntegerOption((o) =>
+              o.setName("seconds").setDescription("0-3600; 0 disables").setMinValue(0).setMaxValue(3600),
+            )
+            .addBooleanOption((o) => o.setName("clear").setDescription("Use the guild cooldown")),
         ),
     )
     .addSubcommandGroup((g) =>
@@ -475,6 +487,34 @@ async function execute(interaction, { db, dispatch, processCfg }) {
       dispatch.refreshGuild(interaction.guildId);
       return interaction.reply({
         content: t(locale, "cmd.filter_set", { name: `event.${key}.color`, value }),
+        ephemeral: true,
+      });
+    }
+    if (sub === "cooldown") {
+      const seconds = interaction.options.getInteger("seconds");
+      const clear = interaction.options.getBoolean("clear");
+      const row = db.ensureGuild(interaction.guildId);
+      const extra = db.extraOf(row);
+      const eventCooldown = extra.eventCooldown && typeof extra.eventCooldown === "object" && !Array.isArray(extra.eventCooldown)
+        ? { ...extra.eventCooldown }
+        : {};
+      let value;
+      if (clear) {
+        delete eventCooldown[key];
+        value = t(locale, "none");
+      } else {
+        if (!Number.isInteger(seconds) || seconds < 0 || seconds > 3600) {
+          return interaction.reply({ content: t(locale, "cmd.invalid_option", { name: "seconds" }), ephemeral: true });
+        }
+        eventCooldown[key] = seconds;
+        value = String(seconds);
+      }
+      if (Object.keys(eventCooldown).length) extra.eventCooldown = eventCooldown;
+      else delete extra.eventCooldown;
+      db.setExtra(interaction.guildId, extra);
+      dispatch.refreshGuild(interaction.guildId);
+      return interaction.reply({
+        content: t(locale, "cmd.filter_set", { name: `event.${key}.cooldown`, value }),
         ephemeral: true,
       });
     }

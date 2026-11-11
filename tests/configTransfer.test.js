@@ -82,6 +82,7 @@ function sourcePayload() {
       strings: { "event.messageDelete": "silindi" },
       colors: { info: 0x00ff00 },
       eventColors: { messageDelete: 0x123456 },
+      eventCooldown: { messageDelete: 0, guildBanAdd: 60 },
       hiddenFields: { messageDelete: ["id", "jump"] },
       redact: { url: true },
     },
@@ -164,11 +165,12 @@ test("round-trips config into another guild and keeps its webhook", (t) => {
   assert.deepEqual(extra.strings, { "event.messageDelete": "silindi" });
   assert.deepEqual(extra.colors, { info: 0x00ff00 });
   assert.deepEqual(extra.eventColors, { messageDelete: 0x123456 });
+  assert.deepEqual(extra.eventCooldown, { messageDelete: 0, guildBanAdd: 60 });
   assert.deepEqual(extra.hiddenFields, { messageDelete: ["id", "jump"] });
   assert.deepEqual(extra.redact, { url: true });
 });
 
-test("skips invalid per-event color overrides", (t) => {
+test("skips invalid per-event overrides", (t) => {
   const db = withDb(t);
   if (!db) return;
   const payload = sourcePayload();
@@ -178,10 +180,18 @@ test("skips invalid per-event color overrides", (t) => {
     notAnEvent: 0x123456,
     messageUpdate: 0x1000000,
   };
+  payload.extra.eventCooldown = {
+    messageDelete: 0,
+    guildBanAdd: 3601,
+    notAnEvent: 5,
+    messageUpdate: 1.5,
+  };
 
   const counts = importGuild(db, "201", payload);
-  assert.equal(counts.skipped, 3);
-  assert.deepEqual(db.extraOf(db.getGuild.get("201")).eventColors, { messageDelete: 0 });
+  assert.equal(counts.skipped, 6);
+  const extra = db.extraOf(db.getGuild.get("201"));
+  assert.deepEqual(extra.eventColors, { messageDelete: 0 });
+  assert.deepEqual(extra.eventCooldown, { messageDelete: 0 });
 });
 
 test("replaces omitted settings and clears missing mention roles", (t) => {
