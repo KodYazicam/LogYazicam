@@ -1080,6 +1080,7 @@ npm test
 - Config transfer: export without webhook secrets, round-trip import with channel remapping, unknown-key skips, validation/size rejection before writes, rollback, and attachment download limits
 - Dashboard: newest-first events, guild filter, limit cap, reduced payloads, bearer-token auth, non-loopback refusal, no external assets, health, 404, and 405
 - History retention: cutoff boundaries, per-guild overrides, unknown-guild defaults, untouched non-history tables, and config transfer
+- Redaction: each flag independently, invite/url coupling, always-on token shapes, embed title/description/fields, and per-guild overrides; `voiceKind` covers every transition and move precedence
 
 CI: GitHub Actions, Node 22, `npm ci` && `npm test`.
 
