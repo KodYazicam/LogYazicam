@@ -49,6 +49,9 @@ All notable changes to this project are documented here. The format follows
 - Per-event cooldown overrides via `/log event cooldown`, stored in
   `extra_json.eventCooldown`. `0` disables the cooldown for one event while
   other events keep the guild default.
+- Optional quiet-day scheduling via `/log set name:quiet_days value:mon,tue`.
+  The existing quiet window can now apply only on selected local weekdays;
+  `all` or `clear` restores every-day behavior.
 - All 18 locale packs now translate the `/log export` and `/log import` replies;
   a placeholder-consistency test keeps future additions honest.
 - `/log import` now resets every importable setting to `null` before applying

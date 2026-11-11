@@ -9,6 +9,16 @@ const { LOCALES, t } = require("./locales");
 const { buildEmbed, parseHexColor } = require("./util");
 
 const MAX_HISTORY_LIMIT = 500;
+const QUIET_DAYS = ["sun", "mon", "tue", "wed", "thu", "fri", "sat"];
+const QUIET_DAY_ALIASES = {
+  sunday: "sun",
+  monday: "mon",
+  tuesday: "tue",
+  wednesday: "wed",
+  thursday: "thu",
+  friday: "fri",
+  saturday: "sat",
+};
 const FILTER_NAMES = new Set([
   "ignore_bots",
   "ignore_webhooks",
@@ -23,6 +33,18 @@ const FILTER_NAMES = new Set([
 function clampHistoryLimit(value, fallback = 50) {
   const n = Number(value);
   return Number.isSafeInteger(n) && n > 0 ? Math.min(n, MAX_HISTORY_LIMIT) : fallback;
+}
+
+function parseQuietDays(raw) {
+  const tokens = String(raw || "").toLowerCase().split(/[,\s]+/).filter(Boolean);
+  if (!tokens.length || tokens.some((token) => ["all", "clear", "*", "everyday"].includes(token))) return [];
+  const out = [];
+  for (const token of tokens) {
+    const day = QUIET_DAY_ALIASES[token] || token;
+    if (!QUIET_DAYS.includes(day)) return null;
+    out.push(day);
+  }
+  return [...new Set(out)];
 }
 
 function data(config = {}) {
@@ -361,6 +383,7 @@ function data(config = {}) {
               { name: "acct_days", value: "minAccountDays" },
               { name: "quiet_in", value: "quietStart" },
               { name: "quiet_out", value: "quietEnd" },
+              { name: "quiet_days", value: "quietDays" },
               { name: "hook_name", value: "webhookName" },
               { name: "hook_av", value: "webhookAvatar" },
               { name: "timestamp", value: "showTimestamp" },
@@ -859,6 +882,12 @@ async function execute(interaction, { db, dispatch, processCfg }) {
       extra[name] = Number.isFinite(days) && days > 0 ? Math.min(Math.floor(days), 3650) : 0;
     } else if (name === "actors") {
       extra.actors = ["all", "humans", "bots"].includes(raw) ? raw : "all";
+    } else if (name === "quietDays") {
+      const days = parseQuietDays(raw);
+      if (days == null) {
+        return interaction.reply({ content: t(locale, "cmd.invalid_option", { name: "quiet_days" }), ephemeral: true });
+      }
+      extra.quietDays = days;
     } else if (name === "delivery") {
       extra.delivery = ["embed", "plain", "webhook"].includes(raw) ? raw : "embed";
       extra.plainText = extra.delivery === "plain";
@@ -873,7 +902,12 @@ async function execute(interaction, { db, dispatch, processCfg }) {
     db.setExtra(interaction.guildId, extra);
     dispatch.refreshGuild(interaction.guildId);
     return interaction.reply({
-      content: t(locale, "cmd.filter_set", { name, value: String(extra[name]) }),
+      content: t(locale, "cmd.filter_set", {
+        name,
+        value: name === "quietDays"
+          ? (extra.quietDays.length ? extra.quietDays.join(",") : "all")
+          : String(extra[name]),
+      }),
       ephemeral: true,
     });
   }
