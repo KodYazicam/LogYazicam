@@ -348,7 +348,7 @@ These are **not** fake Discord events. They sit on top of the catalog.
 
 **Sinks** (`LOG_SINK=discord,file,http`): after a successful route, also append JSONL under `FILE_SINK_DIR/guildId/YYYY-MM-DD.jsonl` and/or POST `HTTP_SINK_URL`. Omit `discord` to skip Discord entirely (file-only logger).
 
-**Backup** (`BACKUP_DIR` + `BACKUP_MS`): copy the SQLite file on an interval.
+**Backup** (`BACKUP_DIR` + `BACKUP_MS`): write a consistent SQLite online snapshot on an interval. WAL contents are included; do not replace this with a plain file copy.
 
 **Sharding** (`SHARD_LIST=auto` or a number): process starts a `ShardingManager`. Empty = single process.
 
@@ -1084,7 +1084,8 @@ npm test
 - Locales: every non-English pack translates the config-transfer replies with the same placeholders as English
 - Logger: camelCase and uppercase config keys, level filtering, file output, unknown-level fallback, and unusable paths
 - Webhook delivery: succeeds without a channel fetch, falls back when enabled, and runs file/HTTP sinks before Discord
-- Sink isolation: unwritable file directories and backup paths cannot drop Discord delivery or throw on a timer
+- Sink isolation: unwritable file directories cannot drop Discord delivery
+- SQLite backup: WAL-consistent online snapshots, nested directories, and logged failures
 
 CI: GitHub Actions, Node 22, `npm ci` && `npm test`.
 

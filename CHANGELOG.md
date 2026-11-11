@@ -60,6 +60,9 @@ All notable changes to this project are documented here. The format follows
 - `npm run deploy` now applies `CONFIG_PERMISSION` from `.env` instead of the
   unset `process.env` value, so slash defaults match the configured runtime
   permission.
+- SQLite backups now use better-sqlite3's online backup API, so WAL contents
+  are included and a running bot produces a consistent snapshot. Overlapping
+  intervals are skipped and failures are logged.
 
 ### Security
 

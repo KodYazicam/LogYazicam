@@ -14,7 +14,8 @@ No Discord token. Runner: `node --test` (CI and `npm test`).
 | `redact.test.js` | Each optional flag independently, invite/url coupling, no-flag passthrough, all always-on token shapes, ordinary-text false positives, embed title/description/field redaction without mutation, and `flagsFrom` per-guild overrides |
 | `locales.test.js` | Every non-English pack translates the five config-transfer replies and keeps the same placeholder set as English; interpolation drops no placeholders |
 | `logger.test.js` | `logLevel`/`logFile` and uppercase env keys, level filtering, file output, unknown-level fallback, no-file mode, and unusable paths |
-| `sinks.test.js` | `writeFileSink` and `backupSqlite` return `false` for blocked/missing destinations instead of throwing |
+| `sinks.test.js` | `writeFileSink` returns `false` for blocked/missing destinations instead of throwing |
+| `backup.test.js` | `backupTo` creates nested directories and a readable snapshot that includes rows still in WAL; missing destinations reject |
 | `commands.test.js` | Slash default permission uses the supplied `processConfig`, falls back to `ManageGuild` for invalid names, and keeps the `process.env` fallback |
 
 When you add a locale file, update the sorted array in `catalog.test.js`. When you add an event, `en.js` + catalog uniqueness is enough — no new test file required unless the formatter has branches (`voiceKind`).

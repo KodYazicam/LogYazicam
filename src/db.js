@@ -109,6 +109,13 @@ function openDb(filePath) {
     return setGuild(id, { extra_json: JSON.stringify(extra) });
   }
 
+  async function backupTo(destination) {
+    if (!destination) throw new Error("backup destination is required");
+    fs.mkdirSync(path.dirname(destination), { recursive: true });
+    await db.backup(destination);
+    return destination;
+  }
+
   const getRoute = db.prepare("SELECT * FROM event_routes WHERE guild_id = ? AND event_key = ?");
   const listRoutes = db.prepare("SELECT * FROM event_routes WHERE guild_id = ?");
   const upsertRoute = db.prepare(`
@@ -247,6 +254,7 @@ function openDb(filePath) {
     removeIgnore,
     listIgnores,
     replaceConfig,
+    backupTo,
     pushHistory,
     listHistory,
     recentHistory,
