@@ -98,7 +98,7 @@ async function formatMemberAdd(member, cfg, inviterInfo) {
   const fields = [
     ["field.user", userTag(member.user)],
     ["field.id", cfg.embedShowIds ? member.id : null],
-    ["field.channel", `<t:${created}:R>`],
+    ["field.created", `<t:${created}:R>`],
     ["field.inviter", inviterInfo || null],
   ];
   return {

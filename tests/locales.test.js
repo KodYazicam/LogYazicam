@@ -2,6 +2,8 @@ const { test } = require("node:test");
 const assert = require("node:assert/strict");
 const { PACKS, LOCALES, t } = require("../src/locales");
 
+const MEMBER_KEYS = ["field.created", "invite.vanity"];
+
 const TRANSLATED_KEYS = [
   "cmd.config_export",
   "cmd.config_import",
@@ -24,6 +26,23 @@ test("every locale translates command replies", () => {
   for (const locale of LOCALES) {
     if (locale === "en") continue;
     for (const key of TRANSLATED_KEYS) {
+      const value = PACKS[locale][key];
+      assert.equal(typeof value, "string", `${locale} ${key} is missing`);
+      assert.notEqual(value, en[key], `${locale} ${key} still falls back to English`);
+      assert.deepEqual(
+        placeholders(value),
+        placeholders(en[key]),
+        `${locale} ${key} has different placeholders`,
+      );
+    }
+  }
+});
+
+test("every locale translates the member-join labels", () => {
+  const en = PACKS.en;
+  for (const locale of LOCALES) {
+    if (locale === "en") continue;
+    for (const key of MEMBER_KEYS) {
       const value = PACKS[locale][key];
       assert.equal(typeof value, "string", `${locale} ${key} is missing`);
       assert.notEqual(value, en[key], `${locale} ${key} still falls back to English`);

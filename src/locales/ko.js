@@ -1,6 +1,8 @@
 const en = require("./en");
 module.exports = {
   ...en,
+  "field.created": "계정 생성",
+  "invite.vanity": "배니티 URL ({code})",
   "bot.ready": "LogYazicam이 {tag}(으)로 {guilds}개 서버에서 온라인입니다.",
   "cmd.denied": "이 명령을 사용할 수 없습니다.",
   "cmd.guild_only": "이 명령은 서버에서만 사용할 수 있습니다.",

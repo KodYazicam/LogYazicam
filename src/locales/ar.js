@@ -1,6 +1,8 @@
 const en = require("./en");
 module.exports = {
   ...en,
+  "field.created": "تم إنشاء الحساب",
+  "invite.vanity": "رابط مخصص ({code})",
   "bot.ready": "LogYazicam متصل باسم {tag} في {guilds} خادم.",
   "cmd.denied": "لا يمكنك استخدام هذا الأمر.",
   "cmd.guild_only": "يعمل هذا الأمر في السيرفرات فقط.",

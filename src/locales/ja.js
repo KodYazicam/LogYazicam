@@ -1,6 +1,8 @@
 const en = require("./en");
 module.exports = {
   ...en,
+  "field.created": "アカウント作成",
+  "invite.vanity": "バニティURL ({code})",
   "bot.ready": "LogYazicam が {tag} として {guilds} サーバーでオンラインです。",
   "cmd.denied": "このコマンドは使えません。",
   "cmd.guild_only": "このコマンドはサーバーでのみ使用できます。",

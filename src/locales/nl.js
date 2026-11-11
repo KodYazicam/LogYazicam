@@ -1,6 +1,8 @@
 const en = require("./en");
 module.exports = {
   ...en,
+  "field.created": "Account aangemaakt",
+  "invite.vanity": "Vanity-URL ({code})",
   "bot.ready": "LogYazicam online als {tag} in {guilds} server(s).",
   "cmd.denied": "Je mag dit commando niet gebruiken.",
   "cmd.guild_only": "Dit commando werkt alleen in een server.",

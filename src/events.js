@@ -114,15 +114,17 @@ function bindEvents(client, { dispatch, processCfg, log }) {
         if (used) {
           inviterInfo = `${used.inviter?.tag || used.inviterId || used.code} (${used.code})`;
         } else if (member.guild.vanityURLCode) {
-          inviterInfo = `vanity (${member.guild.vanityURLCode})`;
+          inviterInfo = t(cfg.locale, "invite.vanity", { code: member.guild.vanityURLCode });
         } else {
-          inviterInfo = "unknown";
+          inviterInfo = t(cfg.locale, "unknown");
         }
         for (const inv of current.values()) {
           dispatch.db.upsertInvite.run(member.guild.id, inv.code, inv.uses || 0, inv.inviter?.id || null);
         }
       } catch {
-        inviterInfo = member.guild.vanityURLCode ? `vanity (${member.guild.vanityURLCode})` : "unknown";
+        inviterInfo = member.guild.vanityURLCode
+          ? t(cfg.locale, "invite.vanity", { code: member.guild.vanityURLCode })
+          : t(cfg.locale, "unknown");
       }
     }
     await run(member.guild, "guildMemberAdd", await formatMemberAdd(member, cfg, inviterInfo));

@@ -1,6 +1,8 @@
 const en = require("./en");
 module.exports = {
   ...en,
+  "field.created": "Conta criada",
+  "invite.vanity": "URL personalizada ({code})",
   "bot.ready": "LogYazicam online como {tag} em {guilds} servidor(es).",
   "bot.credit": "Powered by LogYazicam — KodYazicam",
   "cmd.denied": "Não podes usar este comando.",
