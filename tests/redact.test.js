@@ -158,6 +158,12 @@ test("redactEmbeds passes through empty lists and missing flags", () => {
   assert.notEqual(redactEmbeds(embeds, alwaysOn), embeds);
 });
 
+test("redactEmbeds returns the original embed when rebuilding fails", () => {
+  const embed = { title: "bad timestamp", timestamp: "not-a-date" };
+  const result = redactEmbeds([embed], { ...off, url: true });
+  assert.equal(result[0], embed);
+});
+
 test("eventRedactFlags overrides only optional per-event flags", () => {
   const base = { ...alwaysOn, url: true, email: false };
   const cfg = {

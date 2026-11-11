@@ -224,3 +224,31 @@ test("unknown routes return 404 and non-GET returns 405", async (t) => {
   assert.equal(post.status, 405);
   assert.equal(post.headers.get("allow"), "GET");
 });
+
+test("API failures return a 500 and log the request error", async (t) => {
+  const errors = [];
+  const db = {
+    listGuilds: { all: () => [] },
+    historyCount: () => 0,
+    recentHistory() {
+      throw new Error("history down");
+    },
+  };
+  const dashboard = createDashboard({
+    db,
+    processCfg: {
+      dashboardHost: "127.0.0.1",
+      dashboardPort: 0,
+      dashboardToken: "",
+      dashboardLimit: 50,
+    },
+    log: { error: (...args) => errors.push(args) },
+  });
+  t.after(() => dashboard.close());
+  const address = await dashboard.start(0, "127.0.0.1");
+
+  const response = await fetch(`http://127.0.0.1:${address.port}/api/events`);
+  assert.equal(response.status, 500);
+  assert.deepEqual(await response.json(), { error: "internal error" });
+  assert.ok(errors.some((args) => args[0] === "dashboard request" && args[1].message === "history down"));
+});

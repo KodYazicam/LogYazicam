@@ -38,5 +38,7 @@ test("guild routes persist without process restart", (t) => {
   const cfg = mergeGuild(processCfg, db.getGuild.get("g1"), db.listRoutes.all("g1"), db.listIgnores.all("g1"), {});
   assert.equal(cfg.events.messageDelete.on, true);
   assert.equal(cfg.events.messageDelete.channelId, "c1");
+  db.raw.prepare("UPDATE guilds SET extra_json = ? WHERE id = ?").run("{not-json", "g1");
+  assert.deepEqual(db.extraOf(db.getGuild.get("g1")), {});
   db.raw.close();
 });
