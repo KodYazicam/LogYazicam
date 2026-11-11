@@ -1,6 +1,8 @@
 const en = require("./en");
 module.exports = {
   ...en,
+  "field.created": "Konto utworzono",
+  "invite.vanity": "Własny URL ({code})",
   "bot.ready": "LogYazicam online jako {tag} na {guilds} serwer(ach).",
   "cmd.denied": "Nie możesz użyć tej komendy.",
   "cmd.guild_only": "Ta komenda działa tylko na serwerze.",

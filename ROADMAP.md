@@ -24,6 +24,7 @@ Small, shippable steps. Upvote or comment on an issue if you want something move
 - [x] Filter command column allowlist
 - [x] Bounded config attachment downloads
 - [x] Logger safe value formatting
+- [x] Correct, localized member-join labels
 
 ## Next
 

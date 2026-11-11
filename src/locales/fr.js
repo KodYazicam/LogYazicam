@@ -1,6 +1,8 @@
 const en = require("./en");
 module.exports = {
   ...en,
+  "field.created": "Compte créé",
+  "invite.vanity": "URL personnalisée ({code})",
   "bot.ready": "LogYazicam en ligne en tant que {tag} dans {guilds} serveur(s).",
   "cmd.denied": "Tu ne peux pas utiliser cette commande.",
   "cmd.guild_only": "Cette commande ne fonctionne que sur un serveur.",

@@ -1,6 +1,8 @@
 const en = require("./en");
 module.exports = {
   ...en,
+  "field.created": "खाता बनाया गया",
+  "invite.vanity": "वैनिटी ({code})",
   "bot.ready": "LogYazicam {tag} के रूप में {guilds} सर्वर पर ऑनलाइन है।",
   "cmd.denied": "आप यह कमांड नहीं चला सकते।",
   "cmd.guild_only": "यह कमांड केवल सर्वर में काम करता है।",

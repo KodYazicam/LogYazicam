@@ -79,6 +79,9 @@ All notable changes to this project are documented here. The format follows
   of hanging until the interaction expires.
 - The logger safely formats circular, BigInt, and throwing values instead of
   letting a formatting error escape the log call.
+- Member-join embeds now label account age as **Account created** instead of
+  reusing the channel field, and the vanity/unknown invite fallbacks are
+  translated in every locale pack.
 
 ### Security
 

@@ -35,6 +35,8 @@ module.exports = {
   "cmd.config_import_too_big": "Yapılandırma dosyası {max} KB’den büyük.",
   "cmd.config_import_file": "`/log export` ile alınan bir `.json` dosyası ekle.",
   "field.author": "Yazar",
+  "field.created": "Hesap oluşturulma",
+  "invite.vanity": "Özel URL ({code})",
   "field.channel": "Kanal",
   "field.content": "İçerik",
   "field.before": "Önce",

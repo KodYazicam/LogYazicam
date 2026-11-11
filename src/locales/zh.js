@@ -1,6 +1,8 @@
 const en = require("./en");
 module.exports = {
   ...en,
+  "field.created": "账号创建时间",
+  "invite.vanity": "自定义邀请 ({code})",
   "bot.ready": "LogYazicam 已以 {tag} 在 {guilds} 个服务器上线。",
   "cmd.denied": "你不能使用此命令。",
   "cmd.guild_only": "此命令仅在服务器中可用。",
