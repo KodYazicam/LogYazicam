@@ -6,7 +6,7 @@ const {
 } = require("discord.js");
 const { EVENTS, GROUPS, byKey } = require("./catalog");
 const { LOCALES, t } = require("./locales");
-const { buildEmbed } = require("./util");
+const { buildEmbed, parseHexColor } = require("./util");
 
 const MAX_HISTORY_LIMIT = 500;
 
@@ -717,9 +717,9 @@ async function execute(interaction, { db, dispatch, processCfg }) {
 
   if (sub === "color") {
     const slot = interaction.options.getString("slot", true);
-    const hex = interaction.options.getString("hex", true).replace("#", "");
-    const n = Number.parseInt(hex, 16);
-    if (!Number.isFinite(n) || hex.length < 6) {
+    const hex = interaction.options.getString("hex", true);
+    const n = parseHexColor(hex);
+    if (n == null) {
       return interaction.reply({ content: t(locale, "cmd.invalid_hex"), ephemeral: true });
     }
     const row = db.ensureGuild(interaction.guildId);
@@ -728,7 +728,7 @@ async function execute(interaction, { db, dispatch, processCfg }) {
     extra.colors[slot] = n;
     db.setExtra(interaction.guildId, extra);
     dispatch.refreshGuild(interaction.guildId);
-    return interaction.reply({ content: t(locale, "cmd.filter_set", { name: `color.${slot}`, value: `#${hex}` }), ephemeral: true });
+    return interaction.reply({ content: t(locale, "cmd.filter_set", { name: `color.${slot}`, value: `#${String(hex).trim().replace(/^#/, "")}` }), ephemeral: true });
   }
 
   if (sub === "mention") {

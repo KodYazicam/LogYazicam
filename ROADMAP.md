@@ -20,6 +20,7 @@ Small, shippable steps. Upvote or comment on an issue if you want something move
 - [x] All command replies translated
 - [x] Prefix integer bounds match slash options
 - [x] Black embed colors preserved
+- [x] Strict hex color validation
 
 ## Next
 
