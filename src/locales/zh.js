@@ -6,6 +6,7 @@ module.exports = {
   "cmd.guild_only": "此命令仅在服务器中可用。",
   "cmd.invalid_timezone": "无效的 IANA 时区：`{tz}`。",
   "cmd.invalid_hex": "颜色必须为 `#rrggbb`。",
+  "cmd.invalid_option": "无效选项：`{name}`。",
   "cmd.error": "错误：{error}",
   "cmd.need_channel": "请先设置日志频道：`/log channel set`。",
   "cmd.unknown_event": "未知事件 `{key}`。",

@@ -6,6 +6,7 @@ module.exports = {
   "cmd.guild_only": "Эта команда работает только на сервере.",
   "cmd.invalid_timezone": "Неверный часовой пояс IANA: `{tz}`.",
   "cmd.invalid_hex": "Цвет должен быть в формате `#rrggbb`.",
+  "cmd.invalid_option": "Неверный параметр: `{name}`.",
   "cmd.error": "Ошибка: {error}",
   "cmd.need_channel": "Сначала укажите канал логов: `/log channel set`.",
   "cmd.unknown_event": "Неизвестное событие `{key}`.",

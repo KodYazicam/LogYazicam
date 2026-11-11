@@ -7,6 +7,7 @@ module.exports = {
   "cmd.guild_only": "Bu komut yalnızca sunucularda çalışır.",
   "cmd.invalid_timezone": "Geçersiz IANA saat dilimi: `{tz}`.",
   "cmd.invalid_hex": "Renk `#rrggbb` biçiminde olmalı.",
+  "cmd.invalid_option": "Geçersiz seçenek: `{name}`.",
   "cmd.error": "Hata: {error}",
   "cmd.need_channel": "Önce log kanalı ayarla: `/log channel set`.",
   "cmd.unknown_event": "Bilinmeyen olay `{key}`.",

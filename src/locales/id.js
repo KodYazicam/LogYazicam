@@ -6,6 +6,7 @@ module.exports = {
   "cmd.guild_only": "Perintah ini hanya berfungsi di server.",
   "cmd.invalid_timezone": "Zona waktu IANA tidak valid: `{tz}`.",
   "cmd.invalid_hex": "Warna harus `#rrggbb`.",
+  "cmd.invalid_option": "Opsi tidak valid: `{name}`.",
   "cmd.error": "Kesalahan: {error}",
   "cmd.need_channel": "Setel kanal log dulu: `/log channel set`.",
   "cmd.unknown_event": "Peristiwa tidak dikenal `{key}`.",

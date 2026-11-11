@@ -6,6 +6,7 @@ module.exports = {
   "cmd.guild_only": "このコマンドはサーバーでのみ使用できます。",
   "cmd.invalid_timezone": "無効な IANA タイムゾーンです: `{tz}`。",
   "cmd.invalid_hex": "色は `#rrggbb` 形式で指定してください。",
+  "cmd.invalid_option": "無効なオプションです: `{name}`。",
   "cmd.error": "エラー: {error}",
   "cmd.need_channel": "先にログチャンネルを設定してください: `/log channel set`。",
   "cmd.unknown_event": "不明なイベント `{key}`。",
