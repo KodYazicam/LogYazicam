@@ -37,7 +37,10 @@ function createDispatcher({ client, db, processCfg, log, cache, deps = {} }) {
     const override = cfg.eventActors?.[eventKey];
     const mode = ["all", "humans", "bots"].includes(override) ? override : (cfg.actors || "all");
     if (mode === "all") return true;
-    const isBot = Boolean(payload.bot);
+    // Some events have no actor (channel/role/server changes). Do not treat an
+    // unknown actor as human; just leave those events unaffected.
+    if (typeof payload.bot !== "boolean") return true;
+    const isBot = payload.bot;
     if (mode === "humans" && isBot) return false;
     if (mode === "bots" && !isBot) return false;
     return true;
@@ -89,7 +92,13 @@ function createDispatcher({ client, db, processCfg, log, cache, deps = {} }) {
       if (!actorOk(cfg, payload, eventKey)) return;
       if (!accountAgeOk(cfg, payload)) return;
       if (!includeOk(cfg, payload.ignore?.channel, eventKey)) return;
-      if (ignored(cfg, payload.ignore || {})) return;
+      const ignore = { ...(payload.ignore || {}) };
+      if (!Array.isArray(ignore.roleIds) || !ignore.roleIds.length) {
+        const memberId = ignore.user?.id || payload.userId;
+        const member = memberId ? guild.members?.cache?.get(memberId) : null;
+        if (member?.roles?.cache) ignore.roleIds = [...member.roles.cache.keys()];
+      }
+      if (ignored(cfg, ignore)) return;
       const eventDigest = digestFor(cfg, eventKey);
       const digestMs = eventDigest ? eventDigest.ms : (cfg.digestMs || 0);
       const digestMin = eventDigest?.min || processCfg.digestMin || 5;
@@ -152,13 +161,18 @@ function createDispatcher({ client, db, processCfg, log, cache, deps = {} }) {
       const key = `${guild.id}:${channelId}`;
       if (!queues.has(key)) queues.set(key, []);
       const q = queues.get(key);
-      if (q.length >= processCfg.maxQueue) q.shift();
+      if (q.length >= processCfg.maxQueue) {
+        q.shift();
+        metrics.dropped += 1;
+      }
       q.push({
         channelId,
         content,
         embeds: delivery === "plain" ? [] : embeds,
         files,
         guildId: guild.id,
+        delivery,
+        eventDelivery,
         preferWebhook: delivery === "webhook",
         eventKey,
         summary: payload.summary,
@@ -187,22 +201,31 @@ function createDispatcher({ client, db, processCfg, log, cache, deps = {} }) {
     const sinks = String(processCfg.logSink || "discord").split(",").map((s) => s.trim());
     // Mirror each event once, before any delivery path. The marker keeps a 429
     // retry from writing the same sink row twice.
+    let mirrored = false;
     if (!item.staff && !item.sinksDone) {
       item.sinksDone = true;
       if (sinks.includes("file") || sinks.includes("http")) {
         const { writeFileSink, postHttpSink } = require("./sinks");
         const body = { guildId: item.guildId, eventKey: item.eventKey, summary: item.summary, at: Date.now() };
         try {
-          if (sinks.includes("file") && !writeFileSink(processCfg.fileSinkDir, item.guildId, item.eventKey, body)) {
+          if (sinks.includes("file") && writeFileSink(processCfg.fileSinkDir, item.guildId, item.eventKey, body)) {
+            mirrored = true;
+          } else if (sinks.includes("file")) {
             log.warn("file sink failed", processCfg.fileSinkDir || "(no directory)");
           }
-          if (sinks.includes("http")) postHttpSink(processCfg.httpSinkUrl, body);
+          if (sinks.includes("http")) {
+            postHttpSink(processCfg.httpSinkUrl, body);
+            if (processCfg.httpSinkUrl) mirrored = true;
+          }
         } catch (error) {
           log.warn("sink failed", error.message);
         }
       }
     }
-    const wantHook = !item.staff && (item.preferWebhook || (cfg?.delivery === "webhook") || Boolean(cfg?.webhookId && cfg?.webhookToken));
+    const wantHook = !item.staff && (
+      item.preferWebhook ||
+      (!item.eventDelivery && ((cfg?.delivery === "webhook") || Boolean(cfg?.webhookId && cfg?.webhookToken)))
+    );
     if (wantHook && cfg?.webhookId && cfg?.webhookToken) {
       try {
         const hook = makeWebhook({ id: cfg.webhookId, token: cfg.webhookToken });
@@ -213,7 +236,7 @@ function createDispatcher({ client, db, processCfg, log, cache, deps = {} }) {
           username: cfg.webhookName || processCfg.webhookName,
           avatarURL: cfg.webhookAvatar || processCfg.webhookAvatarUrl || undefined,
         });
-        return;
+        return true;
       } catch (error) {
         log.warn("webhook send failed, falling back to channel", error.message);
         if (processCfg.allowWebhookFallback === false) throw error;
@@ -222,15 +245,16 @@ function createDispatcher({ client, db, processCfg, log, cache, deps = {} }) {
     if (item.preferWebhook && (!cfg?.webhookId || !cfg?.webhookToken)) {
       log.warn("delivery=webhook but no webhook configured; using channel.send");
     }
-    if (!sinks.includes("discord") && sinks.length) return;
+    if (!sinks.includes("discord") && sinks.length) return mirrored;
     const channel = await client.channels.fetch(item.channelId).catch(() => null);
-    if (!channel || !channel.isTextBased()) return;
+    if (!channel || !channel.isTextBased()) return false;
     await channel.send({
       content: item.content || undefined,
       embeds: item.embeds?.length ? item.embeds : undefined,
       files: item.files,
       allowedMentions: { parse: [], roles: cfg?.mentionRole ? [cfg.mentionRole] : [] },
     });
+    return true;
   }
 
   let flushing = false;
@@ -245,8 +269,9 @@ function createDispatcher({ client, db, processCfg, log, cache, deps = {} }) {
         if (item.retryAt && item.retryAt > now()) continue;
         q.shift();
         try {
-          await flushOne(item);
-          metrics.sent += 1;
+          const delivered = await flushOne(item);
+          if (delivered) metrics.sent += 1;
+          else metrics.dropped += 1;
         } catch (error) {
           const retryAfter = error?.retryAfter || error?.httpStatus === 429;
           const configured = Number(processCfg.retryMax);

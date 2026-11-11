@@ -137,7 +137,10 @@ function openDb(filePath) {
 
   function setGroup(guildId, group, { enabled, channelId }) {
     const tx = db.transaction(() => {
-      for (const event of EVENTS.filter((e) => e.group === group)) {
+      // `member` is the onboarding group users expect to contain timeouts too,
+      // even though the catalog keeps `guildMemberTimeout` under moderation.
+      const events = EVENTS.filter((e) => e.group === group || (group === "member" && e.key === "guildMemberTimeout"));
+      for (const event of events) {
         setRoute(guildId, event.key, { enabled, channelId });
       }
     });

@@ -655,3 +655,91 @@ test("staff-channel copies bypass a configured webhook", async () => {
   assert.equal(h.channelSends.length, 1);
   assert.equal(h.dispatch.metrics.sent, 1);
 });
+
+test("enqueue applies role ignores from the member cache", async () => {
+  const guild = {
+    id: "g1",
+    members: {
+      cache: new Map([
+        ["u1", { roles: { cache: new Map([["r1", { id: "r1" }]]) } }],
+        ["u2", { roles: { cache: new Map([["r2", { id: "r2" }]]) } }],
+      ]),
+    },
+  };
+  const h = setup({
+    queued: false,
+    cfg: {
+      ignores: [{ kind: "role", target_id: "r1" }],
+      events: { messageDelete: { on: true, channelId: "c1" } },
+    },
+  });
+
+  await h.dispatch.enqueue(guild, "messageDelete", { summary: "ignored", userId: "u1" });
+  assert.equal(h.dispatch.queues.get("g1:c1"), undefined);
+  await h.dispatch.enqueue(guild, "messageDelete", { summary: "kept", userId: "u2" });
+  assert.equal(h.dispatch.queues.get("g1:c1").length, 1);
+});
+
+test("a per-event embed/plain mode forces channel delivery when the guild uses a webhook", async () => {
+  const h = setup({
+    queued: false,
+    cfg: {
+      delivery: "webhook",
+      eventDelivery: { messageDelete: "embed" },
+      events: { messageDelete: { on: true, channelId: "c1" } },
+    },
+  });
+
+  await h.dispatch.enqueue({ id: "g1" }, "messageDelete", {
+    summary: "embed override",
+    embeds: [{ title: "Deleted" }],
+  });
+  const item = h.dispatch.queues.get("g1:c1").at(-1);
+  assert.equal(item.eventDelivery, "embed");
+  await h.dispatch.tick();
+  assert.equal(h.hookCalls.length, 0);
+  assert.equal(h.channelSends.length, 1);
+  assert.equal(h.dispatch.metrics.sent, 1);
+});
+
+test("a missing channel is counted as dropped, not sent", async () => {
+  const h = setup({
+    cfg: { webhookId: null, webhookToken: null, delivery: "embed" },
+    item: makeItem({ preferWebhook: false }),
+    channelFetch: async () => null,
+  });
+
+  await h.dispatch.tick();
+  assert.equal(h.dispatch.metrics.sent, 0);
+  assert.equal(h.dispatch.metrics.dropped, 1);
+});
+
+test("queue overflow drops the oldest item and records it", async () => {
+  const h = setup({
+    queued: false,
+    processCfg: { maxQueue: 1 },
+    cfg: { events: { messageDelete: { on: true, channelId: "c1" } } },
+  });
+
+  await h.dispatch.enqueue({ id: "g1" }, "messageDelete", { summary: "one" });
+  await h.dispatch.enqueue({ id: "g1" }, "messageDelete", { summary: "two" });
+  const q = h.dispatch.queues.get("g1:c1");
+  assert.equal(q.length, 1);
+  assert.equal(q[0].summary, "two");
+  assert.equal(h.dispatch.metrics.dropped, 1);
+});
+
+test("actor filters leave events without a known actor unaffected", async () => {
+  const h = setup({
+    queued: false,
+    cfg: {
+      actors: "humans",
+      events: { channelDelete: { on: true, channelId: "c1" } },
+    },
+  });
+
+  await h.dispatch.enqueue({ id: "g1" }, "channelDelete", { summary: "no actor" });
+  assert.equal(h.dispatch.queues.get("g1:c1").length, 1);
+  await h.dispatch.enqueue({ id: "g1" }, "channelDelete", { summary: "bot", bot: true });
+  assert.equal(h.dispatch.queues.get("g1:c1").length, 1);
+});

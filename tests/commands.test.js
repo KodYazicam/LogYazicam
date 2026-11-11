@@ -1,7 +1,7 @@
 const { test } = require("node:test");
 const assert = require("node:assert/strict");
 const { PermissionFlagsBits } = require("discord.js");
-const { data, execute, clampHistoryLimit, MAX_HISTORY_LIMIT, FILTER_NAMES, SETTING_NAMES } = require("../src/commands");
+const { data, execute, clampHistoryLimit, MAX_HISTORY_LIMIT, FILTER_NAMES, SETTING_NAMES, SETTING_ALIASES } = require("../src/commands");
 
 function permission(json) {
   return json.default_member_permissions;
@@ -75,6 +75,13 @@ test("setting allowlist excludes internal maps and unknown names", () => {
   for (const name of ["eventColors", "eventCooldown", "colors", "strings", "hiddenFields", "unknown"]) {
     assert.equal(SETTING_NAMES.has(name), false, name);
   }
+});
+
+test("prefix-only setting aliases map to the canonical names", () => {
+  assert.equal(SETTING_ALIASES.quiet_days, "quietDays");
+  assert.equal(SETTING_ALIASES.plain, "plainText");
+  assert.equal(SETTING_ALIASES.staff_channel, "staffChannel");
+  assert.equal(SETTING_NAMES.has(SETTING_ALIASES.quiet_days), true);
 });
 
 test("event group exposes color overrides", () => {
