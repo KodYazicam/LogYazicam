@@ -43,6 +43,9 @@ All notable changes to this project are documented here. The format follows
   a per-guild `history_days` override. Only `history` rows are pruned.
 - Branch coverage for redaction (all optional and always-on patterns, embed
   fields, per-guild overrides) and every `voiceKind` transition.
+- Per-event embed color overrides via `/log event color`, stored in
+  `extra_json.eventColors` and validated during config import. A black override
+  is preserved; clearing it restores the semantic slot color.
 - All 18 locale packs now translate the `/log export` and `/log import` replies;
   a placeholder-consistency test keeps future additions honest.
 - `/log import` now resets every importable setting to `null` before applying

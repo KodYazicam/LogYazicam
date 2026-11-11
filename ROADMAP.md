@@ -30,6 +30,7 @@ Small, shippable steps. Upvote or comment on an issue if you want something move
 - [x] Staff copies bypass webhooks
 - [x] Hot reload reaches dispatcher/events
 - [x] Streamed config downloads are size-capped
+- [x] Per-event embed color overrides
 
 ## Next
 

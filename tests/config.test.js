@@ -147,3 +147,31 @@ test("buildEmbed uses a black event color instead of the info fallback", () => {
 
   assert.equal(embed.data.color, 0);
 });
+
+test("mergeGuild keeps per-event color overrides", (t) => {
+  const db = withDb(t);
+  if (!db) return;
+  db.setExtra("g1", { eventColors: { messageDelete: 0x000000, guildBanAdd: 0x123456 } });
+
+  const row = db.getGuild.get("g1");
+  const merged = mergeGuild(processConfig({}), row, [], [], db.extraOf(row));
+
+  assert.deepEqual(merged.eventColors, { messageDelete: 0x000000, guildBanAdd: 0x123456 });
+});
+
+test("buildEmbed prefers a per-event color over the slot color", () => {
+  const cfg = {
+    id: "g1",
+    locale: "en",
+    colors: { create: 0x111111, update: 0x111111, delete: 0xff0000, voice: 0x111111, member: 0x111111, mod: 0x111111, info: 0x111111 },
+    eventColors: { messageDelete: 0x000000 },
+    showTimestamp: false,
+    showCredit: false,
+    embedCompact: false,
+    extra: {},
+    hiddenFields: {},
+  };
+
+  assert.equal(buildEmbed(cfg, "messageDelete", []).data.color, 0);
+  assert.equal(buildEmbed(cfg, "messageDeleteBulk", []).data.color, 0xff0000);
+});

@@ -370,6 +370,21 @@ function cleanColorMap(value) {
   return { value: out, skipped };
 }
 
+function cleanEventColors(value) {
+  if (!isPlainObject(value)) return { value: undefined, skipped: 1 };
+  const out = {};
+  let skipped = 0;
+  for (const [key, raw] of Object.entries(value)) {
+    const color = Number(raw);
+    if (!byKey[key] || !Number.isInteger(color) || color < 0 || color > 0xffffff) {
+      skipped += 1;
+      continue;
+    }
+    out[key] = color;
+  }
+  return { value: out, skipped };
+}
+
 function cleanRedact(value) {
   if (!isPlainObject(value)) return { value: undefined, skipped: 1 };
   const out = {};
@@ -455,6 +470,12 @@ function cleanExtra(extra, resolveChannel) {
     if (key === "colors") {
       const cleaned = cleanColorMap(raw);
       if (cleaned.value) out.colors = cleaned.value;
+      skipped += cleaned.skipped;
+      continue;
+    }
+    if (key === "eventColors") {
+      const cleaned = cleanEventColors(raw);
+      if (cleaned.value) out.eventColors = cleaned.value;
       skipped += cleaned.skipped;
       continue;
     }

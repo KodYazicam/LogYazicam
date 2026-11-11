@@ -57,6 +57,16 @@ function data(config = {}) {
             .addStringOption((o) =>
               o.setName("key").setDescription("Event key").setRequired(true).setAutocomplete(true),
             ),
+        )
+        .addSubcommand((s) =>
+          s
+            .setName("color")
+            .setDescription("Override one event's embed color")
+            .addStringOption((o) =>
+              o.setName("key").setDescription("Event key").setRequired(true).setAutocomplete(true),
+            )
+            .addStringOption((o) => o.setName("hex").setDescription("#rrggbb"))
+            .addBooleanOption((o) => o.setName("clear").setDescription("Restore the slot color")),
         ),
     )
     .addSubcommandGroup((g) =>
@@ -441,6 +451,33 @@ async function execute(interaction, { db, dispatch, processCfg }) {
   if (group === "event") {
     const key = interaction.options.getString("key", true);
     if (!byKey[key]) return interaction.reply({ content: t(locale, "cmd.unknown_event", { key }), ephemeral: true });
+    if (sub === "color") {
+      const hex = interaction.options.getString("hex");
+      const clear = interaction.options.getBoolean("clear");
+      const row = db.ensureGuild(interaction.guildId);
+      const extra = db.extraOf(row);
+      const eventColors = extra.eventColors && typeof extra.eventColors === "object" && !Array.isArray(extra.eventColors)
+        ? { ...extra.eventColors }
+        : {};
+      let value;
+      if (clear) {
+        delete eventColors[key];
+        value = t(locale, "none");
+      } else {
+        const color = parseHexColor(hex);
+        if (color == null) return interaction.reply({ content: t(locale, "cmd.invalid_hex"), ephemeral: true });
+        eventColors[key] = color;
+        value = `#${color.toString(16).padStart(6, "0")}`;
+      }
+      if (Object.keys(eventColors).length) extra.eventColors = eventColors;
+      else delete extra.eventColors;
+      db.setExtra(interaction.guildId, extra);
+      dispatch.refreshGuild(interaction.guildId);
+      return interaction.reply({
+        content: t(locale, "cmd.filter_set", { name: `event.${key}.color`, value }),
+        ephemeral: true,
+      });
+    }
     if (sub === "on") {
       const channel = interaction.options.getChannel("channel");
       db.setRoute(interaction.guildId, key, { enabled: true, channelId: channel?.id });

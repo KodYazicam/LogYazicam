@@ -158,6 +158,7 @@ function mergeGuild(processCfg, row, routes, ignores, extra) {
     };
   }
   const extraColors = extra?.colors || {};
+  const eventColors = extra?.eventColors;
   return {
     id: row.id,
     locale: locales.LOCALES.includes(row.locale) ? row.locale : processCfg.defaultLocale,
@@ -216,6 +217,9 @@ function mergeGuild(processCfg, row, routes, ignores, extra) {
       mod: extraColors.mod ?? processCfg.colors.mod,
       info: extraColors.info ?? processCfg.colors.info,
     },
+    eventColors: eventColors && typeof eventColors === "object" && !Array.isArray(eventColors)
+      ? eventColors
+      : {},
   };
 }
 
