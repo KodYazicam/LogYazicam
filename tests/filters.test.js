@@ -1,6 +1,6 @@
 const { test } = require("node:test");
 const assert = require("node:assert/strict");
-const { inQuietHours, includeOk, embedToPlain } = require("../src/util");
+const { inQuietHours, includeOk, embedToPlain, parseHexColor } = require("../src/util");
 
 test("quiet hours wrap midnight", () => {
   const cfg = { quietStart: "22:00", quietEnd: "06:00", timezone: "UTC" };
@@ -19,4 +19,17 @@ test("plain text flattening keeps title", () => {
   const text = embedToPlain({ title: "Message deleted", fields: [{ name: "Author", value: "x" }] });
   assert.match(text, /Message deleted/);
   assert.match(text, /Author/);
+});
+
+test("parseHexColor accepts exactly six hex digits with an optional hash", () => {
+  assert.equal(parseHexColor("#000000"), 0);
+  assert.equal(parseHexColor("000000"), 0);
+  assert.equal(parseHexColor("#aBc123"), 0xabc123);
+  assert.equal(parseHexColor("  #FFFFFF  "), 0xffffff);
+});
+
+test("parseHexColor rejects malformed values", () => {
+  for (const value of ["", "123", "1234567", "ffffff00", "#12345g", "#", null, undefined]) {
+    assert.equal(parseHexColor(value), null, String(value));
+  }
 });

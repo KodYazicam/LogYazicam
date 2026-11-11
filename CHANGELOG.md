@@ -71,6 +71,8 @@ All notable changes to this project are documented here. The format follows
   exports are clamped to the same 1–500 bounds as the slash command.
 - Black (`0x000000`) embed colors are preserved instead of falling back to the
   default color.
+- `/log color` now requires exactly six hex digits (with optional `#`) and
+  rejects out-of-range or malformed values.
 
 ### Security
 

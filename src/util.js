@@ -2,6 +2,13 @@ const { EmbedBuilder } = require("discord.js");
 const { t } = require("./locales");
 const { byKey } = require("./catalog");
 
+function parseHexColor(value) {
+  const text = String(value ?? "").trim();
+  const hex = text.startsWith("#") ? text.slice(1) : text;
+  if (!/^[0-9a-fA-F]{6}$/.test(hex)) return null;
+  return Number.parseInt(hex, 16);
+}
+
 function truncate(text, max = 1024) {
   const value = text == null ? "" : String(text);
   if (value.length <= max) return value || "—";
@@ -146,4 +153,4 @@ function hasConfigPermission(memberPermissions, processCfg) {
   return false;
 }
 
-module.exports = { truncate, code, userTag, channelTag, diff, when, buildEmbed, audit, ignored, inQuietHours, includeOk, embedToPlain, hasConfigPermission };
+module.exports = { parseHexColor, truncate, code, userTag, channelTag, diff, when, buildEmbed, audit, ignored, inQuietHours, includeOk, embedToPlain, hasConfigPermission };
