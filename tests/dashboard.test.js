@@ -185,6 +185,35 @@ test("non-loopback bind is refused without a token", async (t) => {
   );
 });
 
+test("malformed history payloads fall back to the event key", async (t) => {
+  const setupResult = setup(t);
+  if (!setupResult) return;
+  setupResult.db.raw
+    .prepare("INSERT INTO history (guild_id, event_key, payload, created_at) VALUES (?, ?, ?, ?)")
+    .run("111", "channelCreate", "{not-json", Date.now());
+  const base = await listen(setupResult.dashboard);
+
+  const data = await (await fetch(`${base}/api/events`)).json();
+  const malformed = data.events.find((event) => event.eventKey === "channelCreate");
+  assert.ok(malformed);
+  assert.equal(malformed.summary, "channelCreate");
+  assert.equal(malformed.channelId, null);
+});
+
+test("invalid dashboard ports reject before listening", async (t) => {
+  const setupResult = setup(t);
+  if (!setupResult) return;
+
+  await assert.rejects(
+    () => setupResult.dashboard.start(-1, "127.0.0.1"),
+    /invalid DASHBOARD_PORT/,
+  );
+  await assert.rejects(
+    () => setupResult.dashboard.start(70000, "127.0.0.1"),
+    /invalid DASHBOARD_PORT/,
+  );
+});
+
 test("unknown routes return 404 and non-GET returns 405", async (t) => {
   const setupResult = setup(t);
   if (!setupResult) return;

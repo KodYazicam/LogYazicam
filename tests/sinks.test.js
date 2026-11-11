@@ -56,6 +56,21 @@ test("postHttpSink ignores empty and invalid URLs", () => {
   assert.doesNotThrow(() => postHttpSink("not a url", { eventKey: "messageDelete" }));
 });
 
+test("postHttpSink swallows connection errors", async (t) => {
+  const server = http.createServer((req) => req.socket.destroy());
+  await new Promise((resolve, reject) => {
+    server.once("error", reject);
+    server.listen(0, "127.0.0.1", resolve);
+  });
+  t.after(() => new Promise((resolve) => server.close(resolve)));
+
+  const { port } = server.address();
+  await new Promise((resolve) => {
+    postHttpSink(`http://127.0.0.1:${port}/hook`, { eventKey: "messageDelete" });
+    setTimeout(resolve, 100);
+  });
+});
+
 test("postHttpSink posts JSON to an HTTP endpoint", async (t) => {
   let resolveRequest;
   const received = new Promise((resolve) => {

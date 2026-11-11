@@ -95,6 +95,10 @@ All notable changes to this project are documented here. The format follows
   filter/webhook/footer, test/pack/setup, fields/string/color/mention,
   history CSV/JSONL, config export/import validation, watch/events, and
   autocomplete; `commands.js` line coverage is now about 97%.
+- Fallback-path coverage for utility formatting, logger append failures,
+  malformed dashboard payloads, invalid dashboard ports, and HTTP sink
+  connection errors; `util.js`, `logger.js`, and `sinks.js` now have 100%
+  line coverage.
 - Per-event embed color overrides via `/log event color`, stored in
   `extra_json.eventColors` and validated during config import. A black override
   is preserved; clearing it restores the semantic slot color.
