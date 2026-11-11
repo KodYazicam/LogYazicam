@@ -209,6 +209,21 @@ function data() {
         .addStringOption((o) => o.setName("key").setDescription("Event key").setAutocomplete(true))
         .addStringOption((o) => o.setName("format").setDescription("jsonl or csv")),
     )
+    .addSubcommand((s) => s.setName("export").setDescription("Export guild config as JSON"))
+    .addSubcommand((s) =>
+      s
+        .setName("import")
+        .setDescription("Import guild config from JSON")
+        .addAttachmentOption((o) =>
+          o.setName("file").setDescription("Config JSON from /log export").setRequired(true),
+        )
+        .addChannelOption((o) =>
+          o
+            .setName("channel")
+            .setDescription("Fallback channel for ids missing in this guild")
+            .addChannelTypes(ChannelType.GuildText, ChannelType.GuildAnnouncement),
+        ),
+    )
     .addSubcommand((s) => s.setName("reload").setDescription("Reload guild cache"))
     .addSubcommand((s) => s.setName("events").setDescription("List event keys"))
     .addSubcommand((s) =>
@@ -585,6 +600,65 @@ async function execute(interaction, { db, dispatch, processCfg }) {
     db.setExtra(interaction.guildId, extra);
     dispatch.refreshGuild(interaction.guildId);
     return interaction.reply({ content: t(locale, "cmd.filter_set", { name: `fields.${key}`, value: hide || "—" }) });
+  }
+
+  if (sub === "export") {
+    const { exportGuild } = require("./configTransfer");
+    const config = exportGuild(db, interaction.guildId);
+    const body = JSON.stringify(config, null, 2);
+    const file = new AttachmentBuilder(Buffer.from(body, "utf8"), {
+      name: `logyazicam-config-${interaction.guildId}.json`,
+    });
+    return interaction.reply({
+      content: t(locale, "cmd.config_export", {
+        routes: config.routes.length,
+        ignores: config.ignores.length,
+      }),
+      files: [file],
+      ephemeral: true,
+    });
+  }
+
+  if (sub === "import") {
+    const { readAttachment, importGuild, MAX_BYTES } = require("./configTransfer");
+    const attachment = interaction.options.getAttachment("file", true);
+    if (!String(attachment.name || "").toLowerCase().endsWith(".json")) {
+      return interaction.reply({ content: t(locale, "cmd.config_import_file"), ephemeral: true });
+    }
+    if (Number(attachment.size) > MAX_BYTES) {
+      return interaction.reply({
+        content: t(locale, "cmd.config_import_too_big", { max: MAX_BYTES / 1024 }),
+        ephemeral: true,
+      });
+    }
+    let payload;
+    try {
+      payload = await readAttachment(attachment);
+    } catch (error) {
+      return interaction.reply({
+        content: t(locale, "cmd.config_import_invalid", { error: error.message }),
+        ephemeral: true,
+      });
+    }
+    const fallback = interaction.options.getChannel("channel")?.id || null;
+    const resolveChannel = (id) => (interaction.guild.channels.cache.has(id) ? id : fallback);
+    let result;
+    try {
+      result = importGuild(db, interaction.guildId, payload, { resolveChannel });
+    } catch (error) {
+      return interaction.reply({
+        content: t(locale, "cmd.config_import_invalid", { error: error.message }),
+        ephemeral: true,
+      });
+    }
+    dispatch.refreshGuild(interaction.guildId);
+    return interaction.reply({
+      content: t(locale, "cmd.config_import", {
+        ...result,
+        skipped: result.skipped,
+      }),
+      ephemeral: true,
+    });
   }
 
   if (sub === "history") {

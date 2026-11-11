@@ -137,6 +137,7 @@ Nothing is logged until you **turn an event or group on**. A fresh guild is sile
 | Delivery | `channel.send` or guild webhook (username/avatar from env) |
 | Rate | Per-channel queue, interval between sends |
 | History | Capped JSON summaries, `/log history` export |
+| Config | `/log export` / `/log import` JSON transfer without webhook secrets |
 | Errors | Process log file, optional error channel, optional owner DM, no crash on handler throw |
 | Reload | `/log reload` + timer; TOKEN still needs restart |
 
@@ -360,6 +361,8 @@ These are **not** fake Discord events. They sit on top of the catalog.
 **429:** `RETRY_429=true` re-queues rate-limited Discord sends. `/log status` shows `sent` / `dropped`.
 
 **History export:** `/log history key:messageDelete format:csv|jsonl`.
+
+**Config transfer:** `/log export` downloads a JSON snapshot of settings, routes, ignores, and `extra_json`; `/log import file:<export.json> [channel:#fallback]` applies it to another guild. Webhook credentials are never exported or overwritten.
 
 **Joins without an invite bump:** embed shows `vanity (code)` or `unknown`.
 
@@ -665,7 +668,15 @@ Optional `channel` (else current). Sends `event.test` embed immediately (does no
 
 ### `/log history`
 
-`limit` 1–200 (default 50). Attachment `logyazicam-{guildId}.jsonl.txt`. Empty → `cmd.history_empty`.
+`limit` 1–500 (default 50). Attachment `logyazicam-{guildId}.jsonl.txt` (or `.csv`). Empty → `cmd.history_empty`.
+
+### `/log export`
+
+Downloads `logyazicam-config-{guildId}.json` with a format marker, version, guild settings, event routes, ignores, and `extra_json` (quiet hours, colors, strings, hidden fields, staff channel, watch list). `webhook_id` / `webhook_token` are never included.
+
+### `/log import`
+
+`file` is a `.json` from `/log export`; `channel` is an optional fallback. The file is validated (format, version, 1 MiB limit) and applied in one SQLite transaction, replacing the guild's settings, routes, ignores, and `extra_json`. Unknown event keys, ignore kinds, settings, and extra keys are skipped and counted. Channel/role/category snowflakes that do not exist in the target guild use the `channel` option or become `null`. Webhook credentials already set on the target guild are left untouched.
 
 ### `/log reload`
 
@@ -1037,6 +1048,7 @@ npm test
 - SQLite routes / group enable / ignore / history cap (skipped if `better-sqlite3` has no native build, e.g. Node 24 without compile)
 - Webhook delivery: success, 429 retry and no-duplicate delivery, 500 drop, timeout/network failure, fallback to `channel.send`, and `sent`/`retries`/`dropped` metrics (injected sender and clock, no real webhook)
 - Docker quickstart invariants: named data volume, `/app/data` ownership before `USER 10001`, and the documented start/deploy/logs/backup commands
+- Config transfer: export without webhook secrets, round-trip import with channel remapping, unknown-key skips, validation/size rejection before writes, rollback, and attachment download limits
 
 CI: GitHub Actions, Node 22, `npm ci` && `npm test`.
 

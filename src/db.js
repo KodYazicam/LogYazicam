@@ -140,6 +140,24 @@ function openDb(filePath) {
   const addIgnore = db.prepare("INSERT OR IGNORE INTO ignores (guild_id, kind, target_id) VALUES (?, ?, ?)");
   const removeIgnore = db.prepare("DELETE FROM ignores WHERE guild_id = ? AND kind = ? AND target_id = ?");
   const listIgnores = db.prepare("SELECT * FROM ignores WHERE guild_id = ?");
+  const clearRoutes = db.prepare("DELETE FROM event_routes WHERE guild_id = ?");
+  const clearIgnores = db.prepare("DELETE FROM ignores WHERE guild_id = ?");
+
+  function replaceConfig(guildId, { patch = {}, routes = [], ignores = [], extra = {} } = {}) {
+    const run = db.transaction(() => {
+      setGuild(guildId, patch);
+      clearRoutes.run(guildId);
+      clearIgnores.run(guildId);
+      for (const route of routes) {
+        setRoute(guildId, route.eventKey, { enabled: route.enabled, channelId: route.channelId });
+      }
+      for (const row of ignores) addIgnore.run(guildId, row.kind, row.targetId);
+      setExtra(guildId, extra);
+    });
+    run();
+    return getGuild.get(guildId);
+  }
+
 
   const insertHistory = db.prepare("INSERT INTO history (guild_id, event_key, payload, created_at) VALUES (?, ?, ?, ?)");
   const listHistory = db.prepare("SELECT * FROM history WHERE guild_id = ? ORDER BY id DESC LIMIT ?");
@@ -205,6 +223,7 @@ function openDb(filePath) {
     addIgnore,
     removeIgnore,
     listIgnores,
+    replaceConfig,
     pushHistory,
     listHistory,
     queryHistory,
