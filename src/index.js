@@ -155,13 +155,16 @@ client.on("interactionCreate", async (interaction) => {
     }
     if (!interaction.isChatInputCommand() || !isOwn) return;
     if (!interaction.inGuild()) {
-      await interaction.reply({ content: "Guild only.", ephemeral: true });
+      await interaction.reply({ content: t(processCfg.defaultLocale, "cmd.guild_only"), ephemeral: true });
       return;
     }
     await commands.execute(interaction, { db, dispatch, processCfg });
   } catch (error) {
     reportError(error, "interactionCreate");
-    const payload = { content: `Error: ${error.message}`.slice(0, 500), ephemeral: true };
+    const payload = {
+      content: t(processCfg.defaultLocale, "cmd.error", { error: String(error.message).slice(0, 500) }),
+      ephemeral: true,
+    };
     if (interaction.deferred || interaction.replied) await interaction.followUp(payload).catch(() => {});
     else await interaction.reply(payload).catch(() => {});
   }
