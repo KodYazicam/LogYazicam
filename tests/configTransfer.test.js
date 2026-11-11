@@ -124,6 +124,7 @@ test("round-trips config into another guild and keeps its webhook", (t) => {
 
   const counts = importGuild(db, "200", payload, {
     resolveChannel: (id) => ({ "chan-a": "chan-b", "role-a": "role-b" })[id] || null,
+    resolveRole: (id) => ({ "role-a": "role-b" })[id] || null,
   });
 
   assert.equal(counts.settings, 15);
@@ -140,7 +141,7 @@ test("round-trips config into another guild and keeps its webhook", (t) => {
   assert.equal(row.embed_color_create, 0x112233);
   assert.equal(row.embed_color_update, null);
   assert.equal(row.history_limit, 500);
-  assert.equal(row.mention_role, "role-a");
+  assert.equal(row.mention_role, "role-b");
   assert.equal(row.webhook_id, "target-id");
   assert.equal(row.webhook_token, "target-token");
 
@@ -163,6 +164,56 @@ test("round-trips config into another guild and keeps its webhook", (t) => {
   assert.deepEqual(extra.colors, { info: 0x00ff00 });
   assert.deepEqual(extra.hiddenFields, { messageDelete: ["id", "jump"] });
   assert.deepEqual(extra.redact, { url: true });
+});
+
+test("replaces omitted settings and clears missing mention roles", (t) => {
+  const db = withDb(t);
+  if (!db) return;
+  db.setGuild("700", {
+    locale: "tr",
+    timezone: "Europe/Istanbul",
+    default_channel: "old-chan",
+    ignore_bots: 1,
+    embed_show_ids: 1,
+    embed_footer: "old footer",
+    history_limit: 500,
+    mention_role: "role-old",
+    webhook_id: "keep-id",
+    webhook_token: "keep-token",
+  });
+  db.setExtra("700", { quietStart: "23:00" });
+  db.setRoute("700", "messageDelete", { enabled: true, channelId: "old-chan" });
+  db.addIgnore.run("700", "user", "old-user");
+
+  const counts = importGuild(db, "700", {
+    format: FORMAT,
+    version: VERSION,
+    guild: { locale: "de", mention_role: "role-missing" },
+    routes: [],
+    ignores: [],
+    extra: {},
+  }, { resolveRole: () => null });
+
+  const row = db.getGuild.get("700");
+  assert.equal(counts.settings, 2);
+  assert.equal(counts.skipped, 1);
+  assert.equal(row.locale, "de");
+  for (const key of [
+    "timezone",
+    "default_channel",
+    "ignore_bots",
+    "embed_show_ids",
+    "embed_footer",
+    "history_limit",
+    "mention_role",
+  ]) {
+    assert.equal(row[key], null, key);
+  }
+  assert.equal(row.webhook_id, "keep-id");
+  assert.equal(row.webhook_token, "keep-token");
+  assert.deepEqual(db.extraOf(row), {});
+  assert.equal(db.listRoutes.all("700").length, 0);
+  assert.equal(db.listIgnores.all("700").length, 0);
 });
 
 test("rejects invalid payloads before writing anything", (t) => {
@@ -233,9 +284,9 @@ test("skips unknown event keys, ignore kinds, settings, and extra keys", (t) => 
   assert.equal(db.listRoutes.all("400").length, 1);
   assert.equal(db.listIgnores.all("400").length, 1);
   const row = db.getGuild.get("400");
-  assert.equal(row.locale, "en");
-  assert.equal(row.ignore_bots, 1);
-  assert.equal(row.history_limit, 200);
+  assert.equal(row.locale, null);
+  assert.equal(row.ignore_bots, null);
+  assert.equal(row.history_limit, null);
   const extra = db.extraOf(row);
   assert.deepEqual(extra, { paused: true });
 });
