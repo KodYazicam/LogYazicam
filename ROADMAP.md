@@ -12,7 +12,7 @@ Small, shippable steps. Upvote or comment on an issue if you want something move
 
 ## Next
 
-- [ ] Config export/import for migrating between guilds
+- [x] Config export/import for migrating between guilds
 - [ ] A read-only dashboard for recent events
 - [ ] More locale coverage for the operator manual
 

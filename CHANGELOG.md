@@ -32,6 +32,10 @@ All notable changes to this project are documented here. The format follows
   commands in the container, reading logs, and backing up the data volume.
 - `tests/docker.test.js` guards the named volume, `/app/data` ownership, and
   the quickstart commands without requiring a Docker daemon.
+- `/log export` and `/log import` for moving guild settings, routes, ignores,
+  and `extra_json` between guilds. Webhook credentials are never exported or
+  overwritten, unknown keys are skipped and reported, and imports are
+  validated and applied in one SQLite transaction.
 
 ### Security
 
