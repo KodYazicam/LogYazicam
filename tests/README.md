@@ -6,7 +6,7 @@ No Discord token. Runner: `node --test` (CI and `npm test`).
 | --- | --- |
 | `catalog.test.js` | Unique English keys; every key has `event.*` in `en`; locale folder matches the expected set; `processConfig` env parsing; every `voiceKind` branch including move precedence |
 | `db.test.js` | Routes, group enable, ignores, history cap. **Skipped** if `better-sqlite3` has no native build (e.g. Node 24 without compile) |
-| `dispatcher.test.js` | Webhook success without a channel fetch, 429 retry and no-duplicate delivery, 500 drop, timeout/network failure, channel fallback, file sink ordering/isolation, and `sent`/`retries`/`dropped` metrics. Uses an injected sender and clock; no real webhook or network calls |
+| `dispatcher.test.js` | Webhook success without a channel fetch, 429 retry and no-duplicate delivery, 500 drop, timeout/network failure, channel fallback, sink mirroring before webhook success, one sink row per retried item, file sink ordering/isolation, and `sent`/`retries`/`dropped` metrics. Uses an injected sender and clock; no real webhook or network calls |
 | `docker.test.js` | Compose uses the named `logyazicam-data` volume, the image owns `/app/data` before `USER 10001`, and the README quickstart keeps its start/deploy/logs/backup commands |
 | `configTransfer.test.js` | Export omits webhook secrets; import replaces omitted settings, preserves webhooks, remaps channels and roles, skips unknown keys, rejects invalid or oversized payloads before writing, rolls back on a mid-import failure, and bounds attachment downloads with an abort signal |
 | `dashboard.test.js` | Events are newest-first, filtered by guild, limit-capped, and reduced to summary fields; token auth, non-loopback refusal, HTML without external assets, health, 404, and 405 |

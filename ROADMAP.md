@@ -26,6 +26,7 @@ Small, shippable steps. Upvote or comment on an issue if you want something move
 - [x] Logger safe value formatting
 - [x] Correct, localized member-join labels
 - [x] Bounded integer env parsing
+- [x] Sinks mirror webhook deliveries exactly once
 
 ## Next
 
