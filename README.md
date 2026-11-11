@@ -64,16 +64,17 @@ Source : https://github.com/KodYazicam/LogYazicam
 16. [Embeds](#embeds)
 17. [Webhooks vs channel.send](#webhooks-vs-channelsend)
 18. [History](#history)
-19. [Locales](#locales)
-20. [Intents and partials](#intents-and-partials)
-21. [Error handling](#error-handling)
-22. [Limits Discord imposes](#limits-discord-imposes)
-23. [Project layout](#project-layout) — also [`src/README.md`](src/README.md)
-24. [Adding an event](#adding-an-event)
-25. [Tests and CI](#tests-and-ci)
-26. [Troubleshooting](#troubleshooting)
-27. [FAQ](#faq)
-28. [License](#license)
+19. [Read-only dashboard](#read-only-dashboard)
+20. [Locales](#locales)
+21. [Intents and partials](#intents-and-partials)
+22. [Error handling](#error-handling)
+23. [Limits Discord imposes](#limits-discord-imposes)
+24. [Project layout](#project-layout) — also [`src/README.md`](src/README.md)
+25. [Adding an event](#adding-an-event)
+26. [Tests and CI](#tests-and-ci)
+27. [Troubleshooting](#troubleshooting)
+28. [FAQ](#faq)
+29. [License](#license)
 
 ---
 
@@ -138,6 +139,7 @@ Nothing is logged until you **turn an event or group on**. A fresh guild is sile
 | Rate | Per-channel queue, interval between sends |
 | History | Capped JSON summaries, `/log history` export |
 | Config | `/log export` / `/log import` JSON transfer without webhook secrets |
+| Dashboard | Optional read-only HTTP view of recent history (`DASHBOARD_ENABLED`) |
 | Errors | Process log file, optional error channel, optional owner DM, no crash on handler throw |
 | Reload | `/log reload` + timer; TOKEN still needs restart |
 
@@ -927,6 +929,28 @@ Channel send: uses the bot user. Simpler. Rate limits are per-channel; the queue
 
 Not a compliance archive. Rows are `{ eventKey, channelId, at, summary }` e.g. `delete 123456`. Message **bodies are not stored** in SQLite (they were already posted in the embed). Turn `store_history` off if even summaries are too much.
 
+## Read-only dashboard
+
+Optional, off by default. Set `DASHBOARD_ENABLED=true` and open `http://127.0.0.1:8787/`.
+
+```env
+DASHBOARD_ENABLED=true
+DASHBOARD_HOST=127.0.0.1
+DASHBOARD_PORT=8787
+DASHBOARD_TOKEN=
+DASHBOARD_LIMIT=50
+```
+
+The page reads the `history` table only: guild, event key, time, channel, and summary. It has no buttons that change config and loads no external scripts or fonts.
+
+| Route | Auth | Returns |
+| --- | --- | --- |
+| `GET /` | none | Self-contained HTML table |
+| `GET /api/events?limit=&guildId=` | bearer if token set | Newest-first history rows without full payloads |
+| `GET /api/health` | bearer if token set | `{ ok, guilds, events }` |
+
+`DASHBOARD_HOST=127.0.0.1` is the safe default. If you bind to another interface, the process refuses to start unless `DASHBOARD_TOKEN` is set; send it as `Authorization: Bearer <token>`. The dashboard is read-only, but history summaries can still be sensitive, so keep it on loopback or behind a trusted reverse proxy. Port, host, and token changes require a restart.
+
 ---
 
 ## Locales
@@ -1049,6 +1073,7 @@ npm test
 - Webhook delivery: success, 429 retry and no-duplicate delivery, 500 drop, timeout/network failure, fallback to `channel.send`, and `sent`/`retries`/`dropped` metrics (injected sender and clock, no real webhook)
 - Docker quickstart invariants: named data volume, `/app/data` ownership before `USER 10001`, and the documented start/deploy/logs/backup commands
 - Config transfer: export without webhook secrets, round-trip import with channel remapping, unknown-key skips, validation/size rejection before writes, rollback, and attachment download limits
+- Dashboard: newest-first events, guild filter, limit cap, reduced payloads, bearer-token auth, non-loopback refusal, no external assets, health, 404, and 405
 
 CI: GitHub Actions, Node 22, `npm ci` && `npm test`.
 
