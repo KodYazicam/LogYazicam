@@ -180,7 +180,7 @@ function createDispatcher({ client, db, processCfg, log, cache, deps = {} }) {
         }
       }
     }
-    const wantHook = item.preferWebhook || (cfg?.delivery === "webhook") || Boolean(cfg?.webhookId && cfg?.webhookToken);
+    const wantHook = !item.staff && (item.preferWebhook || (cfg?.delivery === "webhook") || Boolean(cfg?.webhookId && cfg?.webhookToken));
     if (wantHook && cfg?.webhookId && cfg?.webhookToken) {
       try {
         const hook = makeWebhook({ id: cfg.webhookId, token: cfg.webhookToken });
