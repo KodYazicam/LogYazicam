@@ -67,6 +67,8 @@ All notable changes to this project are documented here. The format follows
   apply without a restart.
 - Remaining hardcoded command replies (guild-only, invalid timezone, invalid hex,
   and generic errors) are translated in all 18 locale packs.
+- Prefix integer options reject fractional/infinite/empty values, and history
+  exports are clamped to the same 1–500 bounds as the slash command.
 
 ### Security
 

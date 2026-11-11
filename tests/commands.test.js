@@ -1,7 +1,7 @@
 const { test } = require("node:test");
 const assert = require("node:assert/strict");
 const { PermissionFlagsBits } = require("discord.js");
-const { data } = require("../src/commands");
+const { data, clampHistoryLimit, MAX_HISTORY_LIMIT } = require("../src/commands");
 
 function permission(json) {
   return json.default_member_permissions;
@@ -48,4 +48,13 @@ test("supplied config wins over process.env", (t) => {
     permission(data({ configPermission: "Administrator" }).toJSON()),
     String(PermissionFlagsBits.Administrator),
   );
+});
+
+test("history export limits are clamped to the slash option bounds", () => {
+  assert.equal(MAX_HISTORY_LIMIT, 500);
+  assert.equal(clampHistoryLimit(50), 50);
+  assert.equal(clampHistoryLimit(999999), 500);
+  assert.equal(clampHistoryLimit(-5, 25), 25);
+  assert.equal(clampHistoryLimit(2.5, 25), 25);
+  assert.equal(clampHistoryLimit(null, 25), 25);
 });
