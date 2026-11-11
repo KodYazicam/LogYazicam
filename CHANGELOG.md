@@ -107,6 +107,10 @@ All notable changes to this project are documented here. The format follows
   failures return a logged 500, HTTP sink mirroring and sink exceptions are
   covered, and config sanitizers skip invalid timezone/hidden-field/string/
   color/redact entries; overall line coverage is now about 99.6%.
+- Invite/config edge coverage: vanity/unknown invite fallbacks and invite-fetch
+  failures, interaction-kind labels, invalid extra strings/quiet times/actors/
+  include lists, invalid color/footer settings and ignore targets, and download
+  cancel/release cleanup failures; overall line coverage is now about 99.9%.
 - Fallback-path coverage for utility formatting, logger append failures,
   malformed dashboard payloads, invalid dashboard ports, and HTTP sink
   connection errors; `util.js`, `logger.js`, and `sinks.js` now have 100%

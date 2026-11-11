@@ -596,3 +596,59 @@ test("guild, scheduled, automod, audit, soundboard, entitlement, and subscriptio
   ]);
   assert.equal(errors.length, 0);
 });
+
+test("interaction logs label select, modal, context, and autocomplete kinds", async () => {
+  const { client, guild, calls, errors } = setup();
+  const variants = [
+    { isStringSelectMenu: () => true },
+    { isModalSubmit: () => true },
+    { isContextMenuCommand: () => true },
+    { isAutocomplete: () => true },
+  ];
+  for (const variant of variants) {
+    await fire(client, "interactionCreate", makeInteraction(guild, {
+      isChatInputCommand: () => false,
+      ...variant,
+    }));
+  }
+  assert.deepEqual(keys(calls), ["commandUse", "commandUse", "commandUse", "commandUse"]);
+  assert.equal(errors.length, 0);
+});
+
+test("member joins fall back to vanity, unknown, and survive invite fetch errors", async () => {
+  const vanity = setup({
+    processCfg: { inviteTrack: true },
+    guild: { vanityURLCode: "v-code" },
+  });
+  vanity.guild.invites.fetch = async () => new Map();
+  const vanityMember = makeMember({ id: "u1", user: makeUser(), guild: vanity.guild });
+  await fire(vanity.client, "guildMemberAdd", vanityMember);
+  assert.match(JSON.stringify(vanity.calls[0][2]), /Vanity \(v-code\)/);
+  assert.equal(vanity.errors.length, 0);
+
+  const unknown = setup({ processCfg: { inviteTrack: true } });
+  unknown.guild.invites.fetch = async () => new Map();
+  const unknownMember = makeMember({
+    id: "u2",
+    user: makeUser({ id: "u2" }),
+    guild: unknown.guild,
+  });
+  await fire(unknown.client, "guildMemberAdd", unknownMember);
+  assert.match(JSON.stringify(unknown.calls[0][2]), /Unknown/);
+
+  const failing = setup({
+    processCfg: { inviteTrack: true },
+    guild: { vanityURLCode: "v2" },
+  });
+  failing.guild.invites.fetch = async () => {
+    throw new Error("invite fetch failed");
+  };
+  const failingMember = makeMember({
+    id: "u3",
+    user: makeUser({ id: "u3" }),
+    guild: failing.guild,
+  });
+  await fire(failing.client, "guildMemberAdd", failingMember);
+  assert.match(JSON.stringify(failing.calls[0][2]), /Vanity \(v2\)/);
+  assert.equal(failing.errors.length, 0);
+});
