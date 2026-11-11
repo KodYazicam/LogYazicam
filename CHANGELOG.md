@@ -44,6 +44,8 @@ All notable changes to this project are documented here. The format follows
   `roleIds`, covering member events without formatter-specific plumbing.
 - A per-event `embed`/`plain` delivery override now forces `channel.send` even
   when the guild has webhook credentials; `webhook` still opts into the hook.
+- Unknown `/log pack` names and invalid `/log locale` codes now report
+  `Invalid option` instead of the misleading `Unknown event` text.
 - `metrics.sent` only increments after real delivery. Missing channels and
   queue overflow increment `metrics.dropped` instead.
 - Actor filters (`humans`/`bots`) no longer drop events that have no actor
@@ -88,6 +90,11 @@ All notable changes to this project are documented here. The format follows
   positional option parsing, channel/role cache fallbacks, reply payloads,
   successful JSONL writes, and local HTTP POST headers/body; `prefix.js` and
   `sinks.js` now have 100% line coverage.
+- Core command-handler coverage: denial/owner access, status metrics,
+  channel/group/event routing, ignore lists, locale/timezone validation,
+  filter/webhook/footer, test/pack/setup, fields/string/color/mention,
+  history CSV/JSONL, config export/import validation, watch/events, and
+  autocomplete; `commands.js` line coverage is now about 97%.
 - Per-event embed color overrides via `/log event color`, stored in
   `extra_json.eventColors` and validated during config import. A black override
   is preserved; clearing it restores the semantic slot color.
