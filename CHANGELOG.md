@@ -93,6 +93,8 @@ All notable changes to this project are documented here. The format follows
 - Hot reload now updates the shared process-config object in place, so the
   dispatcher and event handlers see changed queue, webhook, audit, and default
   settings instead of keeping the startup snapshot.
+- `/log import` now rejects oversized `content-length` responses and stops
+  streamed bodies at the 1 MiB cap instead of buffering the whole download.
 
 ### Security
 

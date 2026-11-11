@@ -362,6 +362,61 @@ test("readAttachment checks size before and after download", async () => {
   );
 });
 
+test("readAttachment rejects oversized content-length before reading", async () => {
+  let arrayBufferCalled = false;
+  let cancelled = false;
+  const response = {
+    ok: true,
+    headers: { get: (name) => (name === "content-length" ? String(MAX_BYTES + 1) : null) },
+    body: {
+      cancel: async () => {
+        cancelled = true;
+      },
+    },
+    arrayBuffer: async () => {
+      arrayBufferCalled = true;
+      return Buffer.alloc(0);
+    },
+  };
+
+  await assert.rejects(
+    readAttachment({ url: "https://cdn.example/big" }, { fetchImpl: async () => response }),
+    /larger than/,
+  );
+  assert.equal(arrayBufferCalled, false);
+  assert.equal(cancelled, true);
+});
+
+test("readAttachment cancels an oversized stream at the size cap", async () => {
+  let reads = 0;
+  let cancelled = false;
+  const body = {
+    getReader() {
+      return {
+        read: async () => {
+          reads += 1;
+          if (reads === 1) return { done: false, value: Buffer.alloc(700 * 1024, 32) };
+          if (reads === 2) return { done: false, value: Buffer.alloc(700 * 1024, 32) };
+          return { done: true, value: undefined };
+        },
+        cancel: async () => {
+          cancelled = true;
+        },
+        releaseLock() {},
+      };
+    },
+  };
+
+  await assert.rejects(
+    readAttachment({ url: "https://cdn.example/stream" }, {
+      fetchImpl: async () => ({ ok: true, body }),
+    }),
+    /larger than/,
+  );
+  assert.equal(reads, 2);
+  assert.equal(cancelled, true);
+});
+
 test("readAttachment passes an abort signal and propagates aborts", async () => {
   let seen;
   const fetchImpl = async (url, options) => {
