@@ -57,6 +57,9 @@ All notable changes to this project are documented here. The format follows
 - File/HTTP sink failures are isolated: an unwritable `FILE_SINK_DIR` no longer
   drops Discord delivery, and a failed backup path no longer throws on every
   interval.
+- `npm run deploy` now applies `CONFIG_PERMISSION` from `.env` instead of the
+  unset `process.env` value, so slash defaults match the configured runtime
+  permission.
 
 ### Security
 
