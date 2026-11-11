@@ -21,6 +21,10 @@ All notable changes to this project are documented here. The format follows
   retried; other failures increment `metrics.dropped`.
 - The Docker image now creates `/app/data` with UID `10001` ownership before
   dropping privileges.
+- `/log set` now uses one allowlist for slash and prefix names, rejects unknown
+  keys, and validates numeric ranges instead of silently writing arbitrary
+  `extra_json` values. Prefix aliases such as `plain_text` and `quiet_start`
+  now reach the same settings as their slash choices.
 
 ### Added
 

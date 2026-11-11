@@ -47,9 +47,9 @@ const EXTRA_BOOLEANS = new Set([
 const EXTRA_NUMBERS = {
   minAccountDays: [0, 3650],
   cooldownSec: [0, 3600],
-  fieldMax: [1, 4000],
+  fieldMax: [1, 1024],
   attachMin: [0, 100000],
-  digestMs: [0, 86400000],
+  digestMs: [0, 3600000],
   historyRetentionDays: [0, 3650],
 };
 const EXTRA_STRINGS = {

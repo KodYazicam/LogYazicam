@@ -47,6 +47,79 @@ function parseQuietDays(raw) {
   return [...new Set(out)];
 }
 
+const SETTING_ALIASES = {
+  paused: "paused",
+  plain: "plainText",
+  plain_text: "plainText",
+  thumbs: "showThumbnails",
+  thumbnails: "showThumbnails",
+  actors: "actors",
+  cooldown: "cooldownSec",
+  cooldown_sec: "cooldownSec",
+  acct_days: "minAccountDays",
+  min_account_days: "minAccountDays",
+  quiet_in: "quietStart",
+  quiet_start: "quietStart",
+  quiet_out: "quietEnd",
+  quiet_end: "quietEnd",
+  quiet_days: "quietDays",
+  hook_name: "webhookName",
+  webhook_name: "webhookName",
+  hook_av: "webhookAvatar",
+  webhook_avatar: "webhookAvatar",
+  timestamp: "showTimestamp",
+  show_timestamp: "showTimestamp",
+  attach: "attachLong",
+  attach_long: "attachLong",
+  delivery: "delivery",
+  prefix: "prefix",
+  prefix_on: "prefixOn",
+  slash_on: "slashOn",
+  ephemeral: "ephemeral",
+  credit: "showCredit",
+  show_credit: "showCredit",
+  digest_ms: "digestMs",
+  history_days: "historyRetentionDays",
+  history_retention_days: "historyRetentionDays",
+  snapshot: "snapshotOn",
+  snapshot_on: "snapshotOn",
+  staff_ch: "staffChannel",
+  staff_channel: "staffChannel",
+  redact_url: "redactUrl",
+  field_max: "fieldMax",
+  attach_min: "attachMin",
+};
+const SETTING_NAMES = new Set(Object.values(SETTING_ALIASES));
+const BOOL_SETTINGS = new Set([
+  "paused",
+  "plainText",
+  "showThumbnails",
+  "showTimestamp",
+  "attachLong",
+  "prefixOn",
+  "slashOn",
+  "ephemeral",
+  "showCredit",
+  "snapshotOn",
+]);
+const NUMBER_SETTINGS = {
+  cooldownSec: [0, 3600],
+  minAccountDays: [0, 3650],
+  digestMs: [0, 3600000],
+  historyRetentionDays: [0, 3650],
+  fieldMax: [1, 1024],
+  attachMin: [0, 100000],
+};
+const TIME_SETTINGS = new Set(["quietStart", "quietEnd"]);
+const TIME_VALUE = /^([01]\d|2[0-3]):[0-5]\d$/;
+
+function parseBoolSetting(raw) {
+  const value = String(raw || "").toLowerCase();
+  if (["1", "true", "yes", "on"].includes(value)) return true;
+  if (["0", "false", "no", "off"].includes(value)) return false;
+  return null;
+}
+
 function data(config = {}) {
   const permissionName = config.configPermission || process.env.CONFIG_PERMISSION || "ManageGuild";
   const permission = PermissionFlagsBits[permissionName] || PermissionFlagsBits.ManageGuild;
@@ -895,45 +968,65 @@ async function execute(interaction, { db, dispatch, processCfg }) {
   }
 
   if (sub === "set") {
-    const name = interaction.options.getString("name", true);
+    const requested = interaction.options.getString("name", true);
+    const name = Object.prototype.hasOwnProperty.call(SETTING_ALIASES, requested)
+      ? SETTING_ALIASES[requested]
+      : (SETTING_NAMES.has(requested) ? requested : null);
+    if (!name) {
+      return interaction.reply({ content: t(locale, "cmd.invalid_option", { name: requested }), ephemeral: true });
+    }
     const raw = interaction.options.getString("value", true);
     const row = db.ensureGuild(interaction.guildId);
     const extra = db.extraOf(row);
-    const boolish = ["paused", "plainText", "showThumbnails", "showTimestamp", "attachLong", "prefixOn", "slashOn", "ephemeral", "showCredit", "snapshotOn"];
-    if (boolish.includes(name)) {
-      extra[name] = ["1", "true", "yes", "on"].includes(raw.toLowerCase());
-    } else if (name === "cooldownSec" || name === "minAccountDays" || name === "digestMs") {
-      extra[name] = Number(raw) || 0;
-    } else if (name === "historyRetentionDays") {
-      const days = Number(raw);
-      extra[name] = Number.isFinite(days) && days > 0 ? Math.min(Math.floor(days), 3650) : 0;
+    const invalid = () => interaction.reply({
+      content: t(locale, "cmd.invalid_option", { name: requested }),
+      ephemeral: true,
+    });
+
+    if (BOOL_SETTINGS.has(name)) {
+      const flag = parseBoolSetting(raw);
+      if (flag == null) return invalid();
+      extra[name] = flag;
+    } else if (Object.prototype.hasOwnProperty.call(NUMBER_SETTINGS, name)) {
+      const [min, max] = NUMBER_SETTINGS[name];
+      const value = Number(raw);
+      if (!Number.isInteger(value) || value < min || value > max) return invalid();
+      extra[name] = value;
+    } else if (TIME_SETTINGS.has(name)) {
+      if (raw === "clear" || raw === "-") extra[name] = null;
+      else if (TIME_VALUE.test(raw)) extra[name] = raw;
+      else return invalid();
     } else if (name === "actors") {
-      extra.actors = ["all", "humans", "bots"].includes(raw) ? raw : "all";
+      if (!["all", "humans", "bots"].includes(raw)) return invalid();
+      extra.actors = raw;
     } else if (name === "quietDays") {
       const days = parseQuietDays(raw);
-      if (days == null) {
-        return interaction.reply({ content: t(locale, "cmd.invalid_option", { name: "quiet_days" }), ephemeral: true });
-      }
+      if (days == null) return invalid();
       extra.quietDays = days;
     } else if (name === "delivery") {
-      extra.delivery = ["embed", "plain", "webhook"].includes(raw) ? raw : "embed";
-      extra.plainText = extra.delivery === "plain";
+      if (!["embed", "plain", "webhook"].includes(raw)) return invalid();
+      extra.delivery = raw;
+      extra.plainText = raw === "plain";
     } else if (name === "staffChannel") {
-      extra.staffChannel = raw.replace(/[<#>]/g, "") || null;
+      extra.staffChannel = raw === "clear" || raw === "-" ? null : (raw.replace(/[<#>]/g, "") || null);
     } else if (name === "redactUrl") {
+      const flag = parseBoolSetting(raw);
+      if (flag == null) return invalid();
       extra.redact = extra.redact || {};
-      extra.redact.url = ["1", "true", "yes", "on"].includes(raw.toLowerCase());
-    } else {
+      extra.redact.url = flag;
+    } else if (name === "webhookName" || name === "webhookAvatar" || name === "prefix") {
       extra[name] = raw === "clear" || raw === "-" ? null : raw;
+    } else {
+      return invalid();
     }
     db.setExtra(interaction.guildId, extra);
     dispatch.refreshGuild(interaction.guildId);
     return interaction.reply({
       content: t(locale, "cmd.filter_set", {
-        name,
+        name: requested,
         value: name === "quietDays"
           ? (extra.quietDays.length ? extra.quietDays.join(",") : "all")
-          : String(extra[name]),
+          : extra[name] == null ? "clear" : String(extra[name]),
       }),
       ephemeral: true,
     });
@@ -971,4 +1064,12 @@ async function execute(interaction, { db, dispatch, processCfg }) {
   return interaction.reply({ content: t(locale, "cmd.denied"), ephemeral: true });
 }
 
-module.exports = { data, execute, autocomplete, clampHistoryLimit, MAX_HISTORY_LIMIT, FILTER_NAMES };
+module.exports = {
+  data,
+  execute,
+  autocomplete,
+  clampHistoryLimit,
+  MAX_HISTORY_LIMIT,
+  FILTER_NAMES,
+  SETTING_NAMES,
+};
