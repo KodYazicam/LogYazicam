@@ -161,11 +161,24 @@ function openDb(filePath) {
 
   const insertHistory = db.prepare("INSERT INTO history (guild_id, event_key, payload, created_at) VALUES (?, ?, ?, ?)");
   const listHistory = db.prepare("SELECT * FROM history WHERE guild_id = ? ORDER BY id DESC LIMIT ?");
+  const listRecentHistory = db.prepare("SELECT * FROM history ORDER BY id DESC LIMIT ?");
+  const listRecentHistoryByGuild = db.prepare("SELECT * FROM history WHERE guild_id = ? ORDER BY id DESC LIMIT ?");
+  const countHistory = db.prepare("SELECT COUNT(*) AS n FROM history");
   const trimHistory = db.prepare(`
     DELETE FROM history WHERE guild_id = ? AND id NOT IN (
       SELECT id FROM history WHERE guild_id = ? ORDER BY id DESC LIMIT ?
     )
   `);
+
+  function recentHistory(limit, guildId = "") {
+    return guildId
+      ? listRecentHistoryByGuild.all(guildId, limit)
+      : listRecentHistory.all(limit);
+  }
+
+  function historyCount() {
+    return countHistory.get().n;
+  }
 
   function pushHistory(guildId, eventKey, payload, limit) {
     insertHistory.run(guildId, eventKey, JSON.stringify(payload), Date.now());
@@ -226,6 +239,8 @@ function openDb(filePath) {
     replaceConfig,
     pushHistory,
     listHistory,
+    recentHistory,
+    historyCount,
     queryHistory,
     putSnapshot,
     getSnap,

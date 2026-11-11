@@ -67,6 +67,15 @@ const client = new Client({
 
 const dispatch = createDispatcher({ client, db, processCfg, log, cache });
 
+if (processCfg.dashboardEnabled) {
+  const { createDashboard } = require("./dashboard");
+  const dashboard = createDashboard({ db, processCfg, log });
+  dashboard
+    .start()
+    .then((address) => log.info(`dashboard listening on http://${address.address}:${address.port}`))
+    .catch((error) => log.error("dashboard", error));
+}
+
 function reportError(error, where) {
   log.error(where, error);
   const text = `LogYazicam error in ${where}: ${error?.stack || error}`;

@@ -36,6 +36,9 @@ All notable changes to this project are documented here. The format follows
   and `extra_json` between guilds. Webhook credentials are never exported or
   overwritten, unknown keys are skipped and reported, and imports are
   validated and applied in one SQLite transaction.
+- Optional read-only dashboard (`DASHBOARD_ENABLED`) for recent history rows,
+  with loopback-by-default binding, bearer-token auth for non-loopback hosts,
+  no external assets, and no write routes.
 
 ### Security
 
