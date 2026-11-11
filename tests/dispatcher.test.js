@@ -315,6 +315,25 @@ test("per-event cooldown zero disables the guild cooldown", async () => {
   assert.equal(h.dispatch.queues.get("g1:c1").length, 2);
 });
 
+test("a per-event digest zero disables digesting for that event only", async () => {
+  const h = setup({
+    queued: false,
+    cfg: {
+      digestMs: 10000,
+      eventDigest: { messageDelete: { ms: 0 } },
+      events: {
+        messageDelete: { on: true, channelId: "c1" },
+        messageUpdate: { on: true, channelId: "c1" },
+      },
+    },
+  });
+
+  await h.dispatch.enqueue({ id: "g1" }, "messageDelete", { summary: "one" });
+  assert.equal(h.dispatch.queues.get("g1:c1").length, 1);
+  await h.dispatch.enqueue({ id: "g1" }, "messageUpdate", { summary: "two" });
+  assert.equal(h.dispatch.queues.get("g1:c1").length, 1);
+});
+
 test("a per-event cooldown applies only to that event key", async () => {
   const h = setup({
     queued: false,
