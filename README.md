@@ -607,6 +607,7 @@ All names English. Booleans: `1` `0` `true` `false` `yes` `no` `on` `off`. Numer
 | --- | --- | --- |
 | `on` | `key` (required, autocomplete), `channel` (optional) | `event_routes.enabled=1`. Optional `channel_id` override. |
 | `off` | `key` | `enabled=0`. |
+| `color` | `key` (required, autocomplete), `hex` `#rrggbb`, `clear` | Store `extra_json.eventColors[key]`. This wins over the group slot color; `clear` restores the slot. |
 
 Autocomplete matches substring of the English key (`del` → `messageDelete`, …), max 25 choices (Discord limit). `/log events` lists all keys if you cannot find one.
 
@@ -700,7 +701,7 @@ Reloads `src/locales/*.js` from disk and lists codes. Adding `sv.js` does not ne
 
 ### `/log color`
 
-`slot` (`create` `update` `delete` `voice` `member` `mod` `info`) + `hex` `#rrggbb` → `extra_json.colors`. Applies on the next embed.
+`slot` (`create` `update` `delete` `voice` `member` `mod` `info`) + `hex` `#rrggbb` → `extra_json.colors`. Applies on the next embed. For one event only, use `/log event color key:<event> hex:<#rrggbb>`; the event override wins over its slot and `clear:true` restores the slot.
 
 ### `/log mention`
 
@@ -771,6 +772,14 @@ Developer maps: [`src/README.md`](src/README.md) · [`src/locales/README.md`](sr
 /log group on name:message channel:#logs-messages
 /log group on name:voice channel:#logs-voice
 /log event on key:guildBanAdd channel:#logs-mod
+```
+
+**Highlight one event**
+
+```
+/log event color key:messageDelete hex:#e74c3c
+/log event color key:guildBanAdd hex:#000000
+/log event color key:messageDelete clear:true
 ```
 
 **Ignore a ticket category and a noisy bot**

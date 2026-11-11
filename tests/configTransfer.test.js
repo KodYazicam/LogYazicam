@@ -81,6 +81,7 @@ function sourcePayload() {
       staffChannel: "chan-a",
       strings: { "event.messageDelete": "silindi" },
       colors: { info: 0x00ff00 },
+      eventColors: { messageDelete: 0x123456 },
       hiddenFields: { messageDelete: ["id", "jump"] },
       redact: { url: true },
     },
@@ -162,8 +163,25 @@ test("round-trips config into another guild and keeps its webhook", (t) => {
   assert.equal(extra.quietStart, "23:00");
   assert.deepEqual(extra.strings, { "event.messageDelete": "silindi" });
   assert.deepEqual(extra.colors, { info: 0x00ff00 });
+  assert.deepEqual(extra.eventColors, { messageDelete: 0x123456 });
   assert.deepEqual(extra.hiddenFields, { messageDelete: ["id", "jump"] });
   assert.deepEqual(extra.redact, { url: true });
+});
+
+test("skips invalid per-event color overrides", (t) => {
+  const db = withDb(t);
+  if (!db) return;
+  const payload = sourcePayload();
+  payload.extra.eventColors = {
+    messageDelete: 0x000000,
+    guildBanAdd: "#ff0000",
+    notAnEvent: 0x123456,
+    messageUpdate: 0x1000000,
+  };
+
+  const counts = importGuild(db, "201", payload);
+  assert.equal(counts.skipped, 3);
+  assert.deepEqual(db.extraOf(db.getGuild.get("201")).eventColors, { messageDelete: 0 });
 });
 
 test("replaces omitted settings and clears missing mention roles", (t) => {

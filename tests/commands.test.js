@@ -1,7 +1,7 @@
 const { test } = require("node:test");
 const assert = require("node:assert/strict");
 const { PermissionFlagsBits } = require("discord.js");
-const { data, clampHistoryLimit, MAX_HISTORY_LIMIT, FILTER_NAMES } = require("../src/commands");
+const { data, execute, clampHistoryLimit, MAX_HISTORY_LIMIT, FILTER_NAMES } = require("../src/commands");
 
 function permission(json) {
   return json.default_member_permissions;
@@ -66,4 +66,55 @@ test("filter allowlist rejects guild columns and unknown names", () => {
   for (const name of ["webhook_id", "webhook_token", "locale", "timezone", "default_channel", "unknown"]) {
     assert.equal(FILTER_NAMES.has(name), false, name);
   }
+});
+
+test("event group exposes color overrides", () => {
+  const json = data({}).toJSON();
+  const event = json.options.find((group) => group.name === "event");
+  const color = event.options.find((sub) => sub.name === "color");
+  assert.ok(color);
+  assert.deepEqual(
+    color.options.map((option) => option.name).sort(),
+    ["clear", "hex", "key"],
+  );
+});
+
+test("event color command stores and clears a black override", async () => {
+  let extra = {};
+  const db = {
+    ensureGuild: () => ({ id: "g1" }),
+    extraOf: () => extra,
+    setExtra: (id, next) => {
+      extra = next;
+    },
+  };
+  let response;
+  const dispatch = {
+    guildCfg: () => ({ locale: "en" }),
+    refreshGuild: () => {},
+  };
+  const processCfg = { owners: [], defaultLocale: "en", slashEphemeral: true };
+  const makeInteraction = (hex, clear) => ({
+    guildId: "g1",
+    user: { id: "u1" },
+    memberPermissions: { has: () => true },
+    options: {
+      getSubcommandGroup: () => "event",
+      getSubcommand: () => "color",
+      getString: (name) => (name === "key" ? "messageDelete" : hex),
+      getBoolean: () => clear,
+    },
+    reply: async (payload) => {
+      response = payload;
+      return payload;
+    },
+  });
+
+  await execute(makeInteraction("#000000", false), { db, dispatch, processCfg });
+  assert.deepEqual(extra.eventColors, { messageDelete: 0 });
+  assert.match(response.content, /#000000/);
+
+  await execute(makeInteraction(null, true), { db, dispatch, processCfg });
+  assert.equal(extra.eventColors, undefined);
+  assert.match(response.content, /none|—/i);
 });
