@@ -22,6 +22,7 @@ Small, shippable steps. Upvote or comment on an issue if you want something move
 - [x] Black embed colors preserved
 - [x] Strict hex color validation
 - [x] Filter command column allowlist
+- [x] Bounded config attachment downloads
 
 ## Next
 

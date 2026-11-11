@@ -75,6 +75,8 @@ All notable changes to this project are documented here. The format follows
   rejects out-of-range or malformed values.
 - `/log filter` now enforces the boolean-filter allowlist, so a prefix call
   cannot overwrite webhook credentials or other guild columns.
+- `/log import` attachment downloads now have a 10-second abort timeout instead
+  of hanging until the interaction expires.
 
 ### Security
 
