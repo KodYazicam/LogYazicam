@@ -4,18 +4,27 @@ const path = require("path");
 const LEVELS = { error: 0, warn: 1, info: 2, debug: 3 };
 
 function createLogger(env = {}) {
-  const levelName = String(env.LOG_LEVEL ?? env.logLevel ?? "info").toLowerCase();
-  const level = LEVELS[levelName] ?? 2;
-  const fileValue = env.LOG_FILE ?? env.logFile;
-  let file = fileValue ? path.resolve(fileValue) : null;
-  if (file) {
-    try {
-      fs.mkdirSync(path.dirname(file), { recursive: true });
-    } catch {
-      // Logging must never stop startup; fall back to stdout/stderr only.
-      file = null;
+  let level = 2;
+  let file = null;
+
+  function configure(config = {}) {
+    const levelName = String(config.LOG_LEVEL ?? config.logLevel ?? "info").toLowerCase();
+    level = LEVELS[levelName] ?? 2;
+    const fileValue = config.LOG_FILE ?? config.logFile;
+    let nextFile = fileValue ? path.resolve(fileValue) : null;
+    if (nextFile) {
+      try {
+        fs.mkdirSync(path.dirname(nextFile), { recursive: true });
+      } catch {
+        // Logging must never stop startup; fall back to stdout/stderr only.
+        nextFile = null;
+      }
     }
+    file = nextFile;
+    return { level, file };
   }
+
+  configure(env);
 
   const write = (name, args) => {
     if ((LEVELS[name] ?? 9) > level) return;
@@ -38,6 +47,7 @@ function createLogger(env = {}) {
     warn: (...args) => write("warn", args),
     info: (...args) => write("info", args),
     debug: (...args) => write("debug", args),
+    configure,
   };
 }
 

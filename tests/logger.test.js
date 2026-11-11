@@ -94,3 +94,37 @@ test("an unusable log path does not throw or block stdout", (t) => {
   const captured = capture(() => log.info("still logs"));
   assert.match(captured.out, /INFO still logs/);
 });
+
+test("configure applies a new level and file at runtime", (t) => {
+  const dir = tempDir(t);
+  const first = path.join(dir, "first.log");
+  const second = path.join(dir, "second.log");
+  const log = createLogger({ logLevel: "info", logFile: first });
+
+  capture(() => {
+    log.info("before only");
+    log.debug("hidden before");
+  });
+  log.configure({ logLevel: "debug", logFile: second });
+  capture(() => log.debug("visible after"));
+
+  assert.match(fs.readFileSync(first, "utf8"), /INFO before only/);
+  assert.doesNotMatch(fs.readFileSync(first, "utf8"), /visible after/);
+  assert.match(fs.readFileSync(second, "utf8"), /DEBUG visible after/);
+});
+
+test("configure falls back for invalid levels and blocked paths", (t) => {
+  const dir = tempDir(t);
+  const blocker = path.join(dir, "blocker");
+  fs.writeFileSync(blocker, "not a directory");
+  const log = createLogger({ logLevel: "error", logFile: path.join(dir, "ok.log") });
+
+  log.configure({ logLevel: "verbose", logFile: path.join(blocker, "app.log") });
+  const captured = capture(() => {
+    log.info("info lives");
+    log.debug("hidden debug");
+  });
+
+  assert.match(captured.out, /INFO info lives/);
+  assert.doesNotMatch(captured.out, /hidden debug/);
+});

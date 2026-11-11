@@ -211,6 +211,7 @@ if (processCfg.hotReloadMs > 0) {
       const token = processCfg.token;
       processCfg = processConfig(nextEnv);
       processCfg.token = token;
+      log.configure(processCfg);
       reloadLocales();
       applyPresence();
       for (const id of cache.keys()) dispatch.refreshGuild(id);
