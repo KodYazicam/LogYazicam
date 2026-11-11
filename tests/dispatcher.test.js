@@ -426,6 +426,45 @@ test("a per-event include list restricts only that event", async () => {
   assert.equal(h.dispatch.queues.get("g1:c1").length, 2);
 });
 
+test("a per-event delivery mode overrides the guild mode", async () => {
+  const events = {
+    messageDelete: { on: true, channelId: "c1" },
+    guildBanAdd: { on: true, channelId: "c1" },
+    channelDelete: { on: true, channelId: "c1" },
+  };
+  const embed = { title: "Deleted", fields: [{ name: "channel", value: "#logs" }] };
+  const h = setup({
+    queued: false,
+    cfg: {
+      delivery: "embed",
+      plainText: true,
+      eventDelivery: {
+        messageDelete: "plain",
+        guildBanAdd: "embed",
+        channelDelete: "webhook",
+      },
+      events,
+    },
+  });
+
+  await h.dispatch.enqueue({ id: "g1" }, "messageDelete", { summary: "plain", embeds: [embed] });
+  const plain = h.dispatch.queues.get("g1:c1").at(-1);
+  assert.deepEqual(plain.embeds, []);
+  assert.match(plain.content, /Deleted/);
+  assert.equal(plain.preferWebhook, false);
+
+  await h.dispatch.enqueue({ id: "g1" }, "guildBanAdd", { summary: "embed", embeds: [embed] });
+  const keep = h.dispatch.queues.get("g1:c1").at(-1);
+  assert.equal(keep.embeds.length, 1);
+  assert.equal(keep.embeds[0].data.title, "Deleted");
+  assert.equal(keep.preferWebhook, false);
+
+  await h.dispatch.enqueue({ id: "g1" }, "channelDelete", { summary: "hook", embeds: [embed] });
+  const hook = h.dispatch.queues.get("g1:c1").at(-1);
+  assert.equal(hook.preferWebhook, true);
+  assert.equal(hook.embeds[0].data.title, "Deleted");
+});
+
 test("a per-event cooldown applies only to that event key", async () => {
   const h = setup({
     queued: false,

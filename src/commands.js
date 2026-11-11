@@ -246,8 +246,28 @@ function data(config = {}) {
         )
         .addSubcommand((s) =>
           s
+            .setName("delivery")
+            .setDescription("Delivery mode for one event")
+            .addStringOption((o) =>
+              o.setName("key").setDescription("Event key").setRequired(true).setAutocomplete(true),
+            )
+            .addStringOption((o) =>
+              o
+                .setName("mode")
+                .setDescription("Embed, plain text, webhook, or guild default")
+                .setRequired(true)
+                .addChoices(
+                  { name: "default", value: "default" },
+                  { name: "embed", value: "embed" },
+                  { name: "plain", value: "plain" },
+                  { name: "webhook", value: "webhook" },
+                ),
+            ),
+        )
+        .addSubcommand((s) =>
+          s
             .setName("reset")
-            .setDescription("Clear color and cooldown overrides for one event")
+            .setDescription("Clear all per-event overrides")
             .addStringOption((o) =>
               o.setName("key").setDescription("Event key").setRequired(true).setAutocomplete(true),
             ),
@@ -640,7 +660,7 @@ async function execute(interaction, { db, dispatch, processCfg }) {
       const row = db.ensureGuild(interaction.guildId);
       const extra = db.extraOf(row);
       let changed = false;
-      for (const mapKey of ["eventColors", "eventCooldown", "eventDigest", "eventActors", "quietBypass", "eventIncludeChannels"]) {
+      for (const mapKey of ["eventColors", "eventCooldown", "eventDigest", "eventActors", "quietBypass", "eventIncludeChannels", "eventDelivery"]) {
         if (!extra[mapKey] || typeof extra[mapKey] !== "object" || Array.isArray(extra[mapKey])) continue;
         if (Object.prototype.hasOwnProperty.call(extra[mapKey], key)) changed = true;
         delete extra[mapKey][key];
@@ -826,6 +846,30 @@ async function execute(interaction, { db, dispatch, processCfg }) {
         content: t(locale, "cmd.filter_set", {
           name: `event.${key}.watch`,
           value: ids.map((id) => `<#${id}>`).join(" ") || t(locale, "none"),
+        }),
+        ephemeral: true,
+      });
+    }
+    if (sub === "delivery") {
+      const mode = interaction.options.getString("mode", true);
+      if (!["default", "embed", "plain", "webhook"].includes(mode)) {
+        return interaction.reply({ content: t(locale, "cmd.invalid_option", { name: "mode" }), ephemeral: true });
+      }
+      const row = db.ensureGuild(interaction.guildId);
+      const extra = db.extraOf(row);
+      const eventDelivery = extra.eventDelivery && typeof extra.eventDelivery === "object" && !Array.isArray(extra.eventDelivery)
+        ? { ...extra.eventDelivery }
+        : {};
+      if (mode === "default") delete eventDelivery[key];
+      else eventDelivery[key] = mode;
+      if (Object.keys(eventDelivery).length) extra.eventDelivery = eventDelivery;
+      else delete extra.eventDelivery;
+      db.setExtra(interaction.guildId, extra);
+      dispatch.refreshGuild(interaction.guildId);
+      return interaction.reply({
+        content: t(locale, "cmd.filter_set", {
+          name: `event.${key}.delivery`,
+          value: mode === "default" ? t(locale, "none") : mode,
         }),
         ephemeral: true,
       });

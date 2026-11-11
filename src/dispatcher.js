@@ -130,8 +130,11 @@ function createDispatcher({ client, db, processCfg, log, cache, deps = {} }) {
       if (embeds.length) embeds = redactEmbeds(embeds, flags);
       if (content) content = redactText(content, flags);
 
-      const delivery = cfg.delivery || (cfg.plainText ? "plain" : "embed");
-      if ((delivery === "plain" || cfg.plainText) && embeds.length) {
+      const eventMode = cfg.eventDelivery?.[eventKey];
+      const eventDelivery = ["embed", "plain", "webhook"].includes(eventMode) ? eventMode : null;
+      const delivery = eventDelivery || cfg.delivery || (cfg.plainText ? "plain" : "embed");
+      const flatten = delivery === "plain" || (!eventDelivery && cfg.plainText);
+      if (flatten && embeds.length) {
         const text = embeds.map((e) => embedToPlain(e).slice(0, processCfg.plainMax || 1900)).join("\n\n");
         content = [content, text].filter(Boolean).join("\n").slice(0, processCfg.plainMax || 1900);
         embeds = [];

@@ -613,7 +613,8 @@ All names English. Booleans: `1` `0` `true` `false` `yes` `no` `on` `off`. Numer
 | `actors` | `key` (required, autocomplete), `mode` (`all` `humans` `bots`), `clear` | Store `extra_json.eventActors[key]`. Overrides the guild `actors` setting for one event; `clear` restores it. |
 | `bypass` | `key` (required, autocomplete), `enabled` (default `true`) | Store `extra_json.quietBypass[key]`. This event still logs during quiet hours; `enabled:false` removes the bypass. Pause still applies. |
 | `watch` | `key` (required, autocomplete), `action` (`add` `remove` `clear` `list`), `channel` (optional text/announcement/category) | Store `extra_json.eventIncludeChannels[key]`. When set, only those channels (or children of a listed category) log that event; other events keep the guild allow-list. `clear` removes the per-event list. |
-| `reset` | `key` (required, autocomplete) | Remove that event's color, cooldown, digest, actor, quiet-bypass, and channel allow-list overrides; routes, channel overrides, and guild settings stay unchanged. |
+| `delivery` | `key` (required, autocomplete), `mode` (`default` `embed` `plain` `webhook`) | Store `extra_json.eventDelivery[key]`. The event override beats the guild `delivery` and `plain_text` settings. `default` removes it and restores guild behavior. |
+| `reset` | `key` (required, autocomplete) | Remove that event's color, cooldown, digest, actor, quiet-bypass, channel allow-list, and delivery overrides; routes, channel overrides, and guild settings stay unchanged. |
 
 Autocomplete matches substring of the English key (`del` → `messageDelete`, …), max 25 choices (Discord limit). `/log events` lists all keys if you cannot find one.
 
@@ -738,11 +739,11 @@ One command for the remaining guild knobs (`extra_json`). `name` + `value`:
 | `credit` | `true` / `false` | Footer credit |
 | `staff_ch` | channel id or `#channel` | Staff-copy channel |
 | `redact_url` | `true` / `false` | Strip URLs from logged text |
-| `delivery` | `embed` `plain` `webhook` | How logs are posted |
+| `delivery` | `embed` `plain` `webhook` | How logs are posted. Per-event override: `/log event delivery`. |
 | `prefix` | e.g. `!` | Guild prefix for `!log …` |
 | `prefix_on` / `slash_on` | `true` / `false` | Enable prefix and/or slash |
 
-Numeric values are validated, not silently clamped: `cooldown_sec` `0`–`3600`, `min_account_days` `0`–`3650`, `digest_ms` `0`–`3600000`, `history_days` `0`–`3650`, `field_max` `1`–`1024`, and `attach_min` `0`–`100000`. Booleans accept `true`/`false`, `1`/`0`, `yes`/`no`, and `on`/`off`. Unknown names and internal maps (`eventColors`, `eventCooldown`, `eventDigest`, `eventActors`, `colors`, `strings`, `hiddenFields`) are rejected. Discord caps slash choices at 25, so `field_max` and `attach_min` use the prefix form (`!log set name:field_max value:900`) or config import.
+Numeric values are validated, not silently clamped: `cooldown_sec` `0`–`3600`, `min_account_days` `0`–`3650`, `digest_ms` `0`–`3600000`, `history_days` `0`–`3650`, `field_max` `1`–`1024`, and `attach_min` `0`–`100000`. Booleans accept `true`/`false`, `1`/`0`, `yes`/`no`, and `on`/`off`. Unknown names and internal maps (`eventColors`, `eventCooldown`, `eventDigest`, `eventActors`, `eventDelivery`, `eventIncludeChannels`, `colors`, `strings`, `hiddenFields`) are rejected. Discord caps slash choices at 25, so `field_max` and `attach_min` use the prefix form (`!log set name:field_max value:900`) or config import.
 
 Prefix uses the **same** execute path as slash. Examples (prefix `!`):
 
@@ -763,6 +764,8 @@ Named `key:value` tokens work in any order after the subcommand. Webhook deliver
 Allow-list. Empty = every channel. `add` / `remove` / `clear` / `list` a text channel or **category**. If a category is listed, its children match.
 
 `/log event watch` narrows the allow-list for one event. For example, keep `messageDelete` in `#tickets` while every other event follows the guild list. An event with its own non-empty list ignores the guild list; `clear` (or `reset`) restores the guild allow-list for that event.
+
+`/log event delivery` controls how one event is rendered. `plain` flattens that event's embeds to text, `embed` keeps embeds even when the guild uses `plain_text`, and `webhook` prefers the guild webhook for that event. `default` removes the override. The event mode beats both the guild `delivery` setting and `plain_text`.
 
 Quiet hours, pause, allow-list, cooldown, and account age all run **before** the send queue. They apply without restart. `quiet_days` is evaluated in the guild timezone at send time; an empty list keeps the window active every day. `/log event bypass` lets selected events bypass quiet hours, but not pause.
 
@@ -810,6 +813,9 @@ Developer maps: [`src/README.md`](src/README.md) · [`src/locales/README.md`](sr
 /log event digest key:messageUpdate ms:8000 min:3
 /log event actors key:messageDelete mode:humans
 /log event bypass key:guildBanAdd
+/log event delivery key:messageCreate mode:plain
+/log event delivery key:guildBanAdd mode:embed
+/log event delivery key:messageCreate mode:default
 /log event watch key:messageDelete action:add channel:#tickets
 /log event watch key:messageDelete action:list
 /log event watch key:messageDelete action:clear
