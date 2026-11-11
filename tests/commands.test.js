@@ -1281,3 +1281,318 @@ test("autocomplete responds with locales, groups, events, and an empty list", as
   await autocomplete(interaction({ name: "other", value: "x" }));
   assert.deepEqual(responded, []);
 });
+
+test("event validation rejects bad cooldown, digest, actors, and watch values", async (t) => {
+  const h = commandHarness(t);
+
+  const badCooldown = await runCommand(h, {
+    group: "event",
+    sub: "cooldown",
+    strings: { key: "messageDelete" },
+    integers: { seconds: 3601 },
+    booleans: { clear: false },
+  });
+  assert.match(badCooldown.content, /Invalid option `seconds`/);
+
+  const badDigest = await runCommand(h, {
+    group: "event",
+    sub: "digest",
+    strings: { key: "messageDelete" },
+    integers: { ms: 3600001 },
+    booleans: { clear: false },
+  });
+  assert.match(badDigest.content, /Invalid option `ms\/min`/);
+
+  const badMin = await runCommand(h, {
+    group: "event",
+    sub: "digest",
+    strings: { key: "messageDelete" },
+    integers: { ms: 1000, min: 0 },
+    booleans: { clear: false },
+  });
+  assert.match(badMin.content, /Invalid option `ms\/min`/);
+
+  const badActors = await runCommand(h, {
+    group: "event",
+    sub: "actors",
+    strings: { key: "messageDelete", mode: "everyone" },
+    booleans: { clear: false },
+  });
+  assert.match(badActors.content, /Invalid option `mode`/);
+
+  const badAction = await runCommand(h, {
+    group: "event",
+    sub: "watch",
+    strings: { key: "messageDelete", action: "bogus" },
+  });
+  assert.match(badAction.content, /Invalid option `action`/);
+
+  const missingChannel = await runCommand(h, {
+    group: "event",
+    sub: "watch",
+    strings: { key: "messageDelete", action: "add" },
+  });
+  assert.match(missingChannel.content, /Invalid option `channel`/);
+
+  const badHex = await runCommand(h, {
+    sub: "color",
+    strings: { slot: "delete", hex: "#zzzzzz" },
+  });
+  assert.match(badHex.content, /#rrggbb/);
+  assert.equal(h.calls.setExtra.length, 0);
+});
+
+test("removing the last per-event override clears its extra container", async (t) => {
+  const h = commandHarness(t, {
+    extra: {
+      eventCooldown: { messageDelete: 5 },
+      eventDigest: { messageDelete: { ms: 1000 } },
+      eventActors: { messageDelete: "humans" },
+      eventDelivery: { messageDelete: "plain" },
+      eventHistory: { messageDelete: true },
+      eventRedact: { messageDelete: { url: true } },
+      eventIncludeChannels: { messageDelete: ["c1"] },
+    },
+  });
+
+  await runCommand(h, {
+    group: "event",
+    sub: "cooldown",
+    strings: { key: "messageDelete" },
+    booleans: { clear: true },
+  });
+  assert.equal("eventCooldown" in h.extra, false);
+
+  await runCommand(h, {
+    group: "event",
+    sub: "digest",
+    strings: { key: "messageDelete" },
+    booleans: { clear: true },
+  });
+  assert.equal("eventDigest" in h.extra, false);
+
+  await runCommand(h, {
+    group: "event",
+    sub: "actors",
+    strings: { key: "messageDelete" },
+    booleans: { clear: true },
+  });
+  assert.equal("eventActors" in h.extra, false);
+
+  await runCommand(h, {
+    group: "event",
+    sub: "delivery",
+    strings: { key: "messageDelete", mode: "default" },
+  });
+  assert.equal("eventDelivery" in h.extra, false);
+
+  await runCommand(h, {
+    group: "event",
+    sub: "history",
+    strings: { key: "messageDelete", mode: "default" },
+  });
+  assert.equal("eventHistory" in h.extra, false);
+
+  await runCommand(h, {
+    group: "event",
+    sub: "redact",
+    strings: { key: "messageDelete", flag: "url" },
+    booleans: { clear: true },
+  });
+  assert.equal("eventRedact" in h.extra, false);
+
+  await runCommand(h, {
+    group: "event",
+    sub: "watch",
+    strings: { key: "messageDelete", action: "clear" },
+  });
+  assert.equal("eventIncludeChannels" in h.extra, false);
+});
+
+test("set aliases validate actors, delivery, staff channel, redaction, and webhook fields", async (t) => {
+  const h = commandHarness(t);
+
+  let response = await runCommand(h, {
+    sub: "set",
+    strings: { name: "actors", value: "bots" },
+  });
+  assert.equal(h.extra.actors, "bots");
+  assert.match(response.content, /actors/);
+
+  response = await runCommand(h, {
+    sub: "set",
+    strings: { name: "actors", value: "everyone" },
+  });
+  assert.match(response.content, /Invalid option/);
+  assert.equal(h.extra.actors, "bots");
+
+  await runCommand(h, {
+    sub: "set",
+    strings: { name: "delivery", value: "plain" },
+  });
+  assert.equal(h.extra.delivery, "plain");
+  assert.equal(h.extra.plainText, true);
+
+  response = await runCommand(h, {
+    sub: "set",
+    strings: { name: "delivery", value: "email" },
+  });
+  assert.match(response.content, /Invalid option/);
+
+  await runCommand(h, {
+    sub: "set",
+    strings: { name: "staff_ch", value: "clear" },
+  });
+  assert.equal(h.extra.staffChannel, null);
+  await runCommand(h, {
+    sub: "set",
+    strings: { name: "staff_ch", value: "<#123>" },
+  });
+  assert.equal(h.extra.staffChannel, "123");
+
+  await runCommand(h, {
+    sub: "set",
+    strings: { name: "redact_url", value: "yes" },
+  });
+  assert.equal(h.extra.redact.url, true);
+  response = await runCommand(h, {
+    sub: "set",
+    strings: { name: "redact_url", value: "maybe" },
+  });
+  assert.match(response.content, /Invalid option/);
+
+  await runCommand(h, {
+    sub: "set",
+    strings: { name: "hook_name", value: "clear" },
+  });
+  assert.equal(h.extra.webhookName, null);
+  await runCommand(h, {
+    sub: "set",
+    strings: { name: "hook_name", value: "Logger" },
+  });
+  assert.equal(h.extra.webhookName, "Logger");
+  await runCommand(h, {
+    sub: "set",
+    strings: { name: "hook_av", value: "https://example.test/avatar.png" },
+  });
+  assert.equal(h.extra.webhookAvatar, "https://example.test/avatar.png");
+  await runCommand(h, {
+    sub: "set",
+    strings: { name: "prefix", value: "!" },
+  });
+  assert.equal(h.extra.prefix, "!");
+
+  response = await runCommand(h, {
+    sub: "set",
+    strings: { name: "not_a_setting", value: "x" },
+  });
+  assert.match(response.content, /Invalid option/);
+});
+
+test("watch remove, group defaults, and unknown subcommands fall through correctly", async (t) => {
+  const h = commandHarness(t, { extra: { includeChannels: ["c1", "c2"] } });
+
+  await runCommand(h, {
+    group: "watch",
+    sub: "remove",
+    channels: { channel: commandChannel("c1") },
+  });
+  assert.deepEqual(h.extra.includeChannels, ["c2"]);
+
+  await runCommand(h, {
+    group: "watch",
+    sub: "remove",
+    channels: { channel: commandChannel("c2") },
+  });
+  assert.deepEqual(h.extra.includeChannels, []);
+
+  h.cfg.defaultChannel = "c9";
+  const groupOn = await runCommand(h, {
+    group: "group",
+    sub: "on",
+    strings: { name: "message" },
+  });
+  assert.match(groupOn.content, /<#c9>/);
+
+  const eventOn = await runCommand(h, {
+    group: "event",
+    sub: "on",
+    strings: { key: "messageDelete" },
+  });
+  assert.match(eventOn.content, /logging is \*\*on\*\*/);
+
+  const unknown = await runCommand(h, { sub: "not-a-subcommand" });
+  assert.match(unknown.content, /cannot use/i);
+});
+
+test("import failures report invalid config without writing", async (t) => {
+  const h = commandHarness(t);
+  const previousFetch = globalThis.fetch;
+  t.after(() => {
+    globalThis.fetch = previousFetch;
+  });
+
+  globalThis.fetch = async () => {
+    throw new Error("network down");
+  };
+  let response = await runCommand(h, {
+    sub: "import",
+    attachment: {
+      name: "config.json",
+      size: 20,
+      url: "https://example.invalid/config.json",
+    },
+  });
+  assert.match(response.content, /invalid|network down/i);
+  assert.equal(h.calls.replaceConfig.length, 0);
+
+  globalThis.fetch = async () => new Response(JSON.stringify({
+    format: FORMAT,
+    version: VERSION,
+    guild: {},
+    routes: "not-an-array",
+    ignores: [],
+    extra: {},
+  }), {
+    status: 200,
+    headers: { "content-type": "application/json" },
+  });
+  response = await runCommand(h, {
+    sub: "import",
+    attachment: {
+      name: "config.json",
+      size: 20,
+      url: "https://example.invalid/config.json",
+    },
+  });
+  assert.match(response.content, /Import failed|invalid/i);
+  assert.equal(h.calls.replaceConfig.length, 0);
+
+  globalThis.fetch = async () => new Response(JSON.stringify({
+    format: FORMAT,
+    version: VERSION,
+    guild: {},
+    routes: [],
+    ignores: [],
+    extra: {},
+  }), {
+    status: 200,
+    headers: { "content-type": "application/json" },
+  });
+  const failing = commandHarness(t, {
+    db: {
+      replaceConfig: () => {
+        throw new Error("db down");
+      },
+    },
+  });
+  response = await runCommand(failing, {
+    sub: "import",
+    attachment: {
+      name: "config.json",
+      size: 20,
+      url: "https://example.invalid/config.json",
+    },
+  });
+  assert.match(response.content, /Import failed|db down/i);
+});
