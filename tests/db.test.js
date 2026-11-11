@@ -24,8 +24,10 @@ test("guild routes persist without process restart", (t) => {
   assert.equal(row.enabled, 1);
   assert.equal(row.channel_id, "c1");
   db.setGroup("g1", "voice", { enabled: true, channelId: "c2" });
+  db.setGroup("g1", "member", { enabled: true, channelId: "c3" });
   const routes = db.listRoutes.all("g1");
   assert.ok(routes.some((r) => r.event_key === "voiceJoin" && r.enabled === 1));
+  assert.ok(routes.some((r) => r.event_key === "guildMemberTimeout" && r.enabled === 1 && r.channel_id === "c3"));
   db.addIgnore.run("g1", "user", "u1");
   assert.equal(db.listIgnores.all("g1").length, 1);
   db.pushHistory("g1", "messageDelete", { ok: true }, 2);

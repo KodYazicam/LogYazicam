@@ -4,7 +4,7 @@ const fs = require("fs");
 const os = require("os");
 const path = require("path");
 const { openDb } = require("../src/db");
-const { processConfig, applyConfig, mergeGuild } = require("../src/config");
+const { loadEnvFile, processConfig, applyConfig, mergeGuild } = require("../src/config");
 const { COLORS } = require("../src/catalog");
 const { buildEmbed } = require("../src/util");
 
@@ -57,6 +57,55 @@ test("processConfig truncates and bounds numeric environment values", () => {
   assert.equal(cfg.colors.delete, 0);
   assert.equal(cfg.colors.info, 0xffffff);
   assert.equal(cfg.retryMax, 5);
+});
+
+test("loadEnvFile can prefer the file for Docker hot reload", (t) => {
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), "logyazicam-env-"));
+  const file = path.join(dir, ".env");
+  fs.writeFileSync(file, "LOG_LEVEL=debug\nENV_FILE_WINS=true\n");
+  const previous = process.env.LOG_LEVEL;
+  process.env.LOG_LEVEL = "info";
+  t.after(() => {
+    if (previous === undefined) delete process.env.LOG_LEVEL;
+    else process.env.LOG_LEVEL = previous;
+    fs.rmSync(dir, { recursive: true, force: true });
+  });
+
+  assert.equal(loadEnvFile(file).LOG_LEVEL, "debug");
+  assert.equal(loadEnvFile(file, { fileWins: false }).LOG_LEVEL, "debug");
+  assert.equal(loadEnvFile(file, { fileWins: true }).LOG_LEVEL, "debug");
+});
+
+test("loadEnvFile keeps shell precedence unless the file wins", (t) => {
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), "logyazicam-env-"));
+  const file = path.join(dir, ".env");
+  fs.writeFileSync(file, "LOG_LEVEL=debug\n");
+  const previous = process.env.LOG_LEVEL;
+  const previousWins = process.env.ENV_FILE_WINS;
+  process.env.LOG_LEVEL = "info";
+  delete process.env.ENV_FILE_WINS;
+  t.after(() => {
+    if (previous === undefined) delete process.env.LOG_LEVEL;
+    else process.env.LOG_LEVEL = previous;
+    if (previousWins === undefined) delete process.env.ENV_FILE_WINS;
+    else process.env.ENV_FILE_WINS = previousWins;
+    fs.rmSync(dir, { recursive: true, force: true });
+  });
+
+  assert.equal(loadEnvFile(file).LOG_LEVEL, "info");
+  assert.equal(loadEnvFile(file, { fileWins: true }).LOG_LEVEL, "debug");
+});
+
+test("privacy-sensitive features default to off", () => {
+  const cfg = processConfig({});
+  assert.equal(cfg.snapshotEnabled, false);
+  assert.equal(cfg.presenceIntent, false);
+});
+
+test("snapshot and presence intent can be enabled explicitly", () => {
+  const cfg = processConfig({ SNAPSHOT_ENABLED: "true", PRESENCE_INTENT: "true" });
+  assert.equal(cfg.snapshotEnabled, true);
+  assert.equal(cfg.presenceIntent, true);
 });
 
 test("processConfig keeps zero for values that disable features", () => {

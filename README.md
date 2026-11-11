@@ -97,7 +97,7 @@ It does **not**:
 - Replace Discord’s own Audit Log UI.
 - Publish to npm. Clone this repo.
 
-Identifiers in env, SQLite, slash options, and `src/catalog.js` are **English**: `messageDelete`, `ignore_bots`, `DEFAULT_LOCALE`. User-visible strings are **en** (default), **tr**, **de**, **fr**, **es**.
+Identifiers in env, SQLite, slash options, and `src/catalog.js` are **English**: `messageDelete`, `ignore_bots`, `DEFAULT_LOCALE`. User-visible strings ship in 18 packs; **en** is the default and complete fallback (`tr`, `de`, `fr`, `es`, `pt`, `it`, `nl`, `pl`, `ru`, `uk`, `ar`, `ja`, `ko`, `zh`, `sv`, `hi`, `id`).
 
 ---
 
@@ -129,7 +129,7 @@ Nothing is logged until you **turn an event or group on**. A fresh guild is sile
 
 | Area | What you can do |
 | --- | --- |
-| Events | 60 English keys in 20 groups — all have a real `client.on` (or a split of `voiceStateUpdate` / `guildMemberUpdate` / `guildAuditLogEntryCreate`) |
+| Events | 88 English keys in 24 groups — all have a real `client.on` (or a split of `voiceStateUpdate` / `guildMemberUpdate` / `guildAuditLogEntryCreate`) |
 | Routing | Default channel + per-event override + per-group enable |
 | Locale | 18 UI packs per guild (`en` complete; others override) |
 | Timezone | Any IANA id (`Europe/Istanbul`), validated |
@@ -281,8 +281,10 @@ Rule create/delete/update. `autoModerationActionExecution` — user, rule id, ma
 
 | Key | Why off | Needs |
 | --- | --- | --- |
-| `presenceUpdate` | Fires constantly | Privileged **Presence** intent in the portal + this key on |
+| `presenceUpdate` | Fires constantly | `PRESENCE_INTENT=true` + privileged **Presence** intent in the portal + this key on |
 | `userUpdate` | Username/avatar is global; the bot fans out to every shared guild | Member cache |
+
+`PRESENCE_INTENT` is **off** by default. Leave it off unless you have enabled the privileged Presence intent in the Developer Portal; a mismatch stops the gateway login. Changing it needs a process restart, because intents are fixed when the client connects.
 
 ### Group `poll`
 
@@ -336,7 +338,7 @@ Noisy keys to leave off in production: `messageCreate`, `typingStart`, `presence
 
 These are **not** fake Discord events. They sit on top of the catalog.
 
-**Snapshots** (`SNAPSHOT_ENABLED`, `/log set name:snapshot value:true`): every `messageCreate` stores `{content, author, attachments}` in SQLite (capped by `SNAPSHOT_LIMIT` per guild), even if `messageCreate` logging is off. `messageDelete` fills empty bodies from this table. Retention is the cap, not forever — treat `data/` as sensitive.
+**Snapshots** (`SNAPSHOT_ENABLED=false` by default; opt in with `SNAPSHOT_ENABLED=true` or `/log set name:snapshot value:true`): every `messageCreate` stores `{content, author, attachments}` in SQLite (capped by `SNAPSHOT_LIMIT` per guild), even if `messageCreate` logging is off. `messageDelete` fills empty bodies from this table. This stores message text at rest, so it is opt-in; treat `data/` as sensitive and use `SNAPSHOT_TTL_MS` if you need automatic expiry.
 
 **Invite attribution** (`INVITE_TRACK`): on `ready` and `guildCreate` the bot caches invite uses. On `guildMemberAdd` it diffs uses and sets `field.inviter` (`tag (code)`). Needs permission to fetch invites. Vanity / widget joins have no row.
 
@@ -395,7 +397,7 @@ These are **not** fake Discord events. They sit on top of the catalog.
 3. **Bot → Privileged Gateway Intents**
    - **SERVER MEMBERS INTENT** — on (joins, roles, nicknames).
    - **MESSAGE CONTENT INTENT** — on (deleted/edited bodies).
-   - **PRESENCE INTENT** — only if you will enable `presenceUpdate`.
+   - **PRESENCE INTENT** — only if you set `PRESENCE_INTENT=true` **and** enable `presenceUpdate`.
 4. **OAuth2 → General** → copy **Application ID** → `CLIENT_ID=`.
 5. **OAuth2 → URL Generator** — see next section.
 6. Optional: Bot → Public Bot off if this is a private logger.
@@ -483,6 +485,8 @@ docker compose logs -f logyazicam
 
 SQLite, process logs, and backups live in the named volume at `/app/data`. The image owns that directory as UID `10001`, so a fresh host needs no `chown` and no bind mount.
 
+The compose file bind-mounts `.env` read-only and sets `ENV_FILE_WINS=true`. With the default `HOT_RELOAD_MS`, editing `.env` on the host is picked up without recreating the container. `TOKEN` still needs a restart because Discord.js is already logged in.
+
 Back up the volume while the bot is running:
 
 ```bash
@@ -534,6 +538,7 @@ All names English. Booleans: `1` `0` `true` `false` `yes` `no` `on` `off`. Numer
 | `ERROR_CHANNEL_ID` | empty | hot | Text channel for unhandled errors. |
 | `ERROR_DM_OWNER` | `false` | hot | DM `OWNER_IDS[0]` on fatal errors. |
 | `HOT_RELOAD_MS` | `15000` | process* | `0` disables the timer. Changing the interval needs restart; contents of `.env` do not. |
+| `ENV_FILE_WINS` | `false` | hot | Let `.env` values override already-injected `process.env`. Docker Compose sets `true` with a read-only `.env` mount. |
 | `MAX_QUEUE_PER_CHANNEL` | `20` | hot | Oldest dropped if a log channel is slow. |
 | `RETRY_MAX` | `5` | hot | Maximum 429 retries per queued item; `0` drops immediately. |
 | `SEND_INTERVAL_MS` | `350` | process* | Flush timer period (set at boot). |
@@ -564,6 +569,7 @@ All names English. Booleans: `1` `0` `true` `false` `yes` `no` `on` `off`. Numer
 | `ACTIVITY_TYPE` | `Watching` | hot | `Playing` `Watching` `Listening` `Competing` `Custom`. |
 | `ACTIVITY_TEXT` | `guild logs · /log` | hot | Presence name (128 chars). |
 | `ACTIVITY_STATUS` | `online` | hot | `online` `idle` `dnd` `invisible`. |
+| `PRESENCE_INTENT` | `false` | restart | Include `GuildPresences`; also enable Presence in the Developer Portal. |
 | `PREFIX_ENABLED` | `true` | hot | Process default; guild `/log set name:prefix_on`. |
 | `PREFIX` | `!` | hot | `!log status` — guild can override with `name:prefix`. |
 | `SLASH_ENABLED` | `true` | hot | `false` ignores `/log` (prefix still works if on). |
@@ -626,10 +632,12 @@ Unknown key → `cmd.unknown_event`.
 
 | Sub | Options | Effect |
 | --- | --- | --- |
-| `on` | `name` (choice of 20 groups), `channel` optional | Every catalog key in that group enabled; optional shared override channel. |
+| `on` | `name` (choice of 24 groups), `channel` optional | Every catalog key in that group enabled; optional shared override channel. |
 | `off` | `name` | All keys in the group disabled. |
 
-Groups: `message` `member` `moderation` `invite` `channel` `thread` `role` `emoji` `sticker` `voice` `stage` `server` `webhook` `integration` `event` `automod` `command` `audit` `presence` `user`.
+Groups: `message` `member` `moderation` `invite` `channel` `thread` `role` `emoji` `sticker` `voice` `stage` `server` `webhook` `integration` `event` `automod` `command` `audit` `presence` `user` `poll` `typing` `soundboard` `monetization`.
+
+`/log group on name:member` also enables `guildMemberTimeout`, even though the catalog lists timeouts under `moderation`.
 
 ### `/log ignore`
 
@@ -643,7 +651,7 @@ Groups: `message` `member` `moderation` `invite` `channel` `thread` `role` `emoj
 
 ### `/log locale`
 
-`code`: `en` `tr` `de` `fr` `es`. Writes `guilds.locale`. Next embed and the next command reply use that pack (missing keys fall back to English).
+`code`: `en` `tr` `de` `fr` `es` `pt` `it` `nl` `pl` `ru` `uk` `ar` `ja` `ko` `zh` `sv` `hi` `id`. Writes `guilds.locale`. Next embed and the next command reply use that pack (missing keys fall back to English).
 
 ### `/log timezone`
 
@@ -759,7 +767,7 @@ Prefix uses the **same** execute path as slash. Examples (prefix `!`):
 !log webhook id:123 token:abc
 ```
 
-Named `key:value` tokens work in any order after the subcommand. Webhook delivery still needs `/log webhook` (or `!log webhook`) credentials; otherwise the bot logs a warning and uses `channel.send` unless `ALLOW_WEBHOOK_FALLBACK=false`.
+Named `key:value` tokens work in any order, before or after the subcommand. Webhook delivery still needs `/log webhook` (or `!log webhook`) credentials; otherwise the bot logs a warning and uses `channel.send` unless `ALLOW_WEBHOOK_FALLBACK=false`.
 
 ### `/log watch`
 
@@ -767,7 +775,7 @@ Allow-list. Empty = every channel. `add` / `remove` / `clear` / `list` a text ch
 
 `/log event watch` narrows the allow-list for one event. For example, keep `messageDelete` in `#tickets` while every other event follows the guild list. An event with its own non-empty list ignores the guild list; `clear` (or `reset`) restores the guild allow-list for that event.
 
-`/log event delivery` controls how one event is rendered. `plain` flattens that event's embeds to text, `embed` keeps embeds even when the guild uses `plain_text`, and `webhook` prefers the guild webhook for that event. `default` removes the override. The event mode beats both the guild `delivery` setting and `plain_text`.
+`/log event delivery` controls how one event is rendered. `plain` flattens that event's embeds to text, `embed` keeps embeds even when the guild uses `plain_text`, and `webhook` prefers the guild webhook for that event. `plain`/`embed` also force channel delivery for that event when the guild otherwise uses webhook credentials. `default` removes the override. The event mode beats both the guild `delivery` setting and `plain_text`.
 
 `/log event redact` controls optional redaction per event. An event `url:true` strips links from that event even if the guild default is off; `url:false` keeps links for that event even when the guild redacts them. Secret-token patterns (Discord, GitHub, OpenAI, Anthropic, AWS, Stripe, Slack) are always on and cannot be disabled.
 
@@ -1051,13 +1059,13 @@ Add a string: put it in `en.js` first, then override.
 
 ## Intents and partials
 
-From `src/index.js`:
+From `src/intents.js` and `src/index.js`:
 
-**Intents:** Guilds, GuildMembers, GuildMessages, GuildMessageReactions, MessageContent, GuildVoiceStates, GuildInvites, GuildModeration, GuildEmojisAndStickers, GuildWebhooks, GuildScheduledEvents, GuildPresences, AutoModerationConfiguration, AutoModerationExecution.
+**Intents:** Guilds, GuildMembers, GuildMessages, GuildMessageTyping, GuildMessageReactions, MessageContent, GuildVoiceStates, GuildInvites, GuildModeration, GuildEmojisAndStickers, GuildWebhooks, GuildScheduledEvents, AutoModerationConfiguration, AutoModerationExecution. `GuildPresences` is added only when `PRESENCE_INTENT=true`.
 
 **Partials:** Message, Channel, Reaction, User, GuildMember, ThreadMember, GuildScheduledEvent.
 
-If the portal has Presence off, `presenceUpdate` never fires regardless of SQLite.
+If `PRESENCE_INTENT` is false, or the portal has Presence off, `presenceUpdate` never fires regardless of SQLite.
 
 ---
 
@@ -1069,14 +1077,16 @@ If the portal has Presence off, `presenceUpdate` never fires regardless of SQLit
 | Slash | reply/followUp `Error: {message}`, process lives |
 | Webhook send | warn, fallback to channel |
 | Logger file | try/catch, never throws |
-| `unhandledRejection` / `uncaughtException` | log + optional `ERROR_CHANNEL_ID` + optional owner DM |
+| `unhandledRejection` | log + optional `ERROR_CHANNEL_ID` + optional owner DM, process lives |
+| `uncaughtException` | report, close dashboard/client/SQLite, exit 1 (supervisor restarts) |
+| `SIGTERM` / `SIGINT` | close dashboard/client/SQLite, exit 0 |
 | Missing `TOKEN` / failed `login` | exit 1 |
 
 ---
 
 ## Limits Discord imposes
 
-- Autocomplete max 25 choices — that is why `key` is free text + autocomplete, not a 60-choice list.
+- Autocomplete max 25 choices — that is why `key` is free text + autocomplete, not an 88-choice list.
 - Slash command JSON ~6kB here (under 8kB Discord cap).
 - Message content after delete only if cached or partial fetch works.
 - Bulk delete list is cache, not REST history.

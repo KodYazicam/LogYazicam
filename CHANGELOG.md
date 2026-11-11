@@ -13,6 +13,14 @@ All notable changes to this project are documented here. The format follows
 - Docker Compose now stores data in the named `logyazicam-data` volume instead
   of a host bind mount, so a non-root container can write SQLite on a fresh
   host.
+- `PRESENCE_INTENT` is now opt-in (`false` by default). Presence logging needs
+  both the env flag and the privileged intent in the Developer Portal, so a
+  missing portal toggle can no longer block gateway login.
+- Message snapshots are now opt-in (`SNAPSHOT_ENABLED=false` by default)
+  because they store message text at rest.
+- Docker Compose mounts `.env` read-only and sets `ENV_FILE_WINS=true`, so
+  `HOT_RELOAD_MS` sees host edits instead of the frozen `env_file` values. A
+  `.dockerignore` keeps `.env`, data, and build output out of the image context.
 
 ### Fixed
 
@@ -29,6 +37,22 @@ All notable changes to this project are documented here. The format follows
   keys, and validates numeric ranges instead of silently writing arbitrary
   `extra_json` values. Prefix aliases such as `plain_text` and `quiet_start`
   now reach the same settings as their slash choices.
+- Prefix `key:value` options now parse before or after the subcommand, so
+  `!log set name:delivery value:plain` and `!log event on key:messageDelete`
+  both work.
+- Role ignores now use the member cache when an event payload does not carry
+  `roleIds`, covering member events without formatter-specific plumbing.
+- A per-event `embed`/`plain` delivery override now forces `channel.send` even
+  when the guild has webhook credentials; `webhook` still opts into the hook.
+- `metrics.sent` only increments after real delivery. Missing channels and
+  queue overflow increment `metrics.dropped` instead.
+- Actor filters (`humans`/`bots`) no longer drop events that have no actor
+  field, such as channel or role changes.
+- `/log group on name:member` now also enables `guildMemberTimeout`, matching
+  the README.
+- `SIGTERM`/`SIGINT` now close the dashboard, gateway client, and SQLite handle
+  before exit. An `uncaughtException` is reported and then exits with code 1
+  instead of leaving the process in an unknown state.
 
 ### Added
 

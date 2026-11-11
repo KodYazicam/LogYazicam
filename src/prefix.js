@@ -10,18 +10,24 @@ function parsePrefix(content, prefix, commandName = "log") {
   return rest;
 }
 
-function fakeInteraction(message, tokens, commandName = "log") {
+function fakeInteraction(message, rawTokens, commandName = "log") {
   const options = {};
+  const tokens = [];
+  // Prefix options can appear before or after the subcommand. Keep values such
+  // as `avatar:https://…` intact; only the first `key:` segment is special.
+  for (const piece of rawTokens) {
+    const match = /^([A-Za-z][A-Za-z0-9_]*):(.*)$/.exec(piece);
+    if (match && !["http", "https"].includes(match[1].toLowerCase())) {
+      options[match[1]] = match[2];
+    } else {
+      tokens.push(piece);
+    }
+  }
   const consume = () => {
     const next = tokens[0];
     if (!next || next.startsWith("-")) return undefined;
     return tokens.shift();
   };
-  while (tokens[0] && tokens[0].includes(":")) {
-    const piece = tokens.shift();
-    const idx = piece.indexOf(":");
-    options[piece.slice(0, idx)] = piece.slice(idx + 1);
-  }
   const groupOrSub = consume() || "status";
   let group = null;
   let sub = groupOrSub;

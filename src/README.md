@@ -11,6 +11,7 @@ This folder is the **runtime**. Every guild event Discord actually emits is boun
 ```
 index.js
   loadEnvFile + processConfig     → process-level defaults
+  buildIntents                    → conditional GuildPresences
   openDb                          → WAL SQLite
   createDispatcher                → per-channel send queue
   bindEvents                      → client.on(...)
@@ -34,10 +35,11 @@ index.js
 | `configTransfer.js` | `/log export` snapshot + validated `/log import` into SQLite | Discord API |
 | `dashboard.js` | Optional read-only HTTP view of `history` rows | Config mutation |
 | `retention.js` | History cutoff, per-guild override, and prune sweeps | Other tables |
+| `intents.js` | Base gateway intents + opt-in `GuildPresences` | Event handling |
 | `util.js` | `buildEmbed`, audit fetch, ignore match, truncate | Persistence |
 | `logger.js` | stdout + optional file; never throws | |
 | `deploy-commands.js` | REST `applicationCommands` put | Runtime |
-| `index.js` | Intents, partials, error plumbing | Event formatting |
+| `index.js` | Client wiring, partials, shutdown, error plumbing | Event formatting |
 
 ## Data flow for one delete
 
@@ -81,7 +83,7 @@ Bag for per-guild overrides without a migration:
 }
 ```
 
-Set via `/log string`, `/log color`, `/log event color`, `/log event cooldown`, `/log event digest`, `/log event actors`, `/log event bypass`, `/log event watch`, `/log event delivery`, `/log event redact`, `/log set`, `/log watch`. `mergeGuild` applies `extra.colors` on top of columns / env. `buildEmbed` prefers `extra.eventColors[eventKey]`, then the slot color, and passes `extra.strings` into `t()`. The dispatcher uses `extra.eventCooldown[eventKey]` before the guild `cooldownSec`, `extra.eventDigest[eventKey]` before the guild `digestMs`/`DIGEST_MIN`, `extra.eventActors[eventKey]` before the guild `actors`, `extra.quietBypass[eventKey]` before dropping events for quiet hours, and `extra.eventIncludeChannels[eventKey]` before the guild `includeChannels` list. A non-empty per-event channel list replaces the guild list for that event only; an empty or missing entry falls back to the guild list. `extra.eventDelivery[eventKey]` (`embed`, `plain`, `webhook`) wins over guild `delivery` and `plainText`; `plain` flattens that event, `embed` keeps embeds, and `webhook` sets the webhook preference. `eventRedactFlags` applies `extra.eventRedact[eventKey][flag]` over `flagsFrom` for optional flags only, so always-on secret patterns stay enabled.
+Set via `/log string`, `/log color`, `/log event color`, `/log event cooldown`, `/log event digest`, `/log event actors`, `/log event bypass`, `/log event watch`, `/log event delivery`, `/log event redact`, `/log set`, `/log watch`. `mergeGuild` applies `extra.colors` on top of columns / env. `buildEmbed` prefers `extra.eventColors[eventKey]`, then the slot color, and passes `extra.strings` into `t()`. The dispatcher uses `extra.eventCooldown[eventKey]` before the guild `cooldownSec`, `extra.eventDigest[eventKey]` before the guild `digestMs`/`DIGEST_MIN`, `extra.eventActors[eventKey]` before the guild `actors`, `extra.quietBypass[eventKey]` before dropping events for quiet hours, and `extra.eventIncludeChannels[eventKey]` before the guild `includeChannels` list. A non-empty per-event channel list replaces the guild list for that event only; an empty or missing entry falls back to the guild list. `extra.eventDelivery[eventKey]` (`embed`, `plain`, `webhook`) wins over guild `delivery` and `plainText`; `plain` flattens that event, `embed` keeps embeds, and both force `channel.send` even when the guild has webhook credentials. `webhook` sets the webhook preference. `eventRedactFlags` applies `extra.eventRedact[eventKey][flag]` over `flagsFrom` for optional flags only, so always-on secret patterns stay enabled.
 
 Other `extra_json` knobs: `eventColors`, `eventCooldown`, `eventDigest`, `eventActors`, `quietBypass`, `eventIncludeChannels`, `eventDelivery`, `eventRedact`, `paused`, `plainText`, `showThumbnails`, `showTimestamp`, `attachLong`, `quietStart`, `quietEnd`, `quietDays`, `minAccountDays`, `cooldownSec`, `actors`, `includeChannels`, `webhookName`, `webhookAvatar`, `delivery` (`embed|plain|webhook`), `prefix`, `prefixOn`, `slashOn`.
 
@@ -114,8 +116,8 @@ Control plane: slash `/log` and prefix `{PREFIX}{COMMAND_NAME} …` share `comma
 
 ## Intents
 
-Declared only in `index.js`. Portal must match (Members, Message Content; Presence only if you enable `presenceUpdate`). `GuildMessageTyping` is required for `typingStart` and is already requested.
+Built by `intents.js` and passed to the client in `index.js`. Portal must match (Members, Message Content; Presence only when `PRESENCE_INTENT=true` and you enable `presenceUpdate`). `GuildMessageTyping` is required for `typingStart` and is already requested. Intents are fixed when the client connects, so toggling `PRESENCE_INTENT` needs a restart.
 
 ## Errors
 
-`safe()` around every listener. Slash failures reply ephemeral. Webhook failure → channel fallback. `unhandledRejection` / `uncaughtException` → log + optional `ERROR_CHANNEL_ID` + optional owner DM. Missing `TOKEN` / failed login → exit 1.
+`safe()` around every listener. Slash failures reply ephemeral. Webhook failure → channel fallback. `unhandledRejection` → log + optional `ERROR_CHANNEL_ID` + optional owner DM. `uncaughtException` reports and then exits 1 after closing the dashboard, gateway client, and SQLite. `SIGTERM` / `SIGINT` shut down cleanly. Missing `TOKEN` / failed login → exit 1.
