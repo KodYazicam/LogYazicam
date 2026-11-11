@@ -54,6 +54,9 @@ All notable changes to this project are documented here. The format follows
 - Webhook delivery no longer fetches the route channel first, so a transient
   channel lookup failure cannot drop an event that the webhook could send.
   File/HTTP sinks also run before the Discord channel lookup.
+- File/HTTP sink failures are isolated: an unwritable `FILE_SINK_DIR` no longer
+  drops Discord delivery, and a failed backup path no longer throws on every
+  interval.
 
 ### Security
 
