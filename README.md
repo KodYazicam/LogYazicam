@@ -609,7 +609,8 @@ All names English. Booleans: `1` `0` `true` `false` `yes` `no` `on` `off`. Numer
 | `off` | `key` | `enabled=0`. |
 | `color` | `key` (required, autocomplete), `hex` `#rrggbb`, `clear` | Store `extra_json.eventColors[key]`. This wins over the group slot color; `clear` restores the slot. |
 | `cooldown` | `key` (required, autocomplete), `seconds` `0`–`3600`, `clear` | Store `extra_json.eventCooldown[key]`. Overrides the guild cooldown for one event; `0` disables it, `clear` restores the guild value. |
-| `reset` | `key` (required, autocomplete) | Remove that event's color and cooldown overrides; routes, channel overrides, and guild settings stay unchanged. |
+| `digest` | `key` (required, autocomplete), `ms` `0`–`3600000`, `min` `1`–`1000`, `clear` | Store `extra_json.eventDigest[key]`. Overrides the guild digest window and optional minimum count; `ms:0` disables digesting for that event. |
+| `reset` | `key` (required, autocomplete) | Remove that event's color, cooldown, and digest overrides; routes, channel overrides, and guild settings stay unchanged. |
 
 Autocomplete matches substring of the English key (`del` → `messageDelete`, …), max 25 choices (Discord limit). `/log events` lists all keys if you cannot find one.
 
@@ -729,7 +730,7 @@ One command for the remaining guild knobs (`extra_json`). `name` + `value`:
 | `attach_long` | `true` / `false` | `.txt` dump for long deleted messages |
 | `field_max` | `1`–`1024` | Per-guild embed field length (prefix form; import accepts `fieldMax`) |
 | `attach_min` | `0`–`100000` | Deleted-content length before `.txt` attach (prefix form; import accepts `attachMin`) |
-| `digest_ms` | `0`–`3600000` | Aggregate bursts per channel/event for this window; `0` disables |
+| `digest_ms` | `0`–`3600000` | Aggregate bursts per channel/event for this window; `0` disables. Per-event override: `/log event digest`. |
 | `snapshot` | `true` / `false` | Snapshot cache for deleted-message context |
 | `credit` | `true` / `false` | Footer credit |
 | `staff_ch` | channel id or `#channel` | Staff-copy channel |
@@ -801,6 +802,7 @@ Developer maps: [`src/README.md`](src/README.md) · [`src/locales/README.md`](sr
 /log event cooldown key:messageUpdate seconds:30
 /log event cooldown key:messageDelete seconds:0
 /log event cooldown key:messageDelete clear:true
+/log event digest key:messageUpdate ms:8000 min:3
 /log event reset key:messageDelete
 ```
 

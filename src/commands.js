@@ -177,6 +177,21 @@ function data(config = {}) {
         )
         .addSubcommand((s) =>
           s
+            .setName("digest")
+            .setDescription("Override one event's digest window")
+            .addStringOption((o) =>
+              o.setName("key").setDescription("Event key").setRequired(true).setAutocomplete(true),
+            )
+            .addIntegerOption((o) =>
+              o.setName("ms").setDescription("0-3600000; 0 disables").setMinValue(0).setMaxValue(3600000),
+            )
+            .addIntegerOption((o) =>
+              o.setName("min").setDescription("Minimum events to summarize (1-1000)").setMinValue(1).setMaxValue(1000),
+            )
+            .addBooleanOption((o) => o.setName("clear").setDescription("Use the guild digest")),
+        )
+        .addSubcommand((s) =>
+          s
             .setName("reset")
             .setDescription("Clear color and cooldown overrides for one event")
             .addStringOption((o) =>
@@ -571,7 +586,7 @@ async function execute(interaction, { db, dispatch, processCfg }) {
       const row = db.ensureGuild(interaction.guildId);
       const extra = db.extraOf(row);
       let changed = false;
-      for (const mapKey of ["eventColors", "eventCooldown"]) {
+      for (const mapKey of ["eventColors", "eventCooldown", "eventDigest"]) {
         if (!extra[mapKey] || typeof extra[mapKey] !== "object" || Array.isArray(extra[mapKey])) continue;
         if (Object.prototype.hasOwnProperty.call(extra[mapKey], key)) changed = true;
         delete extra[mapKey][key];
@@ -638,6 +653,35 @@ async function execute(interaction, { db, dispatch, processCfg }) {
       dispatch.refreshGuild(interaction.guildId);
       return interaction.reply({
         content: t(locale, "cmd.filter_set", { name: `event.${key}.cooldown`, value }),
+        ephemeral: true,
+      });
+    }
+    if (sub === "digest") {
+      const ms = interaction.options.getInteger("ms");
+      const min = interaction.options.getInteger("min");
+      const clear = interaction.options.getBoolean("clear");
+      const row = db.ensureGuild(interaction.guildId);
+      const extra = db.extraOf(row);
+      const eventDigest = extra.eventDigest && typeof extra.eventDigest === "object" && !Array.isArray(extra.eventDigest)
+        ? { ...extra.eventDigest }
+        : {};
+      let value;
+      if (clear) {
+        delete eventDigest[key];
+        value = t(locale, "none");
+      } else {
+        if (!Number.isInteger(ms) || ms < 0 || ms > 3600000 || (min != null && (!Number.isInteger(min) || min < 1 || min > 1000))) {
+          return interaction.reply({ content: t(locale, "cmd.invalid_option", { name: "ms/min" }), ephemeral: true });
+        }
+        eventDigest[key] = min == null ? { ms } : { ms, min };
+        value = min == null ? `${ms}ms` : `${ms}ms / ${min}`;
+      }
+      if (Object.keys(eventDigest).length) extra.eventDigest = eventDigest;
+      else delete extra.eventDigest;
+      db.setExtra(interaction.guildId, extra);
+      dispatch.refreshGuild(interaction.guildId);
+      return interaction.reply({
+        content: t(locale, "cmd.filter_set", { name: `event.${key}.digest`, value }),
         ephemeral: true,
       });
     }

@@ -95,6 +95,12 @@ test("event group exposes color overrides", () => {
   const reset = event.options.find((sub) => sub.name === "reset");
   assert.ok(reset);
   assert.deepEqual(reset.options.map((option) => option.name), ["key"]);
+  const digest = event.options.find((sub) => sub.name === "digest");
+  assert.ok(digest);
+  assert.deepEqual(
+    digest.options.map((option) => option.name).sort(),
+    ["clear", "key", "min", "ms"],
+  );
 });
 
 test("set command exposes quiet-day scheduling", () => {
@@ -186,10 +192,56 @@ test("event cooldown command stores zero and clears it", async () => {
   assert.match(response.content, /none|—/i);
 });
 
-test("event reset clears only that event's color and cooldown", async () => {
+test("event digest command stores a window and clears it", async () => {
+  let extra = {};
+  const db = {
+    ensureGuild: () => ({ id: "g1" }),
+    extraOf: () => extra,
+    setExtra: (id, next) => {
+      extra = next;
+    },
+  };
+  let response;
+  const dispatch = {
+    guildCfg: () => ({ locale: "en" }),
+    refreshGuild: () => {},
+  };
+  const processCfg = { owners: [], defaultLocale: "en", slashEphemeral: true };
+  const makeInteraction = (ms, min, clear) => ({
+    guildId: "g1",
+    user: { id: "u1" },
+    memberPermissions: { has: () => true },
+    options: {
+      getSubcommandGroup: () => "event",
+      getSubcommand: () => "digest",
+      getString: () => "messageDelete",
+      getInteger: (name) => (name === "ms" ? ms : min),
+      getBoolean: () => clear,
+    },
+    reply: async (payload) => {
+      response = payload;
+      return payload;
+    },
+  });
+
+  await execute(makeInteraction(0, null, false), { db, dispatch, processCfg });
+  assert.deepEqual(extra.eventDigest, { messageDelete: { ms: 0 } });
+  assert.match(response.content, /0ms/);
+
+  await execute(makeInteraction(5000, 2, false), { db, dispatch, processCfg });
+  assert.deepEqual(extra.eventDigest, { messageDelete: { ms: 5000, min: 2 } });
+  assert.match(response.content, /5000ms \/ 2/);
+
+  await execute(makeInteraction(null, null, true), { db, dispatch, processCfg });
+  assert.equal(extra.eventDigest, undefined);
+  assert.match(response.content, /none|—/i);
+});
+
+test("event reset clears only that event's overrides", async () => {
   let extra = {
     eventColors: { messageDelete: 0xff0000, guildBanAdd: 0x00ff00 },
     eventCooldown: { messageDelete: 60, messageUpdate: 30 },
+    eventDigest: { messageDelete: { ms: 5000 }, messageUpdate: { ms: 1000, min: 2 } },
   };
   const db = {
     ensureGuild: () => ({ id: "g1" }),
@@ -222,6 +274,7 @@ test("event reset clears only that event's color and cooldown", async () => {
   await execute(interaction, { db, dispatch, processCfg });
   assert.deepEqual(extra.eventColors, { guildBanAdd: 0x00ff00 });
   assert.deepEqual(extra.eventCooldown, { messageUpdate: 30 });
+  assert.deepEqual(extra.eventDigest, { messageUpdate: { ms: 1000, min: 2 } });
   assert.match(response.content, /none|—/i);
 });
 

@@ -62,6 +62,18 @@ function createDispatcher({ client, db, processCfg, log, cache, deps = {} }) {
     return true;
   }
 
+  function digestFor(cfg, eventKey) {
+    const raw = cfg.eventDigest?.[eventKey];
+    if (!raw || typeof raw !== "object" || Array.isArray(raw)) return null;
+    const ms = Number(raw.ms);
+    if (!Number.isInteger(ms) || ms < 0 || ms > 3600000) return null;
+    const min = Number(raw.min);
+    return {
+      ms,
+      min: Number.isInteger(min) && min > 0 && min <= 1000 ? min : null,
+    };
+  }
+
   async function enqueue(guild, eventKey, payload) {
     try {
       if (!guild) return;
@@ -77,7 +89,9 @@ function createDispatcher({ client, db, processCfg, log, cache, deps = {} }) {
       if (!accountAgeOk(cfg, payload)) return;
       if (!includeOk(cfg, payload.ignore?.channel)) return;
       if (ignored(cfg, payload.ignore || {})) return;
-      const digestMs = cfg.digestMs || 0;
+      const eventDigest = digestFor(cfg, eventKey);
+      const digestMs = eventDigest ? eventDigest.ms : (cfg.digestMs || 0);
+      const digestMin = eventDigest?.min || processCfg.digestMin || 5;
       if (digestMs > 0 && !payload.digest) {
         const dkey = `${guild.id}:${eventKey}:${channelId}`;
         const bucket = digestBuckets.get(dkey) || { count: 0, timer: null, sample: payload, guild, eventKey };
@@ -87,7 +101,7 @@ function createDispatcher({ client, db, processCfg, log, cache, deps = {} }) {
           bucket.timer = setTimeout(() => {
             digestBuckets.delete(dkey);
             const n = bucket.count;
-            const min = processCfg.digestMin || 5;
+            const min = digestMin;
             if (n >= min) {
               const { buildEmbed } = require("./util");
               const embed = buildEmbed(cfg, eventKey, [

@@ -401,6 +401,30 @@ function cleanEventCooldown(value) {
   return { value: out, skipped };
 }
 
+function cleanEventDigest(value) {
+  if (!isPlainObject(value)) return { value: undefined, skipped: 1 };
+  const out = {};
+  let skipped = 0;
+  for (const [key, raw] of Object.entries(value)) {
+    if (!byKey[key] || !isPlainObject(raw)) {
+      skipped += 1;
+      continue;
+    }
+    const ms = Number(raw.ms);
+    const hasMin = raw.min != null;
+    const min = Number(raw.min);
+    if (
+      !Number.isInteger(ms) || ms < 0 || ms > 3600000
+      || (hasMin && (!Number.isInteger(min) || min < 1 || min > 1000))
+    ) {
+      skipped += 1;
+      continue;
+    }
+    out[key] = hasMin ? { ms, min } : { ms };
+  }
+  return { value: out, skipped };
+}
+
 function cleanQuietDays(value) {
   if (!Array.isArray(value)) return { value: undefined, skipped: 1 };
   const out = [];
@@ -519,6 +543,12 @@ function cleanExtra(extra, resolveChannel) {
     if (key === "eventCooldown") {
       const cleaned = cleanEventCooldown(raw);
       if (cleaned.value) out.eventCooldown = cleaned.value;
+      skipped += cleaned.skipped;
+      continue;
+    }
+    if (key === "eventDigest") {
+      const cleaned = cleanEventDigest(raw);
+      if (cleaned.value) out.eventDigest = cleaned.value;
       skipped += cleaned.skipped;
       continue;
     }

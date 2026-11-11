@@ -181,6 +181,20 @@ test("mergeGuild keeps quiet-day schedules", (t) => {
   assert.deepEqual(merged.quietDays, ["mon", "thu"]);
 });
 
+test("mergeGuild keeps per-event digest overrides", (t) => {
+  const db = withDb(t);
+  if (!db) return;
+  db.setExtra("g1", { eventDigest: { messageDelete: { ms: 0 }, guildBanAdd: { ms: 5000, min: 2 } } });
+
+  const row = db.getGuild.get("g1");
+  const merged = mergeGuild(processConfig({}), row, [], [], db.extraOf(row));
+
+  assert.deepEqual(merged.eventDigest, {
+    messageDelete: { ms: 0 },
+    guildBanAdd: { ms: 5000, min: 2 },
+  });
+});
+
 test("buildEmbed prefers a per-event color over the slot color", () => {
   const cfg = {
     id: "g1",

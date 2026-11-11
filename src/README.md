@@ -69,13 +69,14 @@ Bag for per-guild overrides without a migration:
   "strings": { "event.messageDelete": "Message yeeted" },
   "colors": { "delete": 16711680 },
   "eventColors": { "messageDelete": 0 },
-  "eventCooldown": { "messageUpdate": 30 }
+  "eventCooldown": { "messageUpdate": 30 },
+  "eventDigest": { "messageUpdate": { "ms": 8000, "min": 3 } }
 }
 ```
 
-Set via `/log string`, `/log color`, `/log event color`, `/log event cooldown`, `/log set`, `/log watch`. `mergeGuild` applies `extra.colors` on top of columns / env. `buildEmbed` prefers `extra.eventColors[eventKey]`, then the slot color, and passes `extra.strings` into `t()`. The dispatcher uses `extra.eventCooldown[eventKey]` before the guild `cooldownSec`.
+Set via `/log string`, `/log color`, `/log event color`, `/log event cooldown`, `/log event digest`, `/log set`, `/log watch`. `mergeGuild` applies `extra.colors` on top of columns / env. `buildEmbed` prefers `extra.eventColors[eventKey]`, then the slot color, and passes `extra.strings` into `t()`. The dispatcher uses `extra.eventCooldown[eventKey]` before the guild `cooldownSec`, and `extra.eventDigest[eventKey]` before the guild `digestMs`/`DIGEST_MIN`.
 
-Other `extra_json` knobs: `eventColors`, `eventCooldown`, `paused`, `plainText`, `showThumbnails`, `showTimestamp`, `attachLong`, `quietStart`, `quietEnd`, `quietDays`, `minAccountDays`, `cooldownSec`, `actors`, `includeChannels`, `webhookName`, `webhookAvatar`, `delivery` (`embed|plain|webhook`), `prefix`, `prefixOn`, `slashOn`.
+Other `extra_json` knobs: `eventColors`, `eventCooldown`, `eventDigest`, `paused`, `plainText`, `showThumbnails`, `showTimestamp`, `attachLong`, `quietStart`, `quietEnd`, `quietDays`, `minAccountDays`, `cooldownSec`, `actors`, `includeChannels`, `webhookName`, `webhookAvatar`, `delivery` (`embed|plain|webhook`), `prefix`, `prefixOn`, `slashOn`.
 
 Control plane: slash `/log` and prefix `{PREFIX}{COMMAND_NAME} …` share `commands.execute`. `COMMAND_NAME` (default `log`) needs `npm run deploy` if you change it. `CONFIG_PERMISSION` is the Discord permission name (`ManageGuild` default). `SLASH_EPHEMERAL` / guild `ephemeral` hide slash replies. `SHOW_CREDIT` / guild `credit` toggle the footer credit. `/log set` accepts only `SETTING_NAMES`, validates numeric/time/boolean ranges, and cannot write internal maps such as `eventColors` or `hiddenFields`. Apache-2.0 does not require attribution. Truncation: `EMBED_*_MAX`, `PLAIN_MAX`, `ATTACH_MIN_CHARS`, `AUDIT_FETCH_LIMIT`, `BULK_LINE_LIMIT`.
 

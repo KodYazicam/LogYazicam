@@ -36,6 +36,7 @@ Small, shippable steps. Upvote or comment on an issue if you want something move
 - [x] Dashboard event/time filters
 - [x] Event override reset
 - [x] Validated `/log set` allowlist
+- [x] Per-event digest overrides
 
 ## Next
 
