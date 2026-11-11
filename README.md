@@ -518,7 +518,7 @@ Then delete a message the bot can see. You should get `messageDelete` in `#mod-l
 
 ## Environment reference
 
-All names English. Booleans: `1` `0` `true` `false` `yes` `no` `on` `off`. Guild `/log` overrides the embed/filter defaults per server. Process-level timings (`SEND_INTERVAL_MS`, `HOT_RELOAD_MS`, `MAX_QUEUE_PER_CHANNEL`) stay global until hot-reload re-reads `.env`.
+All names English. Booleans: `1` `0` `true` `false` `yes` `no` `on` `off`. Numeric settings accept integers only; fractional input is truncated, and negative limits fall back to their defaults (except where `0` explicitly disables a feature). Guild `/log` overrides the embed/filter defaults per server. Process-level timings (`SEND_INTERVAL_MS`, `HOT_RELOAD_MS`, `MAX_QUEUE_PER_CHANNEL`) stay global until hot-reload re-reads `.env`.
 
 | Variable | Default | Restart? | Meaning |
 | --- | --- | --- | --- |

@@ -5,6 +5,7 @@ const os = require("os");
 const path = require("path");
 const { openDb } = require("../src/db");
 const { processConfig, mergeGuild } = require("../src/config");
+const { COLORS } = require("../src/catalog");
 const { buildEmbed } = require("../src/util");
 
 function withDb(t) {
@@ -25,6 +26,50 @@ function withDb(t) {
   });
   return db;
 }
+
+test("processConfig truncates and bounds numeric environment values", () => {
+  const cfg = processConfig({
+    HISTORY_LIMIT: "2.9",
+    MAX_QUEUE_PER_CHANNEL: "-4",
+    SEND_INTERVAL_MS: "0",
+    EMBED_FIELD_MAX: "1024.8",
+    EMBED_FOOTER_MAX: "-1",
+    DIGEST_MS: "-5000",
+    DASHBOARD_PORT: "70000",
+    DASHBOARD_LIMIT: "12.7",
+    COLOR_CREATE: "-1",
+    COLOR_UPDATE: "16777216",
+    COLOR_DELETE: "0",
+    COLOR_INFO: "16777215",
+  });
+
+  assert.equal(cfg.historyLimit, 2);
+  assert.equal(cfg.maxQueue, 20);
+  assert.equal(cfg.sendIntervalMs, 350);
+  assert.equal(cfg.fieldMax, 1024);
+  assert.equal(cfg.footerMax, 2048);
+  assert.equal(cfg.digestMs, 0);
+  assert.equal(cfg.dashboardPort, 8787);
+  assert.equal(cfg.dashboardLimit, 12);
+  assert.equal(cfg.colors.create, COLORS.create);
+  assert.equal(cfg.colors.update, COLORS.update);
+  assert.equal(cfg.colors.delete, 0);
+  assert.equal(cfg.colors.info, 0xffffff);
+});
+
+test("processConfig keeps zero for values that disable features", () => {
+  const cfg = processConfig({
+    HISTORY_RETENTION_DAYS: "0",
+    BACKUP_MS: "0",
+    SNAPSHOT_TTL_MS: "0",
+    DASHBOARD_PORT: "0",
+  });
+
+  assert.equal(cfg.historyRetentionDays, 0);
+  assert.equal(cfg.backupMs, 0);
+  assert.equal(cfg.snapshotTtlMs, 0);
+  assert.equal(cfg.dashboardPort, 0);
+});
 
 test("mergeGuild preserves black row and extra colors", (t) => {
   const db = withDb(t);

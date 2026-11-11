@@ -25,6 +25,7 @@ Small, shippable steps. Upvote or comment on an issue if you want something move
 - [x] Bounded config attachment downloads
 - [x] Logger safe value formatting
 - [x] Correct, localized member-join labels
+- [x] Bounded integer env parsing
 
 ## Next
 

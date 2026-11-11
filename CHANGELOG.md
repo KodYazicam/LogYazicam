@@ -82,6 +82,9 @@ All notable changes to this project are documented here. The format follows
 - Member-join embeds now label account age as **Account created** instead of
   reusing the channel field, and the vanity/unknown invite fallbacks are
   translated in every locale pack.
+- Numeric environment settings are now parsed as bounded integers, so
+  fractional or negative limits cannot reach SQLite `LIMIT` clauses, queue
+  checks, or embed colors.
 
 ### Security
 
