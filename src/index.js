@@ -5,7 +5,7 @@ const {
   Partials,
   ActivityType,
 } = require("discord.js");
-const { loadEnvFile, processConfig } = require("./config");
+const { loadEnvFile, processConfig, applyConfig } = require("./config");
 const { openDb } = require("./db");
 const { createLogger } = require("./logger");
 const { createDispatcher } = require("./dispatcher");
@@ -211,9 +211,7 @@ if (processCfg.hotReloadMs > 0) {
   setInterval(() => {
     try {
       const nextEnv = loadEnvFile();
-      const token = processCfg.token;
-      processCfg = processConfig(nextEnv);
-      processCfg.token = token;
+      applyConfig(processCfg, nextEnv);
       log.configure(processCfg);
       reloadLocales();
       applyPresence();

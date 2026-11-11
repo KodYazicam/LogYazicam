@@ -140,6 +140,14 @@ function processConfig(env) {
   };
 }
 
+function applyConfig(current, env) {
+  const next = processConfig(env);
+  const token = current.token;
+  Object.assign(current, next);
+  current.token = token;
+  return current;
+}
+
 function mergeGuild(processCfg, row, routes, ignores, extra) {
   const enabled = {};
   for (const event of EVENTS) {
@@ -211,4 +219,4 @@ function mergeGuild(processCfg, row, routes, ignores, extra) {
   };
 }
 
-module.exports = { loadEnvFile, processConfig, mergeGuild, BOOL, INT, UINT, POS, PORT, COLOR };
+module.exports = { loadEnvFile, processConfig, applyConfig, mergeGuild, BOOL, INT, UINT, POS, PORT, COLOR };

@@ -90,6 +90,9 @@ All notable changes to this project are documented here. The format follows
   longer writes duplicate sink rows.
 - Staff-channel copies now always use `channel.send`, even when the guild has a
   webhook configured, matching the documented staff-channel behavior.
+- Hot reload now updates the shared process-config object in place, so the
+  dispatcher and event handlers see changed queue, webhook, audit, and default
+  settings instead of keeping the startup snapshot.
 
 ### Security
 

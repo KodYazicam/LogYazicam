@@ -4,7 +4,7 @@ const fs = require("fs");
 const os = require("os");
 const path = require("path");
 const { openDb } = require("../src/db");
-const { processConfig, mergeGuild } = require("../src/config");
+const { processConfig, applyConfig, mergeGuild } = require("../src/config");
 const { COLORS } = require("../src/catalog");
 const { buildEmbed } = require("../src/util");
 
@@ -69,6 +69,28 @@ test("processConfig keeps zero for values that disable features", () => {
   assert.equal(cfg.backupMs, 0);
   assert.equal(cfg.snapshotTtlMs, 0);
   assert.equal(cfg.dashboardPort, 0);
+});
+
+test("applyConfig updates the captured object and preserves the live token", () => {
+  const current = processConfig({
+    TOKEN: "live-token",
+    LOG_LEVEL: "info",
+    MAX_QUEUE_PER_CHANNEL: "20",
+    WEBHOOK_NAME: "old-hook",
+  });
+
+  const same = applyConfig(current, {
+    TOKEN: "replacement-token",
+    LOG_LEVEL: "debug",
+    MAX_QUEUE_PER_CHANNEL: "5",
+    WEBHOOK_NAME: "new-hook",
+  });
+
+  assert.equal(same, current);
+  assert.equal(current.token, "live-token");
+  assert.equal(current.logLevel, "debug");
+  assert.equal(current.maxQueue, 5);
+  assert.equal(current.webhookName, "new-hook");
 });
 
 test("mergeGuild preserves black row and extra colors", (t) => {

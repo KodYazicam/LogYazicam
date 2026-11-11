@@ -28,6 +28,7 @@ Small, shippable steps. Upvote or comment on an issue if you want something move
 - [x] Bounded integer env parsing
 - [x] Sinks mirror webhook deliveries exactly once
 - [x] Staff copies bypass webhooks
+- [x] Hot reload reaches dispatcher/events
 
 ## Next
 
