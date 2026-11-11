@@ -164,6 +164,7 @@ function mergeGuild(processCfg, row, routes, ignores, extra) {
   const eventActors = extra?.eventActors;
   const quietBypass = extra?.quietBypass;
   const eventIncludeChannels = extra?.eventIncludeChannels;
+  const eventDelivery = extra?.eventDelivery;
   return {
     id: row.id,
     locale: locales.LOCALES.includes(row.locale) ? row.locale : processCfg.defaultLocale,
@@ -203,6 +204,9 @@ function mergeGuild(processCfg, row, routes, ignores, extra) {
     includeChannels: Array.isArray(extra?.includeChannels) ? extra.includeChannels : [],
     eventIncludeChannels: eventIncludeChannels && typeof eventIncludeChannels === "object" && !Array.isArray(eventIncludeChannels)
       ? eventIncludeChannels
+      : {},
+    eventDelivery: eventDelivery && typeof eventDelivery === "object" && !Array.isArray(eventDelivery)
+      ? eventDelivery
       : {},
     webhookName: extra?.webhookName || processCfg.defaultWebhookUsername || processCfg.webhookName,
     webhookAvatar: extra?.webhookAvatar || processCfg.webhookAvatarUrl,

@@ -66,14 +66,18 @@ All notable changes to this project are documented here. The format follows
   `extra_json.eventIncludeChannels`. One event can watch a dedicated channel or
   category while the rest of the guild keeps its normal allow-list; `clear`
   restores the guild list.
+- Per-event delivery modes via `/log event delivery`, stored in
+  `extra_json.eventDelivery`. One event can stay an embed while the guild uses
+  plain text, flatten only that event, or prefer the webhook for it; `default`
+  restores guild behavior.
 - Optional quiet-day scheduling via `/log set name:quiet_days value:mon,tue`.
   The existing quiet window can now apply only on selected local weekdays;
   `all` or `clear` restores every-day behavior.
 - Dashboard event/time filters: `/api/events` accepts validated `event` and
   `since` parameters, and the page exposes event-key and recency controls.
-- `/log event reset` clears color, cooldown, digest, actor, quiet-bypass, and
-  channel allow-list overrides for one event without touching its route,
-  channel, or guild defaults.
+- `/log event reset` clears color, cooldown, digest, actor, quiet-bypass,
+  channel allow-list, and delivery overrides for one event without touching its
+  route, channel, or guild defaults.
 - All 18 locale packs now translate the `/log export` and `/log import` replies;
   a placeholder-consistency test keeps future additions honest.
 - `/log import` now resets every importable setting to `null` before applying
