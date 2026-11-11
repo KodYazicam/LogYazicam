@@ -253,6 +253,25 @@ test("file sink runs without fetching the channel when discord is not in the sin
   assert.match(text, /"guildId":"g1"/);
 });
 
+test("a bad file sink does not drop Discord delivery", async (t) => {
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), "logyazicam-sink-bad-"));
+  t.after(() => fs.rmSync(dir, { recursive: true, force: true }));
+  const blocker = path.join(dir, "blocker");
+  fs.writeFileSync(blocker, "not a directory");
+
+  const h = setup({
+    cfg: { webhookId: null, webhookToken: null, delivery: "embed" },
+    item: makeItem({ preferWebhook: false }),
+    processCfg: { logSink: "file,discord", fileSinkDir: blocker },
+  });
+
+  await h.dispatch.tick();
+  assert.equal(h.dispatch.metrics.sent, 1);
+  assert.equal(h.dispatch.metrics.dropped, 0);
+  assert.equal(h.channelSends.length, 1);
+  assert.ok(h.warnings.some((line) => /file sink failed/.test(line)));
+});
+
 test("enqueue routes an event into the queue and tick delivers it", async () => {
   const h = setup({
     queued: false,

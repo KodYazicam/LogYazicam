@@ -1084,6 +1084,7 @@ npm test
 - Locales: every non-English pack translates the config-transfer replies with the same placeholders as English
 - Logger: camelCase and uppercase config keys, level filtering, file output, unknown-level fallback, and unusable paths
 - Webhook delivery: succeeds without a channel fetch, falls back when enabled, and runs file/HTTP sinks before Discord
+- Sink isolation: unwritable file directories and backup paths cannot drop Discord delivery or throw on a timer
 
 CI: GitHub Actions, Node 22, `npm ci` && `npm test`.
 

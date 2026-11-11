@@ -4,12 +4,18 @@ const https = require("https");
 const http = require("http");
 
 function writeFileSink(dir, guildId, eventKey, payload) {
-  if (!dir) return;
-  const day = new Date().toISOString().slice(0, 10);
-  const folder = path.join(dir, guildId);
-  fs.mkdirSync(folder, { recursive: true });
-  const line = JSON.stringify({ at: Date.now(), eventKey, ...payload }) + "\n";
-  fs.appendFile(path.join(folder, `${day}.jsonl`), line, () => {});
+  if (!dir) return false;
+  try {
+    const day = new Date().toISOString().slice(0, 10);
+    const folder = path.join(dir, guildId);
+    fs.mkdirSync(folder, { recursive: true });
+    const line = JSON.stringify({ at: Date.now(), eventKey, ...payload }) + "\n";
+    fs.appendFile(path.join(folder, `${day}.jsonl`), line, () => {});
+    return true;
+  } catch {
+    // An optional sink must never break Discord delivery.
+    return false;
+  }
 }
 
 function postHttpSink(url, body) {
@@ -29,10 +35,15 @@ function postHttpSink(url, body) {
 }
 
 function backupSqlite(src, destDir) {
-  if (!destDir || !src) return;
-  fs.mkdirSync(destDir, { recursive: true });
-  const stamp = new Date().toISOString().replace(/[:.]/g, "-");
-  fs.copyFile(src, path.join(destDir, `logyazicam-${stamp}.sqlite`), () => {});
+  if (!destDir || !src) return false;
+  try {
+    fs.mkdirSync(destDir, { recursive: true });
+    const stamp = new Date().toISOString().replace(/[:.]/g, "-");
+    fs.copyFile(src, path.join(destDir, `logyazicam-${stamp}.sqlite`), () => {});
+    return true;
+  } catch {
+    return false;
+  }
 }
 
 module.exports = { writeFileSink, postHttpSink, backupSqlite };

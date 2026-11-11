@@ -186,8 +186,14 @@ function createDispatcher({ client, db, processCfg, log, cache, deps = {} }) {
     if (sinks.includes("file") || sinks.includes("http")) {
       const { writeFileSink, postHttpSink } = require("./sinks");
       const body = { guildId: item.guildId, eventKey: item.eventKey, summary: item.summary, at: Date.now() };
-      if (sinks.includes("file")) writeFileSink(processCfg.fileSinkDir, item.guildId, item.eventKey, body);
-      if (sinks.includes("http")) postHttpSink(processCfg.httpSinkUrl, body);
+      try {
+        if (sinks.includes("file") && !writeFileSink(processCfg.fileSinkDir, item.guildId, item.eventKey, body)) {
+          log.warn("file sink failed", processCfg.fileSinkDir || "(no directory)");
+        }
+        if (sinks.includes("http")) postHttpSink(processCfg.httpSinkUrl, body);
+      } catch (error) {
+        log.warn("sink failed", error.message);
+      }
     }
     if (!sinks.includes("discord") && sinks.length) return;
     const channel = await client.channels.fetch(item.channelId).catch(() => null);
