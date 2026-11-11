@@ -334,6 +334,27 @@ test("a per-event digest zero disables digesting for that event only", async () 
   assert.equal(h.dispatch.queues.get("g1:c1").length, 1);
 });
 
+test("a per-event actor mode filters only that event", async () => {
+  const h = setup({
+    queued: false,
+    cfg: {
+      actors: "all",
+      eventActors: { messageDelete: "humans" },
+      events: {
+        messageDelete: { on: true, channelId: "c1" },
+        messageUpdate: { on: true, channelId: "c1" },
+      },
+    },
+  });
+
+  await h.dispatch.enqueue({ id: "g1" }, "messageDelete", { summary: "bot edit", bot: true });
+  assert.equal(h.dispatch.queues.get("g1:c1"), undefined);
+  await h.dispatch.enqueue({ id: "g1" }, "messageDelete", { summary: "human edit", bot: false });
+  assert.equal(h.dispatch.queues.get("g1:c1").length, 1);
+  await h.dispatch.enqueue({ id: "g1" }, "messageUpdate", { summary: "bot update", bot: true });
+  assert.equal(h.dispatch.queues.get("g1:c1").length, 2);
+});
+
 test("a per-event cooldown applies only to that event key", async () => {
   const h = setup({
     queued: false,

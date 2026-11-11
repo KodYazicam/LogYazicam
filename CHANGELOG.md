@@ -56,13 +56,16 @@ All notable changes to this project are documented here. The format follows
 - Per-event digest overrides via `/log event digest`, stored in
   `extra_json.eventDigest`. `ms:0` disables digesting for one event; an
   optional `min` overrides the minimum count.
+- Per-event actor overrides via `/log event actors`, stored in
+  `extra_json.eventActors`. One event can log only humans or only bots while
+  the guild keeps its default.
 - Optional quiet-day scheduling via `/log set name:quiet_days value:mon,tue`.
   The existing quiet window can now apply only on selected local weekdays;
   `all` or `clear` restores every-day behavior.
 - Dashboard event/time filters: `/api/events` accepts validated `event` and
   `since` parameters, and the page exposes event-key and recency controls.
-- `/log event reset` clears color, cooldown, and digest overrides for one event
-  without touching its route, channel, or guild defaults.
+- `/log event reset` clears color, cooldown, digest, and actor overrides for one
+  event without touching its route, channel, or guild defaults.
 - All 18 locale packs now translate the `/log export` and `/log import` replies;
   a placeholder-consistency test keeps future additions honest.
 - `/log import` now resets every importable setting to `null` before applying

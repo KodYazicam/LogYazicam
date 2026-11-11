@@ -425,6 +425,20 @@ function cleanEventDigest(value) {
   return { value: out, skipped };
 }
 
+function cleanEventActors(value) {
+  if (!isPlainObject(value)) return { value: undefined, skipped: 1 };
+  const out = {};
+  let skipped = 0;
+  for (const [key, raw] of Object.entries(value)) {
+    if (!byKey[key] || !["all", "humans", "bots"].includes(raw)) {
+      skipped += 1;
+      continue;
+    }
+    out[key] = raw;
+  }
+  return { value: out, skipped };
+}
+
 function cleanQuietDays(value) {
   if (!Array.isArray(value)) return { value: undefined, skipped: 1 };
   const out = [];
@@ -549,6 +563,12 @@ function cleanExtra(extra, resolveChannel) {
     if (key === "eventDigest") {
       const cleaned = cleanEventDigest(raw);
       if (cleaned.value) out.eventDigest = cleaned.value;
+      skipped += cleaned.skipped;
+      continue;
+    }
+    if (key === "eventActors") {
+      const cleaned = cleanEventActors(raw);
+      if (cleaned.value) out.eventActors = cleaned.value;
       skipped += cleaned.skipped;
       continue;
     }
