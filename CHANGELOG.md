@@ -84,6 +84,10 @@ All notable changes to this project are documented here. The format follows
   events are asserted individually, and snapshot/self/snapshot-off guards are
   exercised. The `safe()` wrapper now returns its handler promise so callers
   can await completion; `events.js` line coverage is 98.5%.
+- Prefix adapter and sink coverage: owner/permission checks, boolean and
+  positional option parsing, channel/role cache fallbacks, reply payloads,
+  successful JSONL writes, and local HTTP POST headers/body; `prefix.js` and
+  `sinks.js` now have 100% line coverage.
 - Per-event embed color overrides via `/log event color`, stored in
   `extra_json.eventColors` and validated during config import. A black override
   is preserved; clearing it restores the semantic slot color.
