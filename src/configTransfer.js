@@ -4,6 +4,7 @@ const { LOCALES } = require("./locales");
 const FORMAT = "logyazicam-config";
 const VERSION = 1;
 const MAX_BYTES = 1024 * 1024;
+const FETCH_TIMEOUT_MS = 10000;
 
 const BOOLEAN_SETTINGS = new Set([
   "ignore_bots",
@@ -132,14 +133,18 @@ function parseConfig(input) {
   return validateConfig(data);
 }
 
-async function readAttachment(attachment, { fetchImpl = globalThis.fetch } = {}) {
+async function readAttachment(attachment, {
+  fetchImpl = globalThis.fetch,
+  timeoutMs = FETCH_TIMEOUT_MS,
+} = {}) {
   if (!attachment || typeof attachment.url !== "string") throw new Error("missing file attachment");
   const declared = Number(attachment.size);
   if (Number.isFinite(declared) && declared > MAX_BYTES) {
     throw new Error(`config is larger than ${MAX_BYTES / 1024} KB`);
   }
   if (typeof fetchImpl !== "function") throw new Error("attachment download is unavailable");
-  const response = await fetchImpl(attachment.url);
+  const signal = typeof AbortSignal?.timeout === "function" ? AbortSignal.timeout(timeoutMs) : undefined;
+  const response = await fetchImpl(attachment.url, signal ? { signal } : undefined);
   if (!response.ok) throw new Error(`attachment download failed: ${response.status}`);
   const buffer = Buffer.from(await response.arrayBuffer());
   if (buffer.length > MAX_BYTES) throw new Error(`config is larger than ${MAX_BYTES / 1024} KB`);

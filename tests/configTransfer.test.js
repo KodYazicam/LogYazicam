@@ -362,6 +362,29 @@ test("readAttachment checks size before and after download", async () => {
   );
 });
 
+test("readAttachment passes an abort signal and propagates aborts", async () => {
+  let seen;
+  const fetchImpl = async (url, options) => {
+    seen = options;
+    return { ok: true, arrayBuffer: async () => Buffer.from(JSON.stringify(sourcePayload())) };
+  };
+
+  const parsed = await readAttachment({ url: "https://cdn.example/x", size: 10 }, { fetchImpl });
+  assert.equal(parsed.format, FORMAT);
+  assert.ok(seen && seen.signal, "download should receive an abort signal");
+  assert.equal(typeof seen.signal.addEventListener, "function");
+
+  await assert.rejects(
+    readAttachment({ url: "https://cdn.example/x", size: 10 }, {
+      fetchImpl: async (url, options) => {
+        assert.ok(options.signal);
+        throw Object.assign(new Error("The operation was aborted"), { name: "AbortError" });
+      },
+    }),
+    /aborted/,
+  );
+});
+
 test("slash commands register export/import with a file option", () => {
   const { ApplicationCommandOptionType } = require("discord.js");
   const { data } = require("../src/commands");
