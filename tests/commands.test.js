@@ -85,6 +85,14 @@ test("event group exposes color overrides", () => {
   );
 });
 
+test("set command exposes quiet-day scheduling", () => {
+  const json = data({}).toJSON();
+  const set = json.options.find((sub) => sub.name === "set");
+  const name = set.options.find((option) => option.name === "name");
+  const choice = name.choices.find((item) => item.value === "quietDays");
+  assert.equal(choice.name, "quiet_days");
+});
+
 test("event color command stores and clears a black override", async () => {
   let extra = {};
   const db = {
@@ -164,4 +172,43 @@ test("event cooldown command stores zero and clears it", async () => {
   await execute(makeInteraction(null, true), { db, dispatch, processCfg });
   assert.equal(extra.eventCooldown, undefined);
   assert.match(response.content, /none|—/i);
+});
+
+test("quiet_days setting accepts aliases and clears with all", async () => {
+  let extra = {};
+  const db = {
+    ensureGuild: () => ({ id: "g1" }),
+    extraOf: () => extra,
+    setExtra: (id, next) => {
+      extra = next;
+    },
+  };
+  let response;
+  const dispatch = {
+    guildCfg: () => ({ locale: "en" }),
+    refreshGuild: () => {},
+  };
+  const processCfg = { owners: [], defaultLocale: "en", slashEphemeral: true };
+  const makeInteraction = (value) => ({
+    guildId: "g1",
+    user: { id: "u1" },
+    memberPermissions: { has: () => true },
+    options: {
+      getSubcommandGroup: () => null,
+      getSubcommand: () => "set",
+      getString: (name) => (name === "name" ? "quietDays" : value),
+    },
+    reply: async (payload) => {
+      response = payload;
+      return payload;
+    },
+  });
+
+  await execute(makeInteraction("Mon, Thursday"), { db, dispatch, processCfg });
+  assert.deepEqual(extra.quietDays, ["mon", "thu"]);
+  assert.match(response.content, /mon,thu/);
+
+  await execute(makeInteraction("all"), { db, dispatch, processCfg });
+  assert.deepEqual(extra.quietDays, []);
+  assert.match(response.content, /all/);
 });

@@ -32,6 +32,7 @@ Small, shippable steps. Upvote or comment on an issue if you want something move
 - [x] Streamed config downloads are size-capped
 - [x] Per-event embed color overrides
 - [x] Per-event cooldown overrides
+- [x] Quiet-day scheduling
 
 ## Next
 

@@ -170,6 +170,17 @@ test("mergeGuild keeps per-event cooldown overrides", (t) => {
   assert.deepEqual(merged.eventCooldown, { messageDelete: 0, guildBanAdd: 60 });
 });
 
+test("mergeGuild keeps quiet-day schedules", (t) => {
+  const db = withDb(t);
+  if (!db) return;
+  db.setExtra("g1", { quietDays: ["mon", "thu"] });
+
+  const row = db.getGuild.get("g1");
+  const merged = mergeGuild(processConfig({}), row, [], [], db.extraOf(row));
+
+  assert.deepEqual(merged.quietDays, ["mon", "thu"]);
+});
+
 test("buildEmbed prefers a per-event color over the slot color", () => {
   const cfg = {
     id: "g1",

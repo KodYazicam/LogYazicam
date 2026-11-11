@@ -77,6 +77,7 @@ function sourcePayload() {
     extra: {
       quietStart: "23:00",
       quietEnd: "07:00",
+      quietDays: ["mon", "thu"],
       includeChannels: ["chan-a", "chan-missing"],
       staffChannel: "chan-a",
       strings: { "event.messageDelete": "silindi" },
@@ -162,6 +163,7 @@ test("round-trips config into another guild and keeps its webhook", (t) => {
   assert.deepEqual(extra.includeChannels, ["chan-b"]);
   assert.equal(extra.staffChannel, "chan-b");
   assert.equal(extra.quietStart, "23:00");
+  assert.deepEqual(extra.quietDays, ["mon", "thu"]);
   assert.deepEqual(extra.strings, { "event.messageDelete": "silindi" });
   assert.deepEqual(extra.colors, { info: 0x00ff00 });
   assert.deepEqual(extra.eventColors, { messageDelete: 0x123456 });
@@ -186,12 +188,14 @@ test("skips invalid per-event overrides", (t) => {
     notAnEvent: 5,
     messageUpdate: 1.5,
   };
+  payload.extra.quietDays = ["mon", "Monday", "funday", "mon"];
 
   const counts = importGuild(db, "201", payload);
-  assert.equal(counts.skipped, 6);
+  assert.equal(counts.skipped, 8);
   const extra = db.extraOf(db.getGuild.get("201"));
   assert.deepEqual(extra.eventColors, { messageDelete: 0 });
   assert.deepEqual(extra.eventCooldown, { messageDelete: 0 });
+  assert.deepEqual(extra.quietDays, ["mon"]);
 });
 
 test("replaces omitted settings and clears missing mention roles", (t) => {

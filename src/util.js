@@ -117,6 +117,21 @@ function inQuietHours(cfg, now = new Date()) {
   const start = cfg.quietStart;
   const end = cfg.quietEnd;
   if (!start || !end) return false;
+  const quietDays = Array.isArray(cfg.quietDays)
+    ? cfg.quietDays.map((day) => String(day).toLowerCase())
+    : [];
+  if (quietDays.length) {
+    let weekday;
+    try {
+      weekday = new Intl.DateTimeFormat("en-US", {
+        timeZone: cfg.timezone || "UTC",
+        weekday: "short",
+      }).format(now).toLowerCase();
+    } catch {
+      weekday = ["sun", "mon", "tue", "wed", "thu", "fri", "sat"][now.getUTCDay()];
+    }
+    if (!quietDays.includes(weekday)) return false;
+  }
   let hm;
   try {
     hm = new Intl.DateTimeFormat("en-GB", {

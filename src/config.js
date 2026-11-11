@@ -189,6 +189,7 @@ function mergeGuild(processCfg, row, routes, ignores, extra) {
     attachLong: extra?.attachLong != null ? Boolean(extra.attachLong) : processCfg.defaultAttachLong,
     quietStart: extra?.quietStart || processCfg.defaultQuietStart || null,
     quietEnd: extra?.quietEnd || processCfg.defaultQuietEnd || null,
+    quietDays: Array.isArray(extra?.quietDays) ? extra.quietDays : [],
     minAccountDays: extra?.minAccountDays != null ? Number(extra.minAccountDays) : processCfg.defaultMinAccountDays,
     cooldownSec: extra?.cooldownSec != null ? Number(extra.cooldownSec) : processCfg.defaultCooldownSec,
     actors: extra?.actors || processCfg.defaultActors,

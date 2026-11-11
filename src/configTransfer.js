@@ -30,6 +30,7 @@ const SETTINGS = [
 
 const IGNORE_KINDS = new Set(["user", "channel", "role", "category"]);
 const COLOR_SLOTS = new Set(Object.keys(COLORS));
+const QUIET_DAYS = new Set(["sun", "mon", "tue", "wed", "thu", "fri", "sat"]);
 
 const EXTRA_BOOLEANS = new Set([
   "paused",
@@ -400,6 +401,21 @@ function cleanEventCooldown(value) {
   return { value: out, skipped };
 }
 
+function cleanQuietDays(value) {
+  if (!Array.isArray(value)) return { value: undefined, skipped: 1 };
+  const out = [];
+  let skipped = 0;
+  for (const raw of value) {
+    const day = String(raw).toLowerCase();
+    if (!QUIET_DAYS.has(day)) {
+      skipped += 1;
+      continue;
+    }
+    out.push(day);
+  }
+  return { value: [...new Set(out)], skipped };
+}
+
 function cleanRedact(value) {
   if (!isPlainObject(value)) return { value: undefined, skipped: 1 };
   const out = {};
@@ -443,6 +459,12 @@ function cleanExtra(extra, resolveChannel) {
     if (key === "quietStart" || key === "quietEnd") {
       if (raw == null || raw === "" || (typeof raw === "string" && TIME_PATTERN.test(raw))) out[key] = raw || null;
       else skipped += 1;
+      continue;
+    }
+    if (key === "quietDays") {
+      const cleaned = cleanQuietDays(raw);
+      if (cleaned.value) out.quietDays = cleaned.value;
+      skipped += cleaned.skipped;
       continue;
     }
     if (key === "delivery") {

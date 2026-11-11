@@ -722,6 +722,7 @@ One command for the remaining guild knobs (`extra_json`). `name` + `value`:
 | `history_days` | `0`–`3650` | Delete stored history older than N days; `0` keeps forever |
 | `min_account_days` | `0`–`3650` | Skip members whose account is younger |
 | `quiet_start` / `quiet_end` | `HH:MM` in guild timezone | Drop events in that window (wraps midnight). `value:clear` unsets |
+| `quiet_days` | `mon,tue,...` (short or full names) | Apply the quiet window only on these local weekdays. `all` / `clear` restores every day. |
 | `webhook_name` / `webhook_avatar` | string / URL | Per-guild webhook identity |
 | `show_timestamp` | `true` / `false` | Embed timestamp |
 | `attach_long` | `true` / `false` | `.txt` dump for long deleted messages |
@@ -737,6 +738,7 @@ Prefix uses the **same** execute path as slash. Examples (prefix `!`):
 !log group on name:voice
 !log set name:delivery value:plain
 !log set name:delivery value:webhook
+!log set name:quiet_days value:mon,tue,wed
 !log webhook id:123 token:abc
 ```
 
@@ -746,7 +748,7 @@ Named `key:value` tokens work in any order after the subcommand. Webhook deliver
 
 Allow-list. Empty = every channel. `add` / `remove` / `clear` / `list` a text channel or **category**. If a category is listed, its children match.
 
-Quiet hours, pause, allow-list, cooldown, and account age all run **before** the send queue. They apply without restart.
+Quiet hours, pause, allow-list, cooldown, and account age all run **before** the send queue. They apply without restart. `quiet_days` is evaluated in the guild timezone at send time; an empty list keeps the window active every day.
 
 Developer maps: [`src/README.md`](src/README.md) · [`src/locales/README.md`](src/locales/README.md) · [`docs/README.md`](docs/README.md).
 
