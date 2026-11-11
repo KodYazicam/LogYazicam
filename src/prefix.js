@@ -51,7 +51,9 @@ function fakeInteraction(message, tokens, commandName = "log") {
       },
       getInteger: (name) => {
         const v = get(name, false);
-        return v == null ? null : Number(v);
+        if (v == null || v === "") return null;
+        const n = Number(v);
+        return Number.isSafeInteger(n) ? n : null;
       },
       getBoolean: (name) => {
         const v = get(name, false);

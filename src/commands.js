@@ -8,6 +8,13 @@ const { EVENTS, GROUPS, byKey } = require("./catalog");
 const { LOCALES, t } = require("./locales");
 const { buildEmbed } = require("./util");
 
+const MAX_HISTORY_LIMIT = 500;
+
+function clampHistoryLimit(value, fallback = 50) {
+  const n = Number(value);
+  return Number.isSafeInteger(n) && n > 0 ? Math.min(n, MAX_HISTORY_LIMIT) : fallback;
+}
+
 function data(config = {}) {
   const permissionName = config.configPermission || process.env.CONFIG_PERMISSION || "ManageGuild";
   const permission = PermissionFlagsBits[permissionName] || PermissionFlagsBits.ManageGuild;
@@ -666,7 +673,10 @@ async function execute(interaction, { db, dispatch, processCfg }) {
   }
 
   if (sub === "history") {
-    const limit = interaction.options.getInteger("limit") || processCfg.historyExportDefault || 50;
+    const limit = clampHistoryLimit(
+      interaction.options.getInteger("limit"),
+      processCfg.historyExportDefault || 50,
+    );
     const key = interaction.options.getString("key") || "";
     const format = (interaction.options.getString("format") || "jsonl").toLowerCase();
     const rows = db.queryHistory.all(interaction.guildId, 0, Date.now() + 1, key, key, limit);
@@ -810,4 +820,4 @@ async function execute(interaction, { db, dispatch, processCfg }) {
   return interaction.reply({ content: t(locale, "cmd.denied"), ephemeral: true });
 }
 
-module.exports = { data, execute, autocomplete };
+module.exports = { data, execute, autocomplete, clampHistoryLimit, MAX_HISTORY_LIMIT };
