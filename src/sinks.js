@@ -34,16 +34,4 @@ function postHttpSink(url, body) {
   }
 }
 
-function backupSqlite(src, destDir) {
-  if (!destDir || !src) return false;
-  try {
-    fs.mkdirSync(destDir, { recursive: true });
-    const stamp = new Date().toISOString().replace(/[:.]/g, "-");
-    fs.copyFile(src, path.join(destDir, `logyazicam-${stamp}.sqlite`), () => {});
-    return true;
-  } catch {
-    return false;
-  }
-}
-
-module.exports = { writeFileSink, postHttpSink, backupSqlite };
+module.exports = { writeFileSink, postHttpSink };

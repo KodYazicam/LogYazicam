@@ -1,3 +1,4 @@
+const path = require("path");
 const {
   Client,
   GatewayIntentBits,
@@ -221,8 +222,19 @@ if (processCfg.hotReloadMs > 0) {
 }
 
 if (processCfg.backupMs > 0 && processCfg.backupDir) {
-  const { backupSqlite } = require("./sinks");
-  setInterval(() => backupSqlite(processCfg.databasePath, processCfg.backupDir), processCfg.backupMs).unref();
+  let backupRunning = false;
+  setInterval(() => {
+    if (backupRunning) return;
+    backupRunning = true;
+    const stamp = new Date().toISOString().replace(/[:.]/g, "-");
+    const destination = path.join(processCfg.backupDir, `logyazicam-${stamp}.sqlite`);
+    db.backupTo(destination)
+      .then((file) => log.debug("backup written", file))
+      .catch((error) => log.warn("backup failed", error.message))
+      .finally(() => {
+        backupRunning = false;
+      });
+  }, processCfg.backupMs).unref();
 }
 
 client.login(processCfg.token).catch((error) => {
