@@ -1,6 +1,6 @@
 const { WebhookClient } = require("discord.js");
 const { ignored, inQuietHours, includeOk, embedToPlain } = require("./util");
-const { redactEmbeds, redactText, flagsFrom } = require("./redact");
+const { redactEmbeds, redactText, flagsFrom, eventRedactFlags } = require("./redact");
 
 function createDispatcher({ client, db, processCfg, log, cache, deps = {} }) {
   const queues = new Map();
@@ -126,7 +126,7 @@ function createDispatcher({ client, db, processCfg, log, cache, deps = {} }) {
         ? `<@&${cfg.mentionRole}>`
         : null);
 
-      const flags = flagsFrom(cfg, processCfg);
+      const flags = eventRedactFlags(cfg, eventKey, flagsFrom(cfg, processCfg));
       if (embeds.length) embeds = redactEmbeds(embeds, flags);
       if (content) content = redactText(content, flags);
 

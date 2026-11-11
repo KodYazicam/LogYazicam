@@ -135,6 +135,17 @@ test("event group exposes color overrides", () => {
     mode.choices.map((choice) => choice.value),
     ["default", "embed", "plain", "webhook"],
   );
+  const redact = event.options.find((sub) => sub.name === "redact");
+  assert.ok(redact);
+  assert.deepEqual(
+    redact.options.map((option) => option.name).sort(),
+    ["clear", "enabled", "flag", "key"],
+  );
+  const flag = redact.options.find((option) => option.name === "flag");
+  assert.deepEqual(
+    flag.choices.map((choice) => choice.value).sort(),
+    ["email", "invite", "mention", "url"],
+  );
 });
 
 test("set command exposes quiet-day scheduling", () => {
@@ -449,6 +460,60 @@ test("event delivery command stores and restores a per-event mode", async () => 
   assert.match(response.content, /mode/i);
 });
 
+test("event redact command stores, disables, and clears one flag", async () => {
+  let extra = { eventRedact: { messageUpdate: { url: true } } };
+  const db = {
+    ensureGuild: () => ({ id: "g1" }),
+    extraOf: () => extra,
+    setExtra: (id, next) => {
+      extra = next;
+    },
+  };
+  let response;
+  const dispatch = {
+    guildCfg: () => ({ locale: "en" }),
+    refreshGuild: () => {},
+  };
+  const processCfg = { owners: [], defaultLocale: "en", slashEphemeral: true };
+  const makeInteraction = (flag, enabled, clear = false) => ({
+    guildId: "g1",
+    user: { id: "u1" },
+    memberPermissions: { has: () => true },
+    options: {
+      getSubcommandGroup: () => "event",
+      getSubcommand: () => "redact",
+      getString: (name) => (name === "key" ? "messageDelete" : flag),
+      getBoolean: (name) => (name === "clear" ? clear : enabled),
+    },
+    reply: async (payload) => {
+      response = payload;
+      return payload;
+    },
+  });
+
+  await execute(makeInteraction("email", true), { db, dispatch, processCfg });
+  assert.deepEqual(extra.eventRedact, {
+    messageUpdate: { url: true },
+    messageDelete: { email: true },
+  });
+  assert.match(response.content, /true/);
+
+  await execute(makeInteraction("email", false), { db, dispatch, processCfg });
+  assert.deepEqual(extra.eventRedact, {
+    messageUpdate: { url: true },
+    messageDelete: { email: false },
+  });
+  assert.match(response.content, /false/);
+
+  await execute(makeInteraction("email", true, true), { db, dispatch, processCfg });
+  assert.deepEqual(extra.eventRedact, { messageUpdate: { url: true } });
+  assert.match(response.content, /none|—/i);
+
+  await execute(makeInteraction("secrets", true), { db, dispatch, processCfg });
+  assert.deepEqual(extra.eventRedact, { messageUpdate: { url: true } });
+  assert.match(response.content, /flag/i);
+});
+
 test("event reset clears only that event's overrides", async () => {
   let extra = {
     eventColors: { messageDelete: 0xff0000, guildBanAdd: 0x00ff00 },
@@ -458,6 +523,7 @@ test("event reset clears only that event's overrides", async () => {
     quietBypass: { messageDelete: true, messageUpdate: true },
     eventIncludeChannels: { messageDelete: ["c1"], messageUpdate: ["c2"] },
     eventDelivery: { messageDelete: "plain", messageUpdate: "webhook" },
+    eventRedact: { messageDelete: { url: true }, messageUpdate: { mention: false } },
   };
   const db = {
     ensureGuild: () => ({ id: "g1" }),
@@ -495,6 +561,7 @@ test("event reset clears only that event's overrides", async () => {
   assert.deepEqual(extra.quietBypass, { messageUpdate: true });
   assert.deepEqual(extra.eventIncludeChannels, { messageUpdate: ["c2"] });
   assert.deepEqual(extra.eventDelivery, { messageUpdate: "webhook" });
+  assert.deepEqual(extra.eventRedact, { messageUpdate: { mention: false } });
   assert.match(response.content, /none|—/i);
 });
 
