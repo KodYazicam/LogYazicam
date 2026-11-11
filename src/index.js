@@ -67,6 +67,21 @@ const client = new Client({
 
 const dispatch = createDispatcher({ client, db, processCfg, log, cache });
 
+function runHistoryRetention(reason) {
+  try {
+    const { pruneAll } = require("./retention");
+    const deleted = pruneAll(db, processCfg);
+    if (deleted > 0) log.info("history retention", reason, `${deleted} row(s) removed`);
+  } catch (error) {
+    log.error("history retention", reason, error);
+  }
+}
+
+runHistoryRetention("startup");
+if (processCfg.historyPruneMs > 0) {
+  setInterval(() => runHistoryRetention("interval"), processCfg.historyPruneMs).unref();
+}
+
 if (processCfg.dashboardEnabled) {
   const { createDashboard } = require("./dashboard");
   const dashboard = createDashboard({ db, processCfg, log });

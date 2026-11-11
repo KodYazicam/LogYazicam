@@ -39,6 +39,8 @@ All notable changes to this project are documented here. The format follows
 - Optional read-only dashboard (`DASHBOARD_ENABLED`) for recent history rows,
   with loopback-by-default binding, bearer-token auth for non-loopback hosts,
   no external assets, and no write routes.
+- History retention: global `HISTORY_RETENTION_DAYS` / `HISTORY_PRUNE_MS` and
+  a per-guild `history_days` override. Only `history` rows are pruned.
 
 ### Security
 

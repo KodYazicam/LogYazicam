@@ -33,6 +33,7 @@ index.js
 | `config.js` | Env parse, `mergeGuild` (env → row → extra_json colors/strings) | Discord API |
 | `configTransfer.js` | `/log export` snapshot + validated `/log import` into SQLite | Discord API |
 | `dashboard.js` | Optional read-only HTTP view of `history` rows | Config mutation |
+| `retention.js` | History cutoff, per-guild override, and prune sweeps | Other tables |
 | `util.js` | `buildEmbed`, audit fetch, ignore match, truncate | Persistence |
 | `logger.js` | stdout + optional file; never throws | |
 | `deploy-commands.js` | REST `applicationCommands` put | Runtime |

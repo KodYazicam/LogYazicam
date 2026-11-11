@@ -137,7 +137,7 @@ Nothing is logged until you **turn an event or group on**. A fresh guild is sile
 | Embed | show ids, jump URLs, compact inline fields, footer prefix, color per create/update/delete |
 | Delivery | `channel.send` or guild webhook (username/avatar from env) |
 | Rate | Per-channel queue, interval between sends |
-| History | Capped JSON summaries, `/log history` export |
+| History | Capped JSON summaries, `/log history` export, time-based retention |
 | Config | `/log export` / `/log import` JSON transfer without webhook secrets |
 | Dashboard | Optional read-only HTTP view of recent history (`DASHBOARD_ENABLED`) |
 | Errors | Process log file, optional error channel, optional owner DM, no crash on handler throw |
@@ -548,6 +548,8 @@ All names English. Booleans: `1` `0` `true` `false` `yes` `no` `on` `off`. Guild
 | `IGNORE_SELF` | `true` | hot / guild | Drop the bot’s own id (stops log loops). |
 | `STORE_HISTORY` | `true` | hot / guild | Write summary rows. |
 | `HISTORY_LIMIT` | `200` | hot / guild | Per-guild cap; oldest trimmed. |
+| `HISTORY_RETENTION_DAYS` | `0` | hot / guild | Delete rows older than N days. `0` keeps forever. |
+| `HISTORY_PRUNE_MS` | `3600000` | restart | Retention sweep interval. `0` = startup only. |
 | `DEFAULT_PAUSED` | `false` | hot | New guilds start paused until `/log set`. |
 | `DEFAULT_PLAIN_TEXT` | `false` | hot | Flatten embeds by default. |
 | `DEFAULT_SHOW_THUMBNAILS` | `true` | hot | Avatars on embeds. |
@@ -715,6 +717,7 @@ One command for the remaining guild knobs (`extra_json`). `name` + `value`:
 | `thumbnails` | `true` / `false` | Avatar on embeds |
 | `actors` | `all` `humans` `bots` | Who is logged |
 | `cooldown_sec` | `0`–`3600` | Min seconds between two logs of the **same event key** |
+| `history_days` | `0`–`3650` | Delete stored history older than N days; `0` keeps forever |
 | `min_account_days` | `0`–`3650` | Skip members whose account is younger |
 | `quiet_start` / `quiet_end` | `HH:MM` in guild timezone | Drop events in that window (wraps midnight). `value:clear` unsets |
 | `webhook_name` / `webhook_avatar` | string / URL | Per-guild webhook identity |
@@ -929,6 +932,8 @@ Channel send: uses the bot user. Simpler. Rate limits are per-channel; the queue
 
 Not a compliance archive. Rows are `{ eventKey, channelId, at, summary }` e.g. `delete 123456`. Message **bodies are not stored** in SQLite (they were already posted in the embed). Turn `store_history` off if even summaries are too much.
 
+**Retention:** `HISTORY_RETENTION_DAYS=30` deletes rows older than 30 days at startup and every `HISTORY_PRUNE_MS` (default 1 hour; `0` = startup only). Override per guild with `/log set name:history_days value:30`; `0` keeps forever for that guild. Only `history` rows are touched — routes, ignores, snapshots, and invites stay.
+
 ## Read-only dashboard
 
 Optional, off by default. Set `DASHBOARD_ENABLED=true` and open `http://127.0.0.1:8787/`.
@@ -1074,6 +1079,7 @@ npm test
 - Docker quickstart invariants: named data volume, `/app/data` ownership before `USER 10001`, and the documented start/deploy/logs/backup commands
 - Config transfer: export without webhook secrets, round-trip import with channel remapping, unknown-key skips, validation/size rejection before writes, rollback, and attachment download limits
 - Dashboard: newest-first events, guild filter, limit cap, reduced payloads, bearer-token auth, non-loopback refusal, no external assets, health, 404, and 405
+- History retention: cutoff boundaries, per-guild overrides, unknown-guild defaults, untouched non-history tables, and config transfer
 
 CI: GitHub Actions, Node 22, `npm ci` && `npm test`.
 
