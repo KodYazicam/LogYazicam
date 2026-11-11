@@ -268,6 +268,53 @@ test("skips invalid per-event overrides", (t) => {
   assert.deepEqual(extra.quietDays, ["mon"]);
 });
 
+test("skips invalid timezone, hidden fields, strings, colors, and redact flags", (t) => {
+  const db = withDb(t);
+  if (!db) return;
+
+  const payload = {
+    format: FORMAT,
+    version: VERSION,
+    guild: { timezone: "Not/AZone" },
+    routes: [],
+    ignores: [],
+    extra: {
+      hiddenFields: {
+        "*": "bad",
+        messageDelete: "bad",
+        unknown: [],
+        channelCreate: ["name"],
+      },
+      strings: {
+        ["x".repeat(129)]: "long-key",
+        good: "value",
+        bad: 5,
+      },
+      colors: {
+        badSlot: 1,
+        info: "not-a-color",
+        create: 0x112233,
+      },
+      redact: {
+        unknown: true,
+        url: true,
+        mention: "not-a-bool",
+      },
+    },
+  };
+
+  const counts = importGuild(db, "202", payload);
+  assert.equal(counts.settings, 0);
+  assert.equal(counts.skippedSettings, 1);
+  assert.equal(counts.skippedExtra, 9);
+  assert.equal(counts.skipped, 10);
+  const extra = db.extraOf(db.getGuild.get("202"));
+  assert.deepEqual(extra.hiddenFields, { channelCreate: ["name"] });
+  assert.deepEqual(extra.strings, { good: "value" });
+  assert.deepEqual(extra.colors, { create: 0x112233 });
+  assert.deepEqual(extra.redact, { url: true });
+});
+
 test("replaces omitted settings and clears missing mention roles", (t) => {
   const db = withDb(t);
   if (!db) return;

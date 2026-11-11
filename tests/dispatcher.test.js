@@ -1,6 +1,7 @@
 const { test } = require("node:test");
 const assert = require("node:assert/strict");
 const fs = require("fs");
+const http = require("http");
 const os = require("os");
 const path = require("path");
 const { createDispatcher } = require("../src/dispatcher");
@@ -915,4 +916,57 @@ test("preferWebhook without credentials warns and falls back to channel", async 
   assert.equal(h.channelSends.length, 1);
   assert.equal(h.dispatch.metrics.sent, 1);
   assert.ok(h.warnings.some((warning) => warning.includes("no webhook configured")));
+});
+
+test("HTTP sinks mirror events and sink exceptions do not drop delivery", async (t) => {
+  const received = [];
+  const server = http.createServer((req, res) => {
+    let body = "";
+    req.on("data", (chunk) => {
+      body += chunk;
+    });
+    req.on("end", () => {
+      received.push(JSON.parse(body));
+      res.writeHead(204);
+      res.end();
+    });
+  });
+  await new Promise((resolve) => server.listen(0, "127.0.0.1", resolve));
+  t.after(() => new Promise((resolve) => server.close(resolve)));
+  const { port } = server.address();
+
+  const h = setup({
+    item: makeItem({ summary: "http sink" }),
+    processCfg: {
+      logSink: "http",
+      httpSinkUrl: `http://127.0.0.1:${port}/sink`,
+    },
+  });
+  await h.dispatch.tick();
+  assert.equal(h.dispatch.metrics.sent, 1);
+  assert.equal(h.hookCalls.length, 1);
+  await new Promise((resolve) => setTimeout(resolve, 50));
+  assert.equal(received.length, 1);
+  assert.equal(received[0].summary, "http sink");
+
+  const sinksPath = require.resolve("../src/sinks");
+  const sinks = require(sinksPath);
+  const original = sinks.postHttpSink;
+  sinks.postHttpSink = () => {
+    throw new Error("sink exploded");
+  };
+  try {
+    const failing = setup({
+      item: makeItem({ summary: "sink failure" }),
+      processCfg: {
+        logSink: "http",
+        httpSinkUrl: "http://127.0.0.1:9/sink",
+      },
+    });
+    await failing.dispatch.tick();
+    assert.equal(failing.dispatch.metrics.sent, 1);
+    assert.ok(failing.warnings.some((warning) => warning.includes("sink exploded")));
+  } finally {
+    sinks.postHttpSink = original;
+  }
 });

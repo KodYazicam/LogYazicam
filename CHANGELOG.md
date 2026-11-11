@@ -102,6 +102,11 @@ All notable changes to this project are documented here. The format follows
   digest window flush with and without the minimum count, staff-copy enqueue,
   route-failure logging, and missing-webhook fallback warnings;
   `dispatcher.js` line coverage is now about 98%.
+- Defensive-path coverage: malformed embeds fall back to the source embed,
+  malformed `extra_json` falls back to an empty object, dashboard request
+  failures return a logged 500, HTTP sink mirroring and sink exceptions are
+  covered, and config sanitizers skip invalid timezone/hidden-field/string/
+  color/redact entries; overall line coverage is now about 99.6%.
 - Fallback-path coverage for utility formatting, logger append failures,
   malformed dashboard payloads, invalid dashboard ports, and HTTP sink
   connection errors; `util.js`, `logger.js`, and `sinks.js` now have 100%
