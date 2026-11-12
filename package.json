@@ -1,6 +1,6 @@
 {
   "name": "logyazicam",
-  "version": "1.1.0",
+  "version": "2.0.0",
   "description": "Per-guild Discord logging bot. Every gateway event that Discord actually emits, routed and formatted from SQLite + env. No restart for config.",
   "main": "src/index.js",
   "scripts": {
