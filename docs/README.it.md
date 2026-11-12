@@ -27,6 +27,7 @@ Il catalogo completo e ogni variabile d’ambiente sono nel **[README inglese](.
 Author : Batuhan (KodYazicam)
 Project: LogYazicam
 Source : https://github.com/KodYazicam/LogYazicam
+Profile: https://github.com/KodYazicam/Kodyazicam
 ```
 
 **Apache-2.0** — free to use, modify, and distribute. Attribution is not required.

@@ -12,6 +12,7 @@ Katalog lengkap di **[README Inggris](../README.md)**. Nama opsi slash dan kunci
 ```
 Author : Batuhan (KodYazicam) · Project: LogYazicam
 Source : https://github.com/KodYazicam/LogYazicam
+Profile: https://github.com/KodYazicam/Kodyazicam
 ```
 
 **Apache-2.0** — free to use, modify, and distribute. Attribution is not required.

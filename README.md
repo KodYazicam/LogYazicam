@@ -38,6 +38,7 @@ The bot UI (`/log locale`) uses the same language codes. Slash **option names** 
 Author : Batuhan (KodYazicam)
 Project: LogYazicam
 Source : https://github.com/KodYazicam/LogYazicam
+Profile: https://github.com/KodYazicam/Kodyazicam
 ```
 
 **Apache-2.0** — free to use, modify, and distribute. Attribution is not required. The embed footer credit is on by default in this build; you can disable it with `SHOW_CREDIT=false` or `/log set name:credit value:false`.

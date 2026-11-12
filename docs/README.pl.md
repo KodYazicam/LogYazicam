@@ -27,6 +27,7 @@ Pełny katalog i każda zmienna env są w **[angielskim README](../README.md)**.
 Author : Batuhan (KodYazicam)
 Project: LogYazicam
 Source : https://github.com/KodYazicam/LogYazicam
+Profile: https://github.com/KodYazicam/Kodyazicam
 ```
 
 **Apache-2.0** — free to use, modify, and distribute. Attribution is not required.

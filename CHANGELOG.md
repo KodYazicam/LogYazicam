@@ -34,6 +34,7 @@ All notable changes to this project are documented here. The format follows
   Apache-2.0 attribution wording, the slash-command size estimate, and the
   locale coverage table. The locale feature row now states that non-English
   packs cover the core operator strings and fall back to English.
+- README metadata now links to the [KodYazicam profile](https://github.com/KodYazicam/Kodyazicam) in every language.
 
 ### Fixed
 
