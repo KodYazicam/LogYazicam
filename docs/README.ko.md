@@ -50,7 +50,7 @@ cd LogYazicam && cp .env.example .env
 npm install && npm test && npm run deploy && npm start
 ```
 
-Node **20 또는 22**. 초대: `bot` + `applications.commands`, 비트필드 `117888`. **Administrator 체크하지 마세요.**
+Node **22 또는 24**. 초대: `bot` + `applications.commands`, 비트필드 `117888`. **Administrator 체크하지 마세요.**
 
 ```
 https://discord.com/oauth2/authorize?client_id=CLIENT_ID&scope=bot%20applications.commands&permissions=117888

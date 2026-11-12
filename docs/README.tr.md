@@ -55,7 +55,7 @@ npm run deploy
 npm start
 ```
 
-Node **20 veya 22**. Davet: `bot` + `applications.commands`, bitfield `117888` (View, Send, Embed, Attach, History, View Audit Log). **Administrator işaretleme.**
+Node **22 veya 24**. Davet: `bot` + `applications.commands`, bitfield `117888` (View, Send, Embed, Attach, History, View Audit Log). **Administrator işaretleme.**
 
 ```
 https://discord.com/oauth2/authorize?client_id=CLIENT_ID&scope=bot%20applications.commands&permissions=117888

@@ -5,7 +5,7 @@
 
 <p align="center">
   <img src="https://img.shields.io/badge/discord.js-v14-5865F2?style=flat-square&logo=discord&logoColor=white" alt="discord.js">
-  <img src="https://img.shields.io/badge/node-%3E%3D20-339933?style=flat-square" alt="Node">
+  <img src="https://img.shields.io/badge/node-%3E%3D22-339933?style=flat-square" alt="Node">
   <img src="https://img.shields.io/badge/license-Apache--2.0-2ea44f?style=flat-square" alt="License">
   <img src="https://img.shields.io/badge/author-KodYazicam-0D0D0D?style=flat-square" alt="Author">
 </p>
@@ -517,7 +517,7 @@ In Discord:
 
 Then delete a message the bot can see. You should get `messageDelete` in `#mod-log` with the configured footer.
 
-`better-sqlite3` is a native addon. Use Node **20 or 22 LTS**. Node 24 may fail to find bindings until a prebuild exists (`npm install` without `--ignore-scripts` on a machine with `build-essential`).
+`better-sqlite3` is a native addon and version 13 requires Node **22 or 24**. If a prebuild is unavailable for your platform, install `python3`, `make`, and `g++`, then run `npm install` **without** `--ignore-scripts` so the addon can compile.
 
 ---
 
@@ -1159,7 +1159,7 @@ npm run check      # node --check for every JS file
 - Sink isolation: unwritable file directories cannot drop Discord delivery
 - SQLite backup: WAL-consistent online snapshots, nested directories, and logged failures
 
-CI: GitHub Actions runs `npm ci`, the syntax check, the full test suite on Node 20 and 22, coverage on Node 22, a production dependency audit, and a Docker image build.
+CI: GitHub Actions runs `npm ci`, the syntax check, the full test suite on Node 22 and 24, coverage on Node 22, a production dependency audit, and a Docker image build.
 
 ---
 
@@ -1173,7 +1173,7 @@ CI: GitHub Actions runs `npm ci`, the syntax check, the full test suite on Node 
 | No executor on ban/kick | No audit access or entry too old | View Audit Log; raise `AUDIT_MAX_AGE_MS` |
 | Log loop | Logging the log channel | `ignore_self`, ignore that channel, or webhook + `ignore_webhooks` |
 | `presenceUpdate` silent | Intent and/or event off | Portal Presence + `/log event on key:presenceUpdate` |
-| `better-sqlite3` bindings | Node 24 / no compiler | Node 22, `npm install` **with** scripts |
+| `better-sqlite3` bindings | No prebuild / no compiler | Node 22 or 24 + `python3`/`make`/`g++`; `npm install` **with** scripts |
 | Config “not applying” | Looking at TOKEN or waiting on timer | `/log reload`; TOKEN needs restart |
 | Slash “unknown event” | Typo | `/log events` or autocomplete |
 | Webhook 401 | Rotated token | `/log webhook` again or `clear` |

@@ -29,4 +29,4 @@ cd LogYazicam && cp .env.example .env && npm install && npm run deploy && npm st
 /log test
 ```
 
-इनवाइट `117888`। Administrator न चुनें। Node 20/22।
+इनवाइट `117888`। Administrator न चुनें। Node 22/24।

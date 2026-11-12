@@ -50,7 +50,7 @@ cd LogYazicam && cp .env.example .env
 npm install && npm test && npm run deploy && npm start
 ```
 
-Node **20 ou 22**. Invitation : `bot` + `applications.commands`, bitfield `117888`. **Pas Administrateur.**
+Node **22 ou 24**. Invitation : `bot` + `applications.commands`, bitfield `117888`. **Pas Administrateur.**
 
 ```
 https://discord.com/oauth2/authorize?client_id=CLIENT_ID&scope=bot%20applications.commands&permissions=117888

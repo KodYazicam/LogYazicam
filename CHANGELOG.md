@@ -25,9 +25,11 @@ All notable changes to this project are documented here. The format follows
   the builder layer, while the runtime image contains only production
   `node_modules` and `src`. Compose also enables `init` and
   `no-new-privileges`.
-- CI runs the syntax check and tests on Node 20 and 22, coverage on Node 22, a
+- CI runs the syntax check and tests on Node 22 and 24, coverage on Node 22, a
   production dependency audit, and a Docker image build. `npm run check` and
   `npm run test:coverage` expose the same checks locally.
+- Node 22 is now the minimum supported runtime: `better-sqlite3` 13 requires
+  Node 22+, and Node 20 crashed during the SQLite tests.
 - Removed the unused `MENTION_USERS` environment variable from config parsing
   and `.env.example`.
 - Corrected README command examples (`/log set name:credit value:false`), the

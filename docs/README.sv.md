@@ -29,4 +29,4 @@ cd LogYazicam && cp .env.example .env && npm install && npm run deploy && npm st
 /log test
 ```
 
-Invite bitfield `117888`. Inte Administrator. Node 20/22.
+Invite bitfield `117888`. Inte Administrator. Node 22/24.

@@ -51,7 +51,7 @@ cp .env.example .env
 npm install && npm test && npm run deploy && npm start
 ```
 
-Node **20 oder 22**. Invite: `bot` + `applications.commands`, Bitfeld `117888`. **Kein Administrator.**
+Node **22 oder 24**. Invite: `bot` + `applications.commands`, Bitfeld `117888`. **Kein Administrator.**
 
 ```
 https://discord.com/oauth2/authorize?client_id=CLIENT_ID&scope=bot%20applications.commands&permissions=117888

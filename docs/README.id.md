@@ -29,4 +29,4 @@ cd LogYazicam && cp .env.example .env && npm install && npm run deploy && npm st
 /log test
 ```
 
-Invite `117888`. Jangan centang Administrator. Node 20/22.
+Invite `117888`. Jangan centang Administrator. Node 22/24.
