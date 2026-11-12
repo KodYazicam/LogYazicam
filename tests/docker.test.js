@@ -16,7 +16,13 @@ test("compose uses a named data volume that the image user can write", () => {
   assert.doesNotMatch(compose, /\.\/data:\/app\/data/);
   assert.match(compose, /\.\/\.env:\/app\/\.env:ro/);
   assert.match(compose, /ENV_FILE_WINS:\s*"true"/);
+  assert.match(compose, /init:\s*true/);
+  assert.match(compose, /no-new-privileges:true/);
   assert.match(read(".dockerignore"), /^\.env$/m);
+
+  assert.match(dockerfile, /FROM node:22-bookworm-slim AS deps/);
+  assert.match(dockerfile, /COPY --from=deps \/app\/node_modules/);
+  assert.doesNotMatch(dockerfile, /npm (?:ci|install) --omit=dev \|\|/);
 
   const userIndex = dockerfile.indexOf("USER 10001");
   const dataIndex = dockerfile.indexOf("chown -R 10001:10001 /app/data");

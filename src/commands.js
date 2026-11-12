@@ -1178,12 +1178,33 @@ async function execute(interaction, { db, dispatch, processCfg }) {
 
   if (sub === "import") {
     const { readAttachment, importGuild, MAX_BYTES } = require("./configTransfer");
+    // The attachment download can take up to 10 seconds. Slash interactions
+    // must be acknowledged within 3 seconds, so defer before fetching. Prefix
+    // messages have no such deadline and simply reply when the import finishes.
+    let deferred = false;
+    if (typeof interaction.deferReply === "function") {
+      try {
+        await interaction.deferReply({ ephemeral: hidden });
+        deferred = true;
+      } catch {
+        // Already acknowledged by another path; keep going with a normal reply.
+      }
+    }
+    const reply = (payload) => {
+      if (!deferred || typeof interaction.editReply !== "function") return interaction.reply(payload);
+      const data = typeof payload === "string" ? { content: payload } : { ...payload };
+      delete data.ephemeral;
+      return interaction.editReply(data);
+    };
     const attachment = interaction.options.getAttachment("file", true);
+    if (!attachment) {
+      return reply({ content: t(locale, "cmd.config_import_file"), ephemeral: true });
+    }
     if (!String(attachment.name || "").toLowerCase().endsWith(".json")) {
-      return interaction.reply({ content: t(locale, "cmd.config_import_file"), ephemeral: true });
+      return reply({ content: t(locale, "cmd.config_import_file"), ephemeral: true });
     }
     if (Number(attachment.size) > MAX_BYTES) {
-      return interaction.reply({
+      return reply({
         content: t(locale, "cmd.config_import_too_big", { max: MAX_BYTES / 1024 }),
         ephemeral: true,
       });
@@ -1192,7 +1213,7 @@ async function execute(interaction, { db, dispatch, processCfg }) {
     try {
       payload = await readAttachment(attachment);
     } catch (error) {
-      return interaction.reply({
+      return reply({
         content: t(locale, "cmd.config_import_invalid", { error: error.message }),
         ephemeral: true,
       });
@@ -1204,13 +1225,13 @@ async function execute(interaction, { db, dispatch, processCfg }) {
     try {
       result = importGuild(db, interaction.guildId, payload, { resolveChannel, resolveRole });
     } catch (error) {
-      return interaction.reply({
+      return reply({
         content: t(locale, "cmd.config_import_invalid", { error: error.message }),
         ephemeral: true,
       });
     }
     dispatch.refreshGuild(interaction.guildId);
-    return interaction.reply({
+    return reply({
       content: t(locale, "cmd.config_import", {
         ...result,
         skipped: result.skipped,

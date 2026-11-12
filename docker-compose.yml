@@ -1,7 +1,10 @@
 services:
   logyazicam:
     build: .
+    init: true
     restart: unless-stopped
+    security_opt:
+      - no-new-privileges:true
     env_file: .env
     environment:
       # Let HOT_RELOAD_MS read the mounted .env instead of the frozen env_file.

@@ -40,7 +40,7 @@ Project: LogYazicam
 Source : https://github.com/KodYazicam/LogYazicam
 ```
 
-**Apache-2.0** — free to use, modify, and distribute. Attribution is not required. The embed footer credit is on by default in this build; you can disable it with `SHOW_CREDIT=false` or `/log config credit false`.
+**Apache-2.0** — free to use, modify, and distribute. Attribution is not required. The embed footer credit is on by default in this build; you can disable it with `SHOW_CREDIT=false` or `/log set name:credit value:false`.
 
 ---
 
@@ -131,7 +131,7 @@ Nothing is logged until you **turn an event or group on**. A fresh guild is sile
 | --- | --- |
 | Events | 88 English keys in 24 groups — all have a real `client.on` (or a split of `voiceStateUpdate` / `guildMemberUpdate` / `guildAuditLogEntryCreate`) |
 | Routing | Default channel + per-event override + per-group enable |
-| Locale | 18 UI packs per guild (`en` complete; others override) |
+| Locale | 18 UI packs per guild (`en` complete; other packs cover ~55–58 core strings and fall back to English) |
 | Timezone | Any IANA id (`Europe/Istanbul`), validated |
 | Filters | ignore bots / webhooks / self; ignore list by snowflake |
 | Embed | show ids, jump URLs, compact inline fields, footer prefix, color per create/update/delete |
@@ -578,7 +578,7 @@ All names English. Booleans: `1` `0` `true` `false` `yes` `no` `on` `off`. Numer
 | `COMMAND_NAME` | `log` | deploy | Slash + prefix verb (`!log` / `/log`). Redeploy after change. |
 | `CONFIG_PERMISSION` | `ManageGuild` | deploy / hot | Discord permission name; `OWNER_IDS` always bypass. Slash defaults apply on `npm run deploy`; prefix checks update on hot reload. |
 | `SLASH_EPHEMERAL` | `true` | hot | Slash replies hidden. Guild: `/log set name:ephemeral`. |
-| `SHOW_CREDIT` | `true` | hot | Embed footer credit. Guild: `name:credit`. LICENSE still requires attribution in docs. |
+| `SHOW_CREDIT` | `true` | hot | Embed footer credit. Guild: `name:credit`. Apache-2.0 does not require attribution. |
 | `EMBED_FIELD_MAX` | `1024` | hot | Field value cap (Discord max 1024). |
 | `EMBED_DESC_MAX` | `4000` | hot | Description cap. |
 | `EMBED_FOOTER_MAX` | `2048` | hot | Footer cap. |
@@ -699,7 +699,7 @@ Downloads `logyazicam-config-{guildId}.json` with a format marker, version, guil
 
 ### `/log import`
 
-`file` is a `.json` from `/log export`; `channel` is an optional fallback. The file is validated (format, version, 1 MiB limit) and applied in one SQLite transaction. Import **replaces** settings, routes, ignores, and `extra_json`: any setting omitted by the file is reset to `null`, so `mergeGuild` falls back to env defaults instead of inheriting the target guild's old value. Unknown event keys, ignore kinds, settings, and extra keys are skipped and counted. Missing channel/category ids use the `channel` option or become `null`; a `mention_role` that is not in the target guild becomes `null` and counts as skipped. Webhook credentials already set on the target guild are left untouched.
+`file` is a `.json` from `/log export` (upload it in slash mode, or paste a Discord CDN URL in prefix mode); `channel` is an optional fallback. The file is validated (format, version, 1 MiB limit) and applied in one SQLite transaction. Import **replaces** settings, routes, ignores, and `extra_json`: any setting omitted by the file is reset to `null`, so `mergeGuild` falls back to env defaults instead of inheriting the target guild's old value. Unknown event keys, ignore kinds, settings, and extra keys are skipped and counted. Missing channel/category ids use the `channel` option or become `null`; a `mention_role` that is not in the target guild becomes `null` and counts as skipped. Webhook credentials already set on the target guild are left untouched.
 
 ### `/log reload`
 
@@ -1029,8 +1029,6 @@ The page reads the `history` table only: guild, event key, time, channel, and su
 
 ## Locales
 
-| Code | File | Coverage |
-| --- | --- | --- |
 | Code | README | Bot UI pack |
 | --- | --- | --- |
 | `en` | [README.md](./README.md) | Complete (`src/locales/en.js`) |
@@ -1090,7 +1088,7 @@ If `PRESENCE_INTENT` is false, or the portal has Presence off, `presenceUpdate` 
 ## Limits Discord imposes
 
 - Autocomplete max 25 choices — that is why `key` is free text + autocomplete, not an 88-choice list.
-- Slash command JSON ~6kB here (under 8kB Discord cap).
+- Slash command text is ~3.6k counted characters here (under Discord's 8k cap); the serialized JSON is ~12 KB.
 - Message content after delete only if cached or partial fetch works.
 - Bulk delete list is cache, not REST history.
 - Global commands: up to 1 hour to appear.
@@ -1138,7 +1136,9 @@ Do not add a key without a listener. Tests do not catch missing listeners; the R
 ## Tests and CI
 
 ```bash
-npm test
+npm test           # node --test
+npm run test:coverage
+npm run check      # node --check for every JS file
 ```
 
 - Unique English keys, every key has `event.*` in `en`
@@ -1158,7 +1158,7 @@ npm test
 - Sink isolation: unwritable file directories cannot drop Discord delivery
 - SQLite backup: WAL-consistent online snapshots, nested directories, and logged failures
 
-CI: GitHub Actions, Node 22, `npm ci` && `npm test`.
+CI: GitHub Actions runs `npm ci`, the syntax check, the full test suite on Node 20 and 22, coverage on Node 22, a production dependency audit, and a Docker image build.
 
 ---
 
@@ -1192,7 +1192,7 @@ CI: GitHub Actions, Node 22, `npm ci` && `npm test`.
 
 **Is it on npm?** No. Clone.
 
-**Can I strip the footer credit?** Yes. It is on by default, but Apache-2.0 does not require it. Set `SHOW_CREDIT=false` or use `/log config credit false`.
+**Can I strip the footer credit?** Yes. It is on by default, but Apache-2.0 does not require it. Set `SHOW_CREDIT=false` or use `/log set name:credit value:false`.
 
 ---
 

@@ -391,6 +391,21 @@ test("enqueue routes an event into the queue and tick delivers it", async () => 
   assert.equal(h.hookCalls.length, 1);
   assert.equal(h.dispatch.queues.get("g1:c1").length, 0);
 });
+test("drain flushes queued items and reports an empty queue", async () => {
+  const h = setup({
+    queued: false,
+    cfg: {
+      events: { messageDelete: { on: true, channelId: "c1" } },
+    },
+  });
+
+  await h.dispatch.enqueue({ id: "g1" }, "messageDelete", { summary: "drain me" });
+  assert.equal(h.dispatch.queueSize(), 1);
+  assert.equal(await h.dispatch.drain({ timeoutMs: 1000, intervalMs: 1 }), 0);
+  assert.equal(h.dispatch.metrics.sent, 1);
+  assert.equal(h.hookCalls.length, 1);
+});
+
 test("per-event cooldown zero disables the guild cooldown", async () => {
   const h = setup({
     queued: false,

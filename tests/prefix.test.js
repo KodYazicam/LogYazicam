@@ -64,6 +64,26 @@ test("prefix URL values are not mistaken for new options", () => {
   assert.equal(url.options.getString("value"), "https://example.com/a.png");
 });
 
+test("prefix import resolves a pasted Discord CDN attachment URL", () => {
+  const attachment = fake([
+    "import",
+    "file:https://cdn.discordapp.com/attachments/1/2/config.json?x=1",
+  ]).options.getAttachment("file");
+  assert.deepEqual(attachment, {
+    url: "https://cdn.discordapp.com/attachments/1/2/config.json?x=1",
+    name: "config.json",
+    size: 0,
+  });
+  assert.equal(fake(["import"]).options.getAttachment("file"), null);
+  assert.equal(
+    fake(["import", "file:https://cdn.discordapp.com/attachments/1/2/a%20b.json"])
+      .options.getAttachment("file").name,
+    "a b.json",
+  );
+  assert.equal(fake(["import", "file:https://example.com/config.json"]).options.getAttachment("file"), null);
+  assert.equal(fake(["import", "file:http://cdn.discordapp.com/config.json"]).options.getAttachment("file"), null);
+});
+
 test("canPrefix allows owners and configured permissions but denies others", () => {
   assert.equal(canPrefix({ author: { id: "owner1" } }, { owners: ["owner1"] }), true);
   assert.equal(

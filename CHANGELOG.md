@@ -3,7 +3,7 @@
 All notable changes to this project are documented here. The format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
-## [Unreleased]
+## [1.1.0] - 2026-11-12
 
 ### Changed
 
@@ -21,6 +21,19 @@ All notable changes to this project are documented here. The format follows
 - Docker Compose mounts `.env` read-only and sets `ENV_FILE_WINS=true`, so
   `HOT_RELOAD_MS` sees host edits instead of the frozen `env_file` values. A
   `.dockerignore` keeps `.env`, data, and build output out of the image context.
+- The Docker image now uses a multi-stage build: the compiler toolchain stays in
+  the builder layer, while the runtime image contains only production
+  `node_modules` and `src`. Compose also enables `init` and
+  `no-new-privileges`.
+- CI runs the syntax check and tests on Node 20 and 22, coverage on Node 22, a
+  production dependency audit, and a Docker image build. `npm run check` and
+  `npm run test:coverage` expose the same checks locally.
+- Removed the unused `MENTION_USERS` environment variable from config parsing
+  and `.env.example`.
+- Corrected README command examples (`/log set name:credit value:false`), the
+  Apache-2.0 attribution wording, the slash-command size estimate, and the
+  locale coverage table. The locale feature row now states that non-English
+  packs cover the core operator strings and fall back to English.
 
 ### Fixed
 
@@ -55,9 +68,26 @@ All notable changes to this project are documented here. The format follows
 - `SIGTERM`/`SIGINT` now close the dashboard, gateway client, and SQLite handle
   before exit. An `uncaughtException` is reported and then exits with code 1
   instead of leaving the process in an unknown state.
+- Shutdown now drains the in-memory delivery queue for up to 3 seconds before
+  closing Discord and SQLite, so a clean stop does not silently discard events.
+- `EMBED_DESC_MAX`, `EMBED_FOOTER_MAX`, and `BULK_LINE_LIMIT` are forwarded into
+  merged guild configs; previously the documented variables were parsed but
+  never used.
+- `/log import` now defers the slash interaction before downloading the
+  attachment, then edits the reply, avoiding the 3-second acknowledgement
+  timeout. Prefix imports resolve pasted attachment URLs instead of throwing on
+  a missing attachment object, and both paths report a missing file cleanly.
+- SQLite connections set `busy_timeout = 5000`, so sharded processes wait for a
+  short lock instead of failing an event with `SQLITE_BUSY`.
 
 ### Added
 
+- `scripts/check-syntax.js` and `npm run check` for a dependency-free syntax
+  pass across `src`, `tests`, and `scripts`.
+- `tests/index.test.js` covers the entrypoint's missing-token failure path, and
+  new assertions cover forwarded display limits, import deferral, prefix
+  attachment URLs, shutdown drain, SQLite `busy_timeout`, and the multi-stage
+  Dockerfile.
 - Regression tests for webhook delivery: success, 429 retry (no duplicate
   delivery), 500 and timeout drops, channel fallback, and delivery metrics.
   `createDispatcher` accepts an optional `deps` object for the webhook client,

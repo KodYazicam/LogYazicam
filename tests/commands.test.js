@@ -785,6 +785,7 @@ function commandHarness(t, options = {}) {
     addIgnore: [],
     removeIgnore: [],
     replaceConfig: [],
+    defer: [],
     refresh: 0,
   };
   let response;
@@ -867,6 +868,13 @@ function commandHarness(t, options = {}) {
         getRole: (name) => roles[name] ?? null,
         getAttachment: () => overrides.attachment ?? null,
         getFocused: () => overrides.focused ?? null,
+      },
+      deferReply: async (payload) => {
+        calls.defer.push(payload);
+      },
+      editReply: async (payload) => {
+        response = payload;
+        return payload;
       },
       reply: async (payload) => {
         response = payload;
@@ -1251,6 +1259,8 @@ test("config export and import validate files and replace config", async (t) => 
     },
   });
   assert.match(imported.content, /Imported config/);
+  assert.equal(destination.calls.defer.length, 1);
+  assert.equal(destination.calls.defer[0].ephemeral, true);
   assert.equal(destination.calls.replaceConfig.length, 1);
   assert.equal(destination.calls.replaceConfig[0][0], "g1");
 });
@@ -1523,6 +1533,23 @@ test("watch remove, group defaults, and unknown subcommands fall through correct
 
   const unknown = await runCommand(h, { sub: "not-a-subcommand" });
   assert.match(unknown.content, /cannot use/i);
+});
+
+test("import reports a missing attachment after deferring", async (t) => {
+  const h = commandHarness(t);
+  const response = await runCommand(h, { sub: "import", attachment: null });
+
+  assert.match(response.content, /\.json|file/i);
+  assert.equal(h.calls.defer.length, 1);
+  assert.equal(h.calls.replaceConfig.length, 0);
+
+  const wrongType = await runCommand(h, {
+    sub: "import",
+    attachment: { name: "config.txt", size: 10 },
+  });
+  assert.match(wrongType.content, /\.json|file/i);
+  assert.equal(h.calls.defer.length, 2);
+  assert.equal(h.calls.replaceConfig.length, 0);
 });
 
 test("import failures report invalid config without writing", async (t) => {

@@ -8,6 +8,9 @@ function openDb(filePath) {
   const db = new Database(filePath);
   db.pragma("journal_mode = WAL");
   db.pragma("foreign_keys = ON");
+  // Sharded deployments can have several writer processes on the same file.
+  // Wait for a short window instead of failing the event with SQLITE_BUSY.
+  db.pragma("busy_timeout = 5000");
   db.exec(`
     CREATE TABLE IF NOT EXISTS guilds (
       id TEXT PRIMARY KEY,

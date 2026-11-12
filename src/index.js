@@ -6,7 +6,6 @@ const {
 } = require("discord.js");
 const { loadEnvFile, processConfig, applyConfig } = require("./config");
 const { buildIntents } = require("./intents");
-const { openDb } = require("./db");
 const { createLogger } = require("./logger");
 const { createDispatcher } = require("./dispatcher");
 const { bindEvents } = require("./events");
@@ -33,6 +32,7 @@ if (processCfg.shardList && !process.env.SHARDING_MANAGER) {
   return;
 }
 
+const { openDb } = require("./db");
 const log = createLogger(processCfg);
 const db = openDb(processCfg.databasePath);
 const cache = new Map();
@@ -102,6 +102,12 @@ async function shutdown(code, reason) {
     log.info("shutdown", reason);
   } catch {
     // logging is best-effort during shutdown
+  }
+  try {
+    const remaining = await dispatch.drain({ timeoutMs: 3000 });
+    if (remaining > 0) log.warn("shutdown queue not empty", `${remaining} item(s)`);
+  } catch (error) {
+    try { log.warn("queue drain failed", error.message); } catch { /* ignore */ }
   }
   try {
     if (dashboard) await dashboard.close();

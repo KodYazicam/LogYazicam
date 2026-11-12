@@ -18,6 +18,7 @@ test("guild routes persist without process restart", (t) => {
     }
     throw error;
   }
+  assert.equal(db.raw.pragma("busy_timeout", { simple: true }), 5000);
   db.ensureGuild("g1");
   db.setRoute("g1", "messageDelete", { enabled: true, channelId: "c1" });
   const row = db.getRoute.get("g1", "messageDelete");

@@ -108,4 +108,4 @@ Tam tablo ve her key’in embed alanları: [İngilizce README — catalog](../RE
 
 ## Lisans
 
-Apache-2.0 — [LICENSE](../LICENSE). Çatallarda atıf kalsın.
+Apache-2.0 — [LICENSE](../LICENSE). Atıf zorunlu değildir; altbilgi kredisi isteğe bağlıdır.

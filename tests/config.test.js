@@ -59,6 +59,33 @@ test("processConfig truncates and bounds numeric environment values", () => {
   assert.equal(cfg.retryMax, 5);
 });
 
+test("mergeGuild forwards description, footer, and bulk limits", () => {
+  const processCfg = processConfig({
+    EMBED_DESC_MAX: "1200",
+    EMBED_FOOTER_MAX: "900",
+    BULK_LINE_LIMIT: "12",
+  });
+  const merged = mergeGuild(
+    processCfg,
+    { id: "g1", locale: "en", timezone: "UTC", extra_json: "{}" },
+    [],
+    [],
+    {},
+  );
+
+  assert.equal(merged.descMax, 1200);
+  assert.equal(merged.footerMax, 900);
+  assert.equal(merged.bulkLineLimit, 12);
+
+  const embed = buildEmbed(
+    { ...merged, descMax: 7, showCredit: false, showTimestamp: false },
+    "messageDelete",
+    [],
+    { description: "abcdefgh" },
+  );
+  assert.equal(embed.data.description, "abcdef…");
+});
+
 test("loadEnvFile can prefer the file for Docker hot reload", (t) => {
   const dir = fs.mkdtempSync(path.join(os.tmpdir(), "logyazicam-env-"));
   const file = path.join(dir, ".env");

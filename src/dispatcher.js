@@ -10,6 +10,7 @@ function createDispatcher({ client, db, processCfg, log, cache, deps = {} }) {
   const makeWebhook = deps.createWebhookClient || ((options) => new WebhookClient(options));
   const now = deps.now || Date.now;
   const schedule = deps.setInterval || setInterval;
+  const wait = deps.sleep || ((ms) => new Promise((resolve) => setTimeout(resolve, ms)));
 
   function guildCfg(guildId) {
     return cache.get(guildId);
@@ -297,10 +298,40 @@ function createDispatcher({ client, db, processCfg, log, cache, deps = {} }) {
     }
   }
 
+  function queueSize() {
+    let size = 0;
+    for (const q of queues.values()) size += q.length;
+    return size;
+  }
+
+  // Best-effort shutdown drain: flush while there is time left, but never
+  // block shutdown forever on a future 429 retryAt or a slow network call.
+  async function drain({ timeoutMs = 5000, intervalMs = 25 } = {}) {
+    const budget = Number(timeoutMs);
+    const deadline = now() + (Number.isFinite(budget) && budget > 0 ? budget : 0);
+    while (queueSize() > 0 && now() <= deadline) {
+      await flushQueues();
+      if (queueSize() === 0) break;
+      await wait(intervalMs);
+    }
+    return queueSize();
+  }
+
   const timer = schedule(flushQueues, processCfg.sendIntervalMs);
   if (typeof timer?.unref === "function") timer.unref();
 
-  return { enqueue, refreshGuild, guildCfg, routeFor, queues, db, metrics, tick: flushQueues };
+  return {
+    enqueue,
+    refreshGuild,
+    guildCfg,
+    routeFor,
+    queues,
+    db,
+    metrics,
+    tick: flushQueues,
+    drain,
+    queueSize,
+  };
 }
 
 module.exports = { createDispatcher };

@@ -78,6 +78,32 @@ function fakeInteraction(message, rawTokens, commandName = "log") {
         const id = String(raw).replace(/[<@&>]/g, "");
         return message.guild.roles.cache.get(id) || { id };
       },
+      getAttachment: (name) => {
+        const raw = get(name, false);
+        if (!raw) return null;
+        const url = String(raw);
+        let parsed;
+        try {
+          parsed = new URL(url);
+        } catch {
+          return null;
+        }
+        // Prefix commands paste a URL instead of a Discord attachment object.
+        // Keep this to Discord's CDN so a guild manager cannot make the bot
+        // fetch arbitrary internal or third-party URLs (SSRF).
+        if (parsed.protocol !== "https:" ||
+            !["cdn.discordapp.com", "media.discordapp.net"].includes(parsed.hostname)) {
+          return null;
+        }
+        let file = parsed.pathname.split("/").pop() || "config.json";
+        try {
+          file = decodeURIComponent(file);
+        } catch {
+          // Keep the raw file name if the URL is malformed.
+        }
+        // Size 0 lets readAttachment enforce the real 1 MiB streamed cap.
+        return { url, name: file, size: 0 };
+      },
     },
     reply: (payload) => {
       const content = typeof payload === "string" ? payload : payload.content;
