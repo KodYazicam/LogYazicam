@@ -44,6 +44,7 @@ Small, shippable steps. Upvote or comment on an issue if you want something move
 - [x] Per-event history toggles
 - [x] Per-event redaction overrides
 - [x] Bounded, non-blocking 429/503 retries with `Retry-After`
+- [x] Bounded in-memory dedupe and history caches
 - [x] Doctor preflight command
 - [x] Backup and restore CLI commands
 

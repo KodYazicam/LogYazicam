@@ -59,6 +59,35 @@ test("processConfig truncates and bounds numeric environment values", () => {
   assert.equal(cfg.retryMax, 5);
 });
 
+test("processConfig bounds the in-memory caches", () => {
+  const cfg = processConfig({
+    DEDUPE_MAX: "12",
+    DEDUPE_TTL_MS: "0",
+    HISTORY_MAX: "34",
+    HISTORY_TTL_MS: "500",
+  });
+  assert.equal(cfg.dedupeMax, 12);
+  assert.equal(cfg.dedupeTtlMs, 0);
+  assert.equal(cfg.historyMax, 34);
+  assert.equal(cfg.historyTtlMs, 500);
+
+  const defaults = processConfig({});
+  assert.equal(defaults.dedupeMax, 10000);
+  assert.equal(defaults.dedupeTtlMs, 3600000);
+  assert.equal(defaults.historyMax, 5000);
+  assert.equal(defaults.historyTtlMs, 7200000);
+
+  for (const key of ["DEDUPE_MAX", "HISTORY_MAX"]) {
+    for (const value of ["0", "-1", "1.5", "not-a-number"]) {
+      assert.throws(
+        () => processConfig({ [key]: value }),
+        new RegExp(`${key} must be a positive integer`),
+        `${key}=${value}`,
+      );
+    }
+  }
+});
+
 test("mergeGuild forwards description, footer, and bulk limits", () => {
   const processCfg = processConfig({
     EMBED_DESC_MAX: "1200",

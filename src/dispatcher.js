@@ -2,16 +2,32 @@ const { WebhookClient } = require("discord.js");
 const { ignored, inQuietHours, includeOk, embedToPlain } = require("./util");
 const { redactEmbeds, redactText, flagsFrom, eventRedactFlags } = require("./redact");
 const { retryDecision } = require("./retry");
+const { createBoundedCache } = require("./boundedCache");
 
 function createDispatcher({ client, db, processCfg, log, cache, deps = {} }) {
   const queues = new Map();
-  const lastSent = new Map();
-  const digestBuckets = new Map();
   const metrics = { sent: 0, dropped: 0, retries: 0 };
   const makeWebhook = deps.createWebhookClient || ((options) => new WebhookClient(options));
   const now = deps.now || Date.now;
   const schedule = deps.setInterval || setInterval;
   const wait = deps.sleep || ((ms) => new Promise((resolve) => setTimeout(resolve, ms)));
+
+  // Cooldown/dedupe keys and pending digest buckets are the only long-lived
+  // per-event state in the dispatcher. Both are capped so a long-running bot
+  // has a fixed memory ceiling; old entries are evicted in insertion order.
+  const dedupe = createBoundedCache({
+    max: processCfg.dedupeMax ?? 10000,
+    ttlMs: processCfg.dedupeTtlMs ?? 3600000,
+    now,
+  });
+  const historyBuffer = createBoundedCache({
+    max: processCfg.historyMax ?? 5000,
+    ttlMs: processCfg.historyTtlMs ?? 7200000,
+    now,
+    onEvict: (bucket) => {
+      if (bucket?.timer) clearTimeout(bucket.timer);
+    },
+  });
 
   function guildCfg(guildId) {
     return cache.get(guildId);
@@ -62,9 +78,10 @@ function createDispatcher({ client, db, processCfg, log, cache, deps = {} }) {
       : (cfg.cooldownSec || 0);
     if (!sec) return true;
     const stamp = `${guildId}:${eventKey}`;
-    const last = lastSent.get(stamp) || 0;
-    if (Date.now() - last < sec * 1000) return false;
-    lastSent.set(stamp, Date.now());
+    const at = now();
+    const last = dedupe.get(stamp, at);
+    if (last != null && at - last < sec * 1000) return false;
+    dedupe.set(stamp, at, at);
     return true;
   }
 
@@ -106,12 +123,12 @@ function createDispatcher({ client, db, processCfg, log, cache, deps = {} }) {
       const digestMin = eventDigest?.min || processCfg.digestMin || 5;
       if (digestMs > 0 && !payload.digest) {
         const dkey = `${guild.id}:${eventKey}:${channelId}`;
-        const bucket = digestBuckets.get(dkey) || { count: 0, timer: null, sample: payload, guild, eventKey };
+        const bucket = historyBuffer.get(dkey) || { count: 0, timer: null, sample: payload, guild, eventKey };
         bucket.count += 1;
         bucket.sample = payload;
         if (!bucket.timer) {
           bucket.timer = setTimeout(() => {
-            digestBuckets.delete(dkey);
+            historyBuffer.delete(dkey);
             const n = bucket.count;
             const min = digestMin;
             if (n >= min) {
@@ -126,7 +143,7 @@ function createDispatcher({ client, db, processCfg, log, cache, deps = {} }) {
             }
           }, digestMs).unref();
         }
-        digestBuckets.set(dkey, bucket);
+        historyBuffer.set(dkey, bucket);
         return;
       }
       if (!cooldownOk(cfg, guild.id, eventKey)) return;
@@ -266,6 +283,8 @@ function createDispatcher({ client, db, processCfg, log, cache, deps = {} }) {
     if (flushing) return;
     flushing = true;
     try {
+      dedupe.prune();
+      historyBuffer.prune();
       for (const [key, q] of queues) {
         const item = q[0];
         if (!item) continue;
