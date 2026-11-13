@@ -12,6 +12,25 @@ function tempDir(t) {
   return dir;
 }
 
+async function listen(t, handler) {
+  const server = http.createServer(handler);
+  await new Promise((resolve, reject) => {
+    server.once("error", reject);
+    server.listen(0, "127.0.0.1", resolve);
+  });
+  t.after(
+    () =>
+      new Promise((resolve, reject) => {
+        server.close((error) => (error ? reject(error) : resolve()));
+      }),
+  );
+  return server;
+}
+
+function portOf(server) {
+  return server.address().port;
+}
+
 test("writeFileSink returns false instead of throwing on a blocked directory", (t) => {
   const dir = tempDir(t);
   const blocker = path.join(dir, "blocker");
@@ -29,20 +48,17 @@ test("writeFileSink returns false when no directory is configured", () => {
 
 test("writeFileSink appends one JSONL record under the guild and day", async (t) => {
   const dir = tempDir(t);
-  assert.equal(writeFileSink(dir, "g1", "messageDelete", { summary: "x", userId: "u1" }), true);
+  await new Promise((resolve, reject) => {
+    const ok = writeFileSink(dir, "g1", "messageDelete", { summary: "x", userId: "u1" }, (error) => {
+      if (error) reject(error);
+      else resolve();
+    });
+    assert.equal(ok, true);
+  });
 
   const day = new Date().toISOString().slice(0, 10);
   const file = path.join(dir, "g1", `${day}.jsonl`);
-  let text = "";
-  for (let i = 0; i < 50 && !text; i += 1) {
-    await new Promise((resolve) => setTimeout(resolve, 5));
-    try {
-      text = fs.readFileSync(file, "utf8");
-    } catch {
-      // appendFile is asynchronous; retry briefly.
-    }
-  }
-
+  const text = fs.readFileSync(file, "utf8");
   assert.ok(text.endsWith("\n"));
   const line = JSON.parse(text.trim());
   assert.equal(typeof line.at, "number");
@@ -51,24 +67,37 @@ test("writeFileSink appends one JSONL record under the guild and day", async (t)
   assert.equal(line.userId, "u1");
 });
 
-test("postHttpSink ignores empty and invalid URLs", () => {
-  assert.doesNotThrow(() => postHttpSink("", { eventKey: "messageDelete" }));
-  assert.doesNotThrow(() => postHttpSink("not a url", { eventKey: "messageDelete" }));
+test("postHttpSink ignores empty and invalid URLs", async () => {
+  await new Promise((resolve) => {
+    postHttpSink("", { eventKey: "messageDelete" }, (error) => {
+      assert.equal(error, null);
+      resolve();
+    });
+  });
+  await new Promise((resolve) => {
+    postHttpSink("not a url", { eventKey: "messageDelete" }, (error) => {
+      assert.ok(error);
+      resolve();
+    });
+  });
 });
 
 test("postHttpSink swallows connection errors", async (t) => {
-  const server = http.createServer((req) => req.socket.destroy());
-  await new Promise((resolve, reject) => {
-    server.once("error", reject);
-    server.listen(0, "127.0.0.1", resolve);
+  let received;
+  const requestSeen = new Promise((resolve) => {
+    received = resolve;
   });
-  t.after(() => new Promise((resolve) => server.close(resolve)));
+  const server = await listen(t, (req) => {
+    received();
+    req.socket.destroy();
+  });
 
-  const { port } = server.address();
-  await new Promise((resolve) => {
-    postHttpSink(`http://127.0.0.1:${port}/hook`, { eventKey: "messageDelete" });
-    setTimeout(resolve, 100);
+  const error = await new Promise((resolve) => {
+    postHttpSink(`http://127.0.0.1:${portOf(server)}/hook`, { eventKey: "messageDelete" }, resolve);
   });
+  await requestSeen;
+
+  assert.ok(error, "the client error reaches the optional completion callback");
 });
 
 test("postHttpSink posts JSON to an HTTP endpoint", async (t) => {
@@ -76,7 +105,7 @@ test("postHttpSink posts JSON to an HTTP endpoint", async (t) => {
   const received = new Promise((resolve) => {
     resolveRequest = resolve;
   });
-  const server = http.createServer((req, res) => {
+  const server = await listen(t, (req, res) => {
     const chunks = [];
     req.on("data", (chunk) => chunks.push(chunk));
     req.on("end", () => {
@@ -89,18 +118,16 @@ test("postHttpSink posts JSON to an HTTP endpoint", async (t) => {
       });
     });
   });
-  await new Promise((resolve, reject) => {
-    server.once("error", reject);
-    server.listen(0, "127.0.0.1", resolve);
-  });
-  t.after(() => new Promise((resolve) => server.close(resolve)));
 
-  const { port } = server.address();
-  postHttpSink(`http://127.0.0.1:${port}/hook`, {
-    eventKey: "messageDelete",
-    summary: "x",
+  const completed = new Promise((resolve, reject) => {
+    postHttpSink(
+      `http://127.0.0.1:${portOf(server)}/hook`,
+      { eventKey: "messageDelete", summary: "x" },
+      (error) => (error ? reject(error) : resolve()),
+    );
   });
   const request = await received;
+  await completed;
 
   assert.equal(request.method, "POST");
   assert.equal(request.headers["content-type"], "application/json");
