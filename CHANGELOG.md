@@ -7,6 +7,12 @@ All notable changes to this project are documented here. The format follows
 
 ### Added
 
+- `logyazicam backup [--out FILE]` and `logyazicam restore FILE [--force]`
+  expose the existing WAL-consistent SQLite snapshot path to operators.
+  Restore runs `PRAGMA integrity_check` before writing, refuses an existing
+  database without `--force`, keeps a timestamped copy when it replaces one,
+  and swaps the file in atomically. Corrupt input leaves the live database
+  untouched, and the CLI never prints token or secret values.
 - `npm run doctor` and the `logyazicam doctor` bin entry run offline preflight
   checks for Node >= 22, Discord token shape, required gateway intents,
   data-directory writability and permissions, SQLite `PRAGMA integrity_check`,

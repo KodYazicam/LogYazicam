@@ -140,6 +140,7 @@ Nothing is logged until you **turn an event or group on**. A fresh guild is sile
 | Rate | Per-channel queue, interval between sends |
 | History | Capped JSON summaries, `/log history` export, time-based retention |
 | Config | `/log export` / `/log import` JSON transfer without webhook secrets |
+| Backup | `logyazicam backup [--out FILE]` and `logyazicam restore FILE [--force]` — WAL-safe snapshots, integrity check, atomic replace, automatic backup before overwrite |
 | Dashboard | Optional read-only HTTP view of recent history (`DASHBOARD_ENABLED`) |
 | Errors | Process log file, optional error channel, optional owner DM, no crash on handler throw |
 | Reload | `/log reload` + timer; TOKEN still needs restart |
@@ -351,7 +352,15 @@ These are **not** fake Discord events. They sit on top of the catalog.
 
 **Sinks** (`LOG_SINK=discord,file,http`): after a successful route, also append JSONL under `FILE_SINK_DIR/guildId/YYYY-MM-DD.jsonl` and/or POST `HTTP_SINK_URL`. Omit `discord` to skip Discord entirely (file-only logger).
 
-**Backup** (`BACKUP_DIR` + `BACKUP_MS`): write a consistent SQLite online snapshot on an interval. WAL contents are included; do not replace this with a plain file copy.
+**Backup** (`BACKUP_DIR` + `BACKUP_MS`): write a consistent SQLite online snapshot on an interval. WAL contents are included; do not replace this with a plain file copy. For a manual snapshot or a restore, use the CLI:
+
+```bash
+logyazicam backup --out ./backups/logyazicam-2026-11-13.sqlite
+# stop the bot before restoring
+logyazicam restore ./backups/logyazicam-2026-11-13.sqlite --force
+```
+
+`backup` defaults to a timestamped file next to `DATABASE_PATH`. `restore` runs SQLite `PRAGMA integrity_check` before touching anything, refuses to replace an existing database without `--force`, and with `--force` writes a timestamped `.bak-…` copy of the existing database before swapping the new file in atomically. A corrupt input leaves the live database untouched. The CLI never prints token or secret values.
 
 **Sharding** (`SHARD_LIST=auto` or a number): process starts a `ShardingManager`. Empty = single process.
 
@@ -511,18 +520,28 @@ SQLite, process logs, and backups live in the named volume at `/app/data`. The i
 
 The compose file bind-mounts `.env` read-only and sets `ENV_FILE_WINS=true`. With the default `HOT_RELOAD_MS`, editing `.env` on the host is picked up without recreating the container. `TOKEN` still needs a restart because Discord.js is already logged in.
 
-Back up the volume while the bot is running:
+Back up the database while the bot is running. The snapshot uses SQLite's online backup API, so WAL contents are included:
 
 ```bash
-docker compose cp logyazicam:/app/data ./logyazicam-data-backup
+docker compose exec logyazicam node src/cli.js backup --out /tmp/logyazicam-backup.sqlite
+docker compose cp logyazicam:/tmp/logyazicam-backup.sqlite ./logyazicam-backup.sqlite
 ```
 
-Restore a backup into the volume (stop the bot first so SQLite is not written during the copy):
+For a raw copy of the whole data volume (SQLite plus process logs and file sinks), stop the bot first so SQLite is not written during the copy:
 
 ```bash
 docker compose stop logyazicam
-docker compose cp ./logyazicam-data-backup/. logyazicam:/app/data
-docker compose run --rm --user root logyazicam chown -R 10001:10001 /app/data
+docker compose cp logyazicam:/app/data ./logyazicam-data-backup
+docker compose start logyazicam
+```
+
+Restore a database backup into the volume. Stop the bot first; `--force` keeps a timestamped copy of the current database inside `/app/data`:
+
+```bash
+docker compose stop logyazicam
+docker compose run --rm \
+  -v "$PWD/logyazicam-backup.sqlite:/restore.sqlite:ro" \
+  logyazicam node src/cli.js restore /restore.sqlite --force
 docker compose start logyazicam
 ```
 
@@ -1128,6 +1147,9 @@ LogYazicam/
   src/catalog.js          Event keys + groups (source of truth)
   src/config.js           Env parse + mergeGuild
   src/db.js               SQLite
+  src/backupRestore.js    WAL-safe backup + validated atomic restore
+  src/cli.js              logyazicam CLI (doctor, backup, restore)
+  src/doctor.js           Offline preflight checks
   src/dispatcher.js       Queue + webhook/channel
   src/events.js           client.on for the catalog
   src/format.js           Message/member/ban/voice formatters
@@ -1181,6 +1203,7 @@ npm run check      # node --check for every JS file
 - Webhook delivery: succeeds without a channel fetch, falls back when enabled, and runs file/HTTP sinks before Discord
 - Sink isolation: unwritable file directories cannot drop Discord delivery
 - SQLite backup: WAL-consistent online snapshots, nested directories, and logged failures
+- Backup/restore CLI: WAL-consistent snapshot, round-trip restore, `--force` and automatic pre-restore backup, corrupt and `integrity_check` rejection with no writes, usage exit codes, and no token in output
 
 CI: GitHub Actions runs `npm ci`, the syntax check, the full test suite on Node 22 and 24, coverage on Node 22, a production dependency audit, and a Docker image build.
 

@@ -935,6 +935,10 @@ test("preferWebhook without credentials warns and falls back to channel", async 
 
 test("HTTP sinks mirror events and sink exceptions do not drop delivery", async (t) => {
   const received = [];
+  let resolveReceived;
+  const sinkReceived = new Promise((resolve) => {
+    resolveReceived = resolve;
+  });
   const server = http.createServer((req, res) => {
     let body = "";
     req.on("data", (chunk) => {
@@ -944,10 +948,17 @@ test("HTTP sinks mirror events and sink exceptions do not drop delivery", async 
       received.push(JSON.parse(body));
       res.writeHead(204);
       res.end();
+      resolveReceived();
     });
   });
   await new Promise((resolve) => server.listen(0, "127.0.0.1", resolve));
-  t.after(() => new Promise((resolve) => server.close(resolve)));
+  t.after(
+    () =>
+      new Promise((resolve, reject) => {
+        server.closeAllConnections();
+        server.close((error) => (error ? reject(error) : resolve()));
+      }),
+  );
   const { port } = server.address();
 
   const h = setup({
@@ -960,7 +971,7 @@ test("HTTP sinks mirror events and sink exceptions do not drop delivery", async 
   await h.dispatch.tick();
   assert.equal(h.dispatch.metrics.sent, 1);
   assert.equal(h.hookCalls.length, 1);
-  await new Promise((resolve) => setTimeout(resolve, 50));
+  await sinkReceived;
   assert.equal(received.length, 1);
   assert.equal(received[0].summary, "http sink");
 
