@@ -374,6 +374,8 @@ logyazicam restore ./backups/logyazicam-2026-11-13.sqlite --force
 
 **429/503:** `RETRY_429=true` re-queues rate-limited or temporarily unavailable Discord webhook sends; `RETRY_MAX` caps attempts per item (default `5`, `0` disables). A valid `Retry-After` header (delta seconds or HTTP-date) sets the timestamp, waits are capped at 5 minutes, and invalid/missing values use the existing backoff. One waiting channel does not stall the others. `/log status` shows `sent` / `dropped`.
 
+**Memory bounds:** dedupe/cooldown keys and pending digest-history buckets are capped in memory (`DEDUPE_MAX` / `HISTORY_MAX`). Oldest entries are evicted first; optional TTLs (`DEDUPE_TTL_MS` / `HISTORY_TTL_MS`) expire them sooner. Evicting a pending digest bucket clears its timer, so it cannot flush later. SQLite history remains governed by `HISTORY_LIMIT` and retention.
+
 **History export:** `/log history key:messageDelete format:csv|jsonl`.
 
 **Config transfer:** `/log export` downloads a JSON snapshot of settings, routes, ignores, and `extra_json`; `/log import file:<export.json> [channel:#fallback]` applies it to another guild. Webhook credentials are never exported or overwritten.
@@ -565,7 +567,7 @@ Then delete a message the bot can see. You should get `messageDelete` in `#mod-l
 
 ## Environment reference
 
-All names English. Booleans: `1` `0` `true` `false` `yes` `no` `on` `off`. Numeric settings accept integers only; fractional input is truncated, and negative limits fall back to their defaults (except where `0` explicitly disables a feature). Guild `/log` overrides the embed/filter defaults per server. Process-level timings (`SEND_INTERVAL_MS`, `HOT_RELOAD_MS`, `MAX_QUEUE_PER_CHANNEL`) stay global until hot-reload re-reads `.env`.
+All names English. Booleans: `1` `0` `true` `false` `yes` `no` `on` `off`. Numeric settings accept integers only; fractional input is truncated, and negative limits fall back to their defaults (except where `0` explicitly disables a feature). `DEDUPE_MAX` and `HISTORY_MAX` are stricter: they must be positive integers, and invalid values fail startup/hot reload. Guild `/log` overrides the embed/filter defaults per server. Process-level timings (`SEND_INTERVAL_MS`, `HOT_RELOAD_MS`, `MAX_QUEUE_PER_CHANNEL`) stay global. The `DEDUPE_*` and `HISTORY_*` cache limits are read when the dispatcher starts; restart to resize them.
 
 | Variable | Default | Restart? | Meaning |
 | --- | --- | --- | --- |
@@ -583,6 +585,10 @@ All names English. Booleans: `1` `0` `true` `false` `yes` `no` `on` `off`. Numer
 | `HOT_RELOAD_MS` | `15000` | process* | `0` disables the timer. Changing the interval needs restart; contents of `.env` do not. |
 | `ENV_FILE_WINS` | `false` | hot | Let `.env` values override already-injected `process.env`. Docker Compose sets `true` with a read-only `.env` mount. |
 | `MAX_QUEUE_PER_CHANNEL` | `20` | hot | Oldest dropped if a log channel is slow. |
+| `DEDUPE_MAX` | `10000` | process* | Positive integer. Cooldown/dedupe keys kept in memory; oldest evicted first. Invalid, zero, or negative values fail startup/hot reload. |
+| `DEDUPE_TTL_MS` | `3600000` | process* | Dedupe key lifetime. `0` disables expiry; the cap still applies. |
+| `HISTORY_MAX` | `5000` | process* | Positive integer. Pending digest/history buckets kept in memory; oldest pending digest is dropped when full. Invalid, zero, or negative values fail startup/hot reload. |
+| `HISTORY_TTL_MS` | `7200000` | process* | Pending digest bucket lifetime. `0` disables expiry; the cap still applies. |
 | `RETRY_MAX` | `5` | hot | Maximum 429/503 retries per queued item; `0` drops immediately. |
 | `SEND_INTERVAL_MS` | `350` | process* | Flush timer period (set at boot). |
 | `AUDIT_MAX_AGE_MS` | `12000` | hot | Ignore older audit entries when attributing executor. |
@@ -952,7 +958,7 @@ Unknown keys in `setGuild` are ignored (whitelist in `src/db.js`). That is inten
 
 ### `history`
 
-`id`, `guild_id`, `event_key`, `payload` (JSON text: `{ eventKey, channelId, at, summary }`), `created_at`. Index `(guild_id, created_at DESC)`. Trimmed to `history_limit`.
+`id`, `guild_id`, `event_key`, `payload` (JSON text: `{ eventKey, channelId, at, summary }`), `created_at`. Index `(guild_id, created_at DESC)`. Trimmed to `history_limit`; this is the on-disk cap, separate from the in-memory `HISTORY_MAX` digest buffer.
 
 ---
 

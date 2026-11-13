@@ -813,6 +813,88 @@ test("a per-event cooldown applies only to that event key", async () => {
   assert.equal(h.dispatch.queues.get("g1:c1").length, 2);
 });
 
+test("dedupe cache evicts the oldest key at DEDUPE_MAX", async () => {
+  const h = setup({
+    queued: false,
+    processCfg: { dedupeMax: 2 },
+    cfg: {
+      cooldownSec: 60,
+      events: {
+        messageDelete: { on: true, channelId: "c1" },
+        messageUpdate: { on: true, channelId: "c1" },
+        guildBanAdd: { on: true, channelId: "c1" },
+      },
+    },
+  });
+
+  await h.dispatch.enqueue({ id: "g1" }, "messageDelete", { summary: "one" });
+  await h.dispatch.enqueue({ id: "g1" }, "messageUpdate", { summary: "two" });
+  await h.dispatch.enqueue({ id: "g1" }, "guildBanAdd", { summary: "three" });
+  await h.dispatch.enqueue({ id: "g1" }, "messageDelete", { summary: "four" });
+
+  assert.equal(h.dispatch.queues.get("g1:c1").length, 4);
+});
+
+test("dedupe entries expire after DEDUPE_TTL_MS", async () => {
+  const h = setup({
+    queued: false,
+    processCfg: { dedupeTtlMs: 1000 },
+    cfg: {
+      cooldownSec: 600,
+      events: { messageDelete: { on: true, channelId: "c1" } },
+    },
+  });
+
+  await h.dispatch.enqueue({ id: "g1" }, "messageDelete", { summary: "one" });
+  await h.dispatch.enqueue({ id: "g1" }, "messageDelete", { summary: "two" });
+  h.advance(999);
+  await h.dispatch.enqueue({ id: "g1" }, "messageDelete", { summary: "three" });
+  assert.equal(h.dispatch.queues.get("g1:c1").length, 1);
+
+  h.advance(1);
+  await h.dispatch.enqueue({ id: "g1" }, "messageDelete", { summary: "four" });
+  assert.equal(h.dispatch.queues.get("g1:c1").length, 2);
+});
+
+test("history buffer evicts the oldest pending digest bucket", async () => {
+  const h = setup({
+    queued: false,
+    processCfg: { historyMax: 1 },
+    cfg: {
+      digestMs: 20,
+      events: {
+        messageDelete: { on: true, channelId: "c1" },
+        messageUpdate: { on: true, channelId: "c1" },
+      },
+    },
+  });
+
+  await h.dispatch.enqueue({ id: "g1" }, "messageDelete", { summary: "one" });
+  await h.dispatch.enqueue({ id: "g1" }, "messageUpdate", { summary: "two" });
+  await new Promise((resolve) => setTimeout(resolve, 60));
+
+  const queue = h.dispatch.queues.get("g1:c1");
+  assert.equal(queue?.length ?? 0, 1);
+  assert.equal(queue[0].eventKey, "messageUpdate");
+});
+
+test("history buffer expires stale pending digest buckets", async () => {
+  const h = setup({
+    queued: false,
+    processCfg: { historyTtlMs: 10 },
+    cfg: {
+      digestMs: 1000,
+      events: { messageDelete: { on: true, channelId: "c1" } },
+    },
+  });
+
+  await h.dispatch.enqueue({ id: "g1" }, "messageDelete", { summary: "one" });
+  h.advance(50);
+  await h.dispatch.tick();
+
+  assert.equal(h.dispatch.queues.get("g1:c1")?.length ?? 0, 0);
+});
+
 test("file sink runs before a successful webhook delivery", async (t) => {
   const dir = fs.mkdtempSync(path.join(os.tmpdir(), "logyazicam-sink-webhook-"));
   t.after(() => fs.rmSync(dir, { recursive: true, force: true }));

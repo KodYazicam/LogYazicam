@@ -29,6 +29,7 @@ index.js
 | `events.js` | `client.on` for each Discord event; splits `voiceStateUpdate` / `guildMemberUpdate`; also poll, typing, soundboard, entitlements, `commandUse` | SQL |
 | `format.js` | Message / member / ban / voice embed payloads | Routing |
 | `dispatcher.js` | Filters, queue, webhook vs `channel.send`, history insert | Slash UX |
+| `boundedCache.js` | FIFO/TTL bound for dedupe keys and pending digest history | Persistence |
 | `retry.js` | Parse webhook `Retry-After` deltas/HTTP-dates, cap waits, choose the retry delay | Discord API calls |
 | `commands.js` | Slash builder + execute + autocomplete | Gateway |
 | `db.js` | Schema + prepared statements. `setGuild` **whitelists** column names | Business copy |
@@ -59,7 +60,9 @@ index.js
    exposed `tick()` with an injected webhook client and clock. A 429/503 sets
    `retryAt` on the item (using a valid `Retry-After` value, capped at 5
    minutes) and re-queues it without sleeping; `RETRY_MAX` bounds attempts, and
-   a `flushing` guard prevents overlapping ticks.
+   a `flushing` guard prevents overlapping ticks. Dedupe/cooldown keys and
+   pending digest buckets use FIFO/TTL caches bounded by `DEDUPE_MAX` and
+   `HISTORY_MAX`, so long runs keep a fixed memory ceiling.
 
 ## Adding an event
 

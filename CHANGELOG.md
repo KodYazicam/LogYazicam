@@ -26,6 +26,11 @@ All notable changes to this project are documented here. The format follows
   form, cap the wait at five minutes, and fall back to the existing backoff for
   invalid or missing headers. 503 responses now use the same bounded,
   timestamp-based retry path as 429 instead of dropping immediately.
+- Long-running dispatcher caches are now bounded. `DEDUPE_MAX` /
+  `DEDUPE_TTL_MS` limit cooldown/dedupe keys, and `HISTORY_MAX` /
+  `HISTORY_TTL_MS` limit pending digest-history buckets. Oldest entries are
+  evicted first, evicted digest buckets have their timers cleared, and invalid
+  positive-integer limits fail fast instead of growing heap use indefinitely.
 
 ## [2.0.0] - 2026-11-12
 

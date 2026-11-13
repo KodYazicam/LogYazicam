@@ -22,6 +22,14 @@ const POS = (v, fallback) => {
   const n = INT(v, fallback);
   return n > 0 ? n : fallback;
 };
+const POSITIVE_INT = (name, v, fallback) => {
+  if (v == null || (typeof v === "string" && v.trim() === "")) return fallback;
+  const n = Number(v);
+  if (!Number.isInteger(n) || n < 1) {
+    throw new RangeError(`${name} must be a positive integer`);
+  }
+  return n;
+};
 const PORT = (v, fallback) => {
   const n = INT(v, fallback);
   return n >= 0 && n <= 65535 ? n : fallback;
@@ -75,6 +83,10 @@ function processConfig(env) {
     historyLimit: UINT(env.HISTORY_LIMIT, 200),
     historyRetentionDays: UINT(env.HISTORY_RETENTION_DAYS, 0),
     historyPruneMs: UINT(env.HISTORY_PRUNE_MS, 3600000),
+    dedupeMax: POSITIVE_INT("DEDUPE_MAX", env.DEDUPE_MAX, 10000),
+    dedupeTtlMs: UINT(env.DEDUPE_TTL_MS, 3600000),
+    historyMax: POSITIVE_INT("HISTORY_MAX", env.HISTORY_MAX, 5000),
+    historyTtlMs: UINT(env.HISTORY_TTL_MS, 7200000),
     defaultPaused: BOOL(env.DEFAULT_PAUSED, false),
     defaultPlainText: BOOL(env.DEFAULT_PLAIN_TEXT, false),
     defaultShowThumbnails: BOOL(env.DEFAULT_SHOW_THUMBNAILS, true),
