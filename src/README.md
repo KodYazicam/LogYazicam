@@ -37,7 +37,8 @@ index.js
 | `retention.js` | History cutoff, per-guild override, and prune sweeps | Other tables |
 | `intents.js` | Base gateway intents + opt-in `GuildPresences` | Event handling |
 | `doctor.js` | Offline preflight checks: Node, token shape, intents, data dir, SQLite integrity, `.env` mode | Network calls, writes |
-| `cli.js` | `logyazicam doctor` entry point and exit codes | Runtime gateway |
+| `backupRestore.js` | Online WAL-safe SQLite backup plus integrity-checked atomic restore for the CLI | Runtime gateway or scheduled backups |
+| `cli.js` | `logyazicam doctor`, `backup`, and `restore` entry point and exit codes | Runtime gateway |
 | `util.js` | `buildEmbed`, audit fetch, ignore match, truncate | Persistence |
 | `logger.js` | stdout + optional file; never throws | |
 | `deploy-commands.js` | REST `applicationCommands` put | Runtime |
