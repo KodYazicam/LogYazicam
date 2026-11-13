@@ -3,10 +3,14 @@
   "version": "2.0.0",
   "description": "Per-guild Discord logging bot. Every gateway event that Discord actually emits, routed and formatted from SQLite + env. No restart for config.",
   "main": "src/index.js",
+  "bin": {
+    "logyazicam": "src/cli.js"
+  },
   "scripts": {
     "start": "node src/index.js",
     "deploy": "node src/deploy-commands.js",
     "dev": "nodemon src/index.js",
+    "doctor": "node src/cli.js doctor",
     "check": "node scripts/check-syntax.js",
     "test": "node --test",
     "test:coverage": "node --test --experimental-test-coverage"

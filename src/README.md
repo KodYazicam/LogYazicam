@@ -36,6 +36,8 @@ index.js
 | `dashboard.js` | Optional read-only HTTP view of `history` rows | Config mutation |
 | `retention.js` | History cutoff, per-guild override, and prune sweeps | Other tables |
 | `intents.js` | Base gateway intents + opt-in `GuildPresences` | Event handling |
+| `doctor.js` | Offline preflight checks: Node, token shape, intents, data dir, SQLite integrity, `.env` mode | Network calls, writes |
+| `cli.js` | `logyazicam doctor` entry point and exit codes | Runtime gateway |
 | `util.js` | `buildEmbed`, audit fetch, ignore match, truncate | Persistence |
 | `logger.js` | stdout + optional file; never throws | |
 | `deploy-commands.js` | REST `applicationCommands` put | Runtime |

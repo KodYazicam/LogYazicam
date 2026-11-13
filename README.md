@@ -468,6 +468,29 @@ npm start
 
 `npm run deploy` with `GUILD_ID` registers `/log` on that guild in seconds. Without `GUILD_ID` it registers **global** commands (can take up to an hour). Re-run deploy after pulling command changes.
 
+### Preflight (`npm run doctor`)
+
+Run the offline checks before the first start or after moving the data directory:
+
+```bash
+npm run doctor
+# after npm link / a global install, the same checks are available as:
+logyazicam doctor
+```
+
+```
+LogYazicam doctor
+PASS node      Node 22.23.2 (>= 22).
+PASS token     TOKEN is present and shaped like a Discord bot token.
+PASS intents   GuildMembers + MessageContent requested. Enable the same privileged intents in the Discord Developer Portal.
+PASS data      /srv/logyazicam/data is writable (mode 755).
+PASS sqlite    /srv/logyazicam/data/logyazicam.sqlite PRAGMA integrity_check = ok.
+PASS env       /srv/logyazicam/.env mode 600.
+6 passed, 0 warnings, 0 failed
+```
+
+The checks cover the Node version, token shape (the token is never printed), required gateway intents, data-directory writability and permissions, `PRAGMA integrity_check`, and `.env` permissions. `PASS` is healthy, `WARN` is a recommendation that does not block startup (a missing database or `.env`), and `FAIL` exits with code `1` so a deploy script can stop before the bot starts. Doctor never creates or edits the database, data directory, or `.env`, and it does not call Discord; the Developer Portal intent toggles still need to be enabled by hand.
+
 ### Docker Compose (one command)
 
 Requires Docker Engine with Compose v2. From a clean clone:
