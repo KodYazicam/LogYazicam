@@ -1,6 +1,7 @@
 const { WebhookClient } = require("discord.js");
 const { ignored, inQuietHours, includeOk, embedToPlain } = require("./util");
 const { redactEmbeds, redactText, flagsFrom, eventRedactFlags } = require("./redact");
+const { retryDecision } = require("./retry");
 
 function createDispatcher({ client, db, processCfg, log, cache, deps = {} }) {
   const queues = new Map();
@@ -275,15 +276,15 @@ function createDispatcher({ client, db, processCfg, log, cache, deps = {} }) {
           if (delivered) metrics.sent += 1;
           else metrics.dropped += 1;
         } catch (error) {
-          const retryAfter = error?.retryAfter || error?.httpStatus === 429;
+          const at = now();
+          const retry = retryDecision(error, at);
           const configured = Number(processCfg.retryMax);
           const limit = Number.isInteger(configured) && configured >= 0 ? configured : 5;
           const attempts = Number(item.retries) || 0;
-          if (processCfg.retry429 && retryAfter && attempts < limit) {
-            const delay = Math.max(0, Math.ceil((Number(error.retryAfter) || 1) * 1000));
+          if (processCfg.retry429 && retry.retryable && attempts < limit) {
             metrics.retries += 1;
             item.retries = attempts + 1;
-            item.retryAt = now() + delay;
+            item.retryAt = at + retry.delayMs;
             q.unshift(item);
           } else {
             metrics.dropped += 1;

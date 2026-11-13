@@ -29,6 +29,7 @@ index.js
 | `events.js` | `client.on` for each Discord event; splits `voiceStateUpdate` / `guildMemberUpdate`; also poll, typing, soundboard, entitlements, `commandUse` | SQL |
 | `format.js` | Message / member / ban / voice embed payloads | Routing |
 | `dispatcher.js` | Filters, queue, webhook vs `channel.send`, history insert | Slash UX |
+| `retry.js` | Parse webhook `Retry-After` deltas/HTTP-dates, cap waits, choose the retry delay | Discord API calls |
 | `commands.js` | Slash builder + execute + autocomplete | Gateway |
 | `db.js` | Schema + prepared statements. `setGuild` **whitelists** column names | Business copy |
 | `config.js` | Env parse, `mergeGuild` (env → row → extra_json colors/strings) | Discord API |
@@ -55,9 +56,10 @@ index.js
    - optional `history` row (`summary` only, not full body); guild `storeHistory` applies unless `eventHistory[eventKey]` overrides it
    - push queue (`MAX_QUEUE_PER_CHANNEL`, drop oldest)
 4. Timer (`SEND_INTERVAL_MS`) sends webhook or `channel.send`. Tests call the
-   exposed `tick()` with an injected webhook client and clock. A 429 sets
-   `retryAt` on the item and re-queues it without sleeping; `RETRY_MAX` bounds
-   attempts, and a `flushing` guard prevents overlapping ticks.
+   exposed `tick()` with an injected webhook client and clock. A 429/503 sets
+   `retryAt` on the item (using a valid `Retry-After` value, capped at 5
+   minutes) and re-queues it without sleeping; `RETRY_MAX` bounds attempts, and
+   a `flushing` guard prevents overlapping ticks.
 
 ## Adding an event
 
