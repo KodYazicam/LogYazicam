@@ -3,6 +3,17 @@
 All notable changes to this project are documented here. The format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [Unreleased]
+
+### Added
+
+- `npm run doctor` and the `logyazicam doctor` bin entry run offline preflight
+  checks for Node >= 22, Discord token shape, required gateway intents,
+  data-directory writability and permissions, SQLite `PRAGMA integrity_check`,
+  and `.env` permissions. Every check prints `PASS`, `WARN`, or `FAIL`, and any
+  `FAIL` exits with code 1. Doctor never writes to the database, data directory,
+  or `.env`.
+
 ## [2.0.0] - 2026-11-12
 
 ### Changed
