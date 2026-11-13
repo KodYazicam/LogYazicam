@@ -212,6 +212,156 @@ test("RETRY_MAX=0 drops a 429 without retrying", async () => {
   assert.equal(h.dispatch.queues.get("g1:c1").length, 0);
 });
 
+test("uses Retry-After seconds on a 429", async () => {
+  let attempts = 0;
+  const h = setup({
+    send: async () => {
+      attempts += 1;
+      if (attempts === 1) {
+        throw Object.assign(new Error("rate limited"), {
+          httpStatus: 429,
+          retryAfter: 0.02,
+          headers: { "retry-after": "2" },
+        });
+      }
+      return { ok: true };
+    },
+  });
+
+  await h.dispatch.tick();
+  assert.equal(h.dispatch.metrics.retries, 1);
+  assert.equal(h.dispatch.queues.get("g1:c1").length, 1);
+
+  h.advance(1999);
+  await h.dispatch.tick();
+  assert.equal(attempts, 1);
+
+  h.advance(1);
+  await h.dispatch.tick();
+  assert.equal(attempts, 2);
+  assert.equal(h.dispatch.metrics.sent, 1);
+  assert.equal(h.dispatch.metrics.retries, 1);
+  assert.equal(h.dispatch.queues.get("g1:c1").length, 0);
+});
+
+test("uses Retry-After HTTP-date on a 503", async () => {
+  const start = Date.parse("2026-11-13T18:00:00.000Z");
+  let attempts = 0;
+  const h = setup({
+    now: start,
+    send: async () => {
+      attempts += 1;
+      if (attempts === 1) {
+        throw Object.assign(new Error("service unavailable"), {
+          httpStatus: 503,
+          headers: { "retry-after": new Date(start + 5000).toUTCString() },
+        });
+      }
+      return { ok: true };
+    },
+  });
+
+  await h.dispatch.tick();
+  assert.equal(h.dispatch.metrics.retries, 1);
+  assert.equal(h.dispatch.queues.get("g1:c1").length, 1);
+
+  h.advance(4999);
+  await h.dispatch.tick();
+  assert.equal(attempts, 1);
+
+  h.advance(1);
+  await h.dispatch.tick();
+  assert.equal(attempts, 2);
+  assert.equal(h.dispatch.metrics.sent, 1);
+  assert.equal(h.dispatch.queues.get("g1:c1").length, 0);
+});
+
+test("invalid Retry-After on a 503 falls back to the existing backoff", async () => {
+  let attempts = 0;
+  const h = setup({
+    send: async () => {
+      attempts += 1;
+      if (attempts === 1) {
+        throw Object.assign(new Error("service unavailable"), {
+          httpStatus: 503,
+          headers: { "retry-after": "not-a-date" },
+        });
+      }
+      return { ok: true };
+    },
+  });
+
+  await h.dispatch.tick();
+  assert.equal(h.dispatch.metrics.retries, 1);
+
+  h.advance(999);
+  await h.dispatch.tick();
+  assert.equal(attempts, 1);
+
+  h.advance(1);
+  await h.dispatch.tick();
+  assert.equal(attempts, 2);
+  assert.equal(h.dispatch.metrics.sent, 1);
+});
+
+test("caps Retry-After at five minutes", async () => {
+  let attempts = 0;
+  const h = setup({
+    send: async () => {
+      attempts += 1;
+      if (attempts === 1) {
+        throw Object.assign(new Error("rate limited"), {
+          httpStatus: 429,
+          headers: { "retry-after": "99999" },
+        });
+      }
+      return { ok: true };
+    },
+  });
+
+  await h.dispatch.tick();
+  assert.equal(h.dispatch.metrics.retries, 1);
+
+  h.advance(299999);
+  await h.dispatch.tick();
+  assert.equal(attempts, 1);
+
+  h.advance(1);
+  await h.dispatch.tick();
+  assert.equal(attempts, 2);
+  assert.equal(h.dispatch.metrics.sent, 1);
+});
+
+test("503 honors RETRY_MAX and drops after exhaustion", async () => {
+  let attempts = 0;
+  const h = setup({
+    processCfg: { retryMax: 2 },
+    send: async () => {
+      attempts += 1;
+      throw Object.assign(new Error("service unavailable"), {
+        httpStatus: 503,
+        headers: { "retry-after": "0" },
+      });
+    },
+  });
+
+  await h.dispatch.tick();
+  assert.equal(attempts, 1);
+  assert.equal(h.dispatch.metrics.retries, 1);
+  assert.equal(h.dispatch.queues.get("g1:c1").length, 1);
+
+  await h.dispatch.tick();
+  assert.equal(attempts, 2);
+  assert.equal(h.dispatch.metrics.retries, 2);
+  assert.equal(h.dispatch.queues.get("g1:c1").length, 1);
+
+  await h.dispatch.tick();
+  assert.equal(attempts, 3);
+  assert.equal(h.dispatch.metrics.retries, 2);
+  assert.equal(h.dispatch.metrics.dropped, 1);
+  assert.equal(h.dispatch.queues.get("g1:c1").length, 0);
+});
+
 test("a rate-limited channel does not block other queues", async () => {
   const h = setup({
     queued: false,

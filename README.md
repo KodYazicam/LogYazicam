@@ -372,7 +372,7 @@ logyazicam restore ./backups/logyazicam-2026-11-13.sqlite --force
 
 **Staff channel:** `/log set name:staff_ch value:CHANNEL_ID` posts a second copy (never via webhook). Empty = off.
 
-**429:** `RETRY_429=true` re-queues rate-limited Discord sends; `RETRY_MAX` caps attempts per item (default `5`, `0` disables). Backoff is scheduled with a timestamp, so one rate-limited channel does not stall the others. `/log status` shows `sent` / `dropped`.
+**429/503:** `RETRY_429=true` re-queues rate-limited or temporarily unavailable Discord webhook sends; `RETRY_MAX` caps attempts per item (default `5`, `0` disables). A valid `Retry-After` header (delta seconds or HTTP-date) sets the timestamp, waits are capped at 5 minutes, and invalid/missing values use the existing backoff. One waiting channel does not stall the others. `/log status` shows `sent` / `dropped`.
 
 **History export:** `/log history key:messageDelete format:csv|jsonl`.
 
@@ -583,7 +583,7 @@ All names English. Booleans: `1` `0` `true` `false` `yes` `no` `on` `off`. Numer
 | `HOT_RELOAD_MS` | `15000` | process* | `0` disables the timer. Changing the interval needs restart; contents of `.env` do not. |
 | `ENV_FILE_WINS` | `false` | hot | Let `.env` values override already-injected `process.env`. Docker Compose sets `true` with a read-only `.env` mount. |
 | `MAX_QUEUE_PER_CHANNEL` | `20` | hot | Oldest dropped if a log channel is slow. |
-| `RETRY_MAX` | `5` | hot | Maximum 429 retries per queued item; `0` drops immediately. |
+| `RETRY_MAX` | `5` | hot | Maximum 429/503 retries per queued item; `0` drops immediately. |
 | `SEND_INTERVAL_MS` | `350` | process* | Flush timer period (set at boot). |
 | `AUDIT_MAX_AGE_MS` | `12000` | hot | Ignore older audit entries when attributing executor. |
 | `WEBHOOK_NAME` | `LogYazicam` | hot | Webhook username. |

@@ -43,7 +43,7 @@ Small, shippable steps. Upvote or comment on an issue if you want something move
 - [x] Per-event delivery modes
 - [x] Per-event history toggles
 - [x] Per-event redaction overrides
-- [x] Bounded, non-blocking 429 retries
+- [x] Bounded, non-blocking 429/503 retries with `Retry-After`
 - [x] Doctor preflight command
 - [x] Backup and restore CLI commands
 

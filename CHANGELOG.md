@@ -20,6 +20,13 @@ All notable changes to this project are documented here. The format follows
   `FAIL` exits with code 1. Doctor never writes to the database, data directory,
   or `.env`.
 
+### Fixed
+
+- Webhook 429 and 503 retries honor `Retry-After` in delta-seconds or HTTP-date
+  form, cap the wait at five minutes, and fall back to the existing backoff for
+  invalid or missing headers. 503 responses now use the same bounded,
+  timestamp-based retry path as 429 instead of dropping immediately.
+
 ## [2.0.0] - 2026-11-12
 
 ### Changed
