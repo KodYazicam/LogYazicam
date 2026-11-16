@@ -26,9 +26,9 @@
   },
   "homepage": "https://github.com/KodYazicam/LogYazicam#readme",
   "dependencies": {
-    "better-sqlite3": "^13.0.3",
+    "better-sqlite3": "^13.1.1",
     "discord.js": "^14.28.1",
-    "dotenv": "^18.0.9"
+    "dotenv": "^18.0.10"
   },
   "devDependencies": {
     "nodemon": "^3.0.2"
