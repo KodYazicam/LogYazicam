@@ -1212,7 +1212,7 @@ npm run check      # node --check for every JS file
 - SQLite backup: WAL-consistent online snapshots, nested directories, and logged failures
 - Backup/restore CLI: WAL-consistent snapshot, round-trip restore, `--force` and automatic pre-restore backup, corrupt and `integrity_check` rejection with no writes, usage exit codes, and no token in output
 
-CI: GitHub Actions runs `npm ci`, the syntax check, the full test suite on Node 22 and 24, coverage on Node 22, a production dependency audit, and a Docker image build.
+CI: GitHub Actions runs `npm ci`, the syntax check, the full test suite on Node 22 and 24, coverage on Node 22, a production dependency audit, and a Docker image build. The coverage step is a gate: `npm run test:coverage` measures `src/**` only and fails below 94% lines, 80% branches, or 90% functions (Node >= 22.8 is required for the threshold flags; CI runs the latest 22.x).
 
 ---
 

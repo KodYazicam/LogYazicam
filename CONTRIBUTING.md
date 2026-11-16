@@ -3,7 +3,10 @@
 ```bash
 npm install
 npm test
+npm run test:coverage
 ```
+
+`npm run test:coverage` is the CI gate: it measures only `src/**` and exits non-zero when coverage falls below 94% lines, 80% branches, or 90% functions. The threshold flags need Node >= 22.8 (CI runs the latest 22.x; `npm test` needs none of them). Treat the floors as policy: lowering one is a deliberate change and must update `tests/coverage-gate.test.js` in the same PR.
 
 Read these before changing code:
 
