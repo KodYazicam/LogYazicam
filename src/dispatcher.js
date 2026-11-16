@@ -1,14 +1,44 @@
-const { WebhookClient } = require("discord.js");
+const { randomUUID } = require("node:crypto");
+const { WebhookClient, AttachmentBuilder } = require("discord.js");
 const { ignored, inQuietHours, includeOk, embedToPlain } = require("./util");
 const { redactEmbeds, redactText, flagsFrom, eventRedactFlags } = require("./redact");
 const { retryDecision } = require("./retry");
 const { createBoundedCache } = require("./boundedCache");
+
+// Attachments are serialized as base64 into the pending-delivery row. Cap the
+// stored copy so a large buffer cannot bloat the database during shutdown; an
+// item that exceeds the cap is still persisted, just without its file.
+const MAX_PENDING_FILE_BYTES = 8 * 1024 * 1024;
+
+function encodeFiles(files) {
+  return (files || []).flatMap((file) => {
+    const attachment = file?.attachment;
+    if (Buffer.isBuffer(attachment) && attachment.length <= MAX_PENDING_FILE_BYTES) {
+      return [{ name: file.name || "attachment.bin", data: attachment.toString("base64") }];
+    }
+    if (typeof attachment === "string") {
+      return [{ name: file.name || attachment.split(/[\\/]/).pop(), path: attachment }];
+    }
+    return [];
+  });
+}
+
+function decodeFiles(files) {
+  return (files || []).flatMap((file) => {
+    if (typeof file?.data === "string") {
+      return [new AttachmentBuilder(Buffer.from(file.data, "base64"), { name: file.name || "attachment.bin" })];
+    }
+    if (typeof file?.path === "string") return [new AttachmentBuilder(file.path, { name: file.name })];
+    return [];
+  });
+}
 
 function createDispatcher({ client, db, processCfg, log, cache, deps = {} }) {
   const queues = new Map();
   const metrics = { sent: 0, dropped: 0, retries: 0 };
   const makeWebhook = deps.createWebhookClient || ((options) => new WebhookClient(options));
   const now = deps.now || Date.now;
+  const newId = deps.newId || (() => randomUUID());
   const schedule = deps.setInterval || setInterval;
   const wait = deps.sleep || ((ms) => new Promise((resolve) => setTimeout(resolve, ms)));
 
@@ -182,10 +212,11 @@ function createDispatcher({ client, db, processCfg, log, cache, deps = {} }) {
       if (!queues.has(key)) queues.set(key, []);
       const q = queues.get(key);
       if (q.length >= processCfg.maxQueue) {
-        q.shift();
         metrics.dropped += 1;
+        forgetPending(q.shift());
       }
       q.push({
+        id: newId(),
         channelId,
         content,
         embeds: delivery === "plain" ? [] : embeds,
@@ -197,9 +228,11 @@ function createDispatcher({ client, db, processCfg, log, cache, deps = {} }) {
         eventKey,
         summary: payload.summary,
         staff: false,
+        createdAt: now(),
       });
       if (cfg.staffChannel && cfg.staffChannel !== channelId) {
         q.push({
+          id: newId(),
           channelId: cfg.staffChannel,
           content,
           embeds: delivery === "plain" ? [] : embeds,
@@ -209,6 +242,7 @@ function createDispatcher({ client, db, processCfg, log, cache, deps = {} }) {
           eventKey,
           summary: payload.summary,
           staff: true,
+          createdAt: now(),
         });
       }
     } catch (error) {
@@ -279,8 +313,15 @@ function createDispatcher({ client, db, processCfg, log, cache, deps = {} }) {
 
   let flushing = false;
 
+  // Restored rows exist before the gateway login completes. Delivering then
+  // would fail every channel fetch and drop the item, so the send timer waits
+  // for the client to become ready.
+  function clientReady() {
+    return typeof client?.isReady !== "function" || client.isReady();
+  }
+
   async function flushQueues() {
-    if (flushing) return;
+    if (flushing || !clientReady()) return;
     flushing = true;
     try {
       dedupe.prune();
@@ -292,8 +333,13 @@ function createDispatcher({ client, db, processCfg, log, cache, deps = {} }) {
         q.shift();
         try {
           const delivered = await flushOne(item);
-          if (delivered) metrics.sent += 1;
-          else metrics.dropped += 1;
+          if (delivered) {
+            metrics.sent += 1;
+            forgetPending(item);
+          } else {
+            metrics.dropped += 1;
+            forgetPending(item);
+          }
         } catch (error) {
           const at = now();
           const retry = retryDecision(error, at);
@@ -307,6 +353,7 @@ function createDispatcher({ client, db, processCfg, log, cache, deps = {} }) {
             q.unshift(item);
           } else {
             metrics.dropped += 1;
+            forgetPending(item);
             log.error("flush", key, error);
             const cfg = guildCfg(item.guildId);
             if (cfg) cfg.lastError = error.message;
@@ -324,17 +371,80 @@ function createDispatcher({ client, db, processCfg, log, cache, deps = {} }) {
     return size;
   }
 
+  // A row is removed only after the item is delivered or permanently dropped,
+  // so a crash between the Discord send and this delete cannot lose the item;
+  // it can only cause one duplicate delivery, which the issue accepts.
+  function forgetPending(item) {
+    if (!item?.id || !item.persisted || typeof db.deletePendingDelivery !== "function") return;
+    try {
+      db.deletePendingDelivery(item.id);
+    } catch (error) {
+      log.warn("pending delivery delete failed", error.message);
+    }
+  }
+
+  function persistPending() {
+    if (typeof db.savePendingDelivery !== "function") return 0;
+    let saved = 0;
+    for (const q of queues.values()) {
+      for (const item of q) {
+        if (!item?.id) continue;
+        try {
+          db.savePendingDelivery({ ...item, files: encodeFiles(item.files) });
+          item.persisted = true;
+          saved += 1;
+        } catch (error) {
+          log.error("pending delivery save failed", error.message);
+        }
+      }
+    }
+    return saved;
+  }
+
+  function restorePending() {
+    if (typeof db.listPendingDeliveries !== "function") return 0;
+    let restored = 0;
+    for (const row of db.listPendingDeliveries()) {
+      const key = `${row.guildId}:${row.channelId}`;
+      if (!queues.has(key)) queues.set(key, []);
+      const q = queues.get(key);
+      if (q.some((item) => item.id === row.id)) continue;
+      q.push({ ...row, files: decodeFiles(row.files), restored: true, persisted: true });
+      restored += 1;
+    }
+    return restored;
+  }
+
+  function allWaitingOnRetry() {
+    const at = now();
+    for (const q of queues.values()) {
+      for (const item of q) {
+        if (!item.retryAt || item.retryAt <= at) return false;
+      }
+    }
+    return true;
+  }
+
   // Best-effort shutdown drain: flush while there is time left, but never
   // block shutdown forever on a future 429 retryAt or a slow network call.
-  async function drain({ timeoutMs = 5000, intervalMs = 25 } = {}) {
+  // Whatever is still queued when the budget expires is written to SQLite so
+  // the next process can resume it. `timeoutMs: 0` skips the drain and only
+  // persists the queue.
+  async function drain({ timeoutMs = 5000, intervalMs = 25, persist = true } = {}) {
     const budget = Number(timeoutMs);
-    const deadline = now() + (Number.isFinite(budget) && budget > 0 ? budget : 0);
-    while (queueSize() > 0 && now() <= deadline) {
+    const enabled = Number.isFinite(budget) && budget > 0;
+    const deadline = now() + (enabled ? budget : 0);
+    while (enabled && queueSize() > 0 && now() <= deadline) {
+      // Every remaining item waits on a future retryAt, so sleeping cannot
+      // deliver anything; persist it now instead of burning the budget.
+      if (allWaitingOnRetry()) break;
       await flushQueues();
       if (queueSize() === 0) break;
       await wait(intervalMs);
     }
-    return queueSize();
+    const remaining = queueSize();
+    if (persist && remaining > 0) persistPending();
+    return remaining;
   }
 
   const timer = schedule(flushQueues, processCfg.sendIntervalMs);
@@ -351,6 +461,8 @@ function createDispatcher({ client, db, processCfg, log, cache, deps = {} }) {
     tick: flushQueues,
     drain,
     queueSize,
+    persistPending,
+    restorePending,
   };
 }
 

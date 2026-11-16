@@ -53,6 +53,9 @@ const client = new Client({
 });
 
 const dispatch = createDispatcher({ client, db, processCfg, log, cache });
+// Load rows from the previous shutdown before the send timer can fire; the
+// dispatcher itself defers delivery until the client is ready.
+const restoredDeliveries = dispatch.restorePending();
 
 function runHistoryRetention(reason) {
   try {
@@ -104,8 +107,10 @@ async function shutdown(code, reason) {
     // logging is best-effort during shutdown
   }
   try {
-    const remaining = await dispatch.drain({ timeoutMs: 3000 });
-    if (remaining > 0) log.warn("shutdown queue not empty", `${remaining} item(s)`);
+    const remaining = await dispatch.drain({ timeoutMs: processCfg.shutdownFlushMs });
+    if (remaining > 0) {
+      log.warn("shutdown queue persisted", `${remaining} item(s) will resume on restart`);
+    }
   } catch (error) {
     try { log.warn("queue drain failed", error.message); } catch { /* ignore */ }
   }
@@ -231,6 +236,9 @@ client.once("ready", () => {
     dispatch.refreshGuild(guild.id);
     cacheInvites(guild);
   }
+  // Restored rows are already queued; guild configs are cached now, so the
+  // next flush can route them like live traffic.
+  if (restoredDeliveries > 0) log.info("pending deliveries restored", `${restoredDeliveries} item(s)`);
   applyPresence();
   log.info(t(processCfg.defaultLocale, "bot.ready", { tag: client.user.tag, guilds: client.guilds.cache.size }));
   log.info(t(processCfg.defaultLocale, "bot.credit"));

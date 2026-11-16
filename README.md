@@ -372,7 +372,7 @@ logyazicam restore ./backups/logyazicam-2026-11-13.sqlite --force
 
 **Staff channel:** `/log set name:staff_ch value:CHANNEL_ID` posts a second copy (never via webhook). Empty = off.
 
-**429/503:** `RETRY_429=true` re-queues rate-limited or temporarily unavailable Discord webhook sends; `RETRY_MAX` caps attempts per item (default `5`, `0` disables). A valid `Retry-After` header (delta seconds or HTTP-date) sets the timestamp, waits are capped at 5 minutes, and invalid/missing values use the existing backoff. One waiting channel does not stall the others. `/log status` shows `sent` / `dropped`.
+**429/503:** `RETRY_429=true` re-queues rate-limited or temporarily unavailable Discord webhook sends; `RETRY_MAX` caps attempts per item (default `5`, `0` disables). A valid `Retry-After` header (delta seconds or HTTP-date) sets the timestamp, waits are capped at 5 minutes, and invalid/missing values use the existing backoff. One waiting channel does not stall the others. `/log status` shows `sent` / `dropped`. On SIGTERM/SIGINT the dispatcher drains for `SHUTDOWN_FLUSH_MS`, then writes the remaining queued items to SQLite (`pending_deliveries`); the next start restores them and delivers each once.
 
 **Memory bounds:** dedupe/cooldown keys and pending digest-history buckets are capped in memory (`DEDUPE_MAX` / `HISTORY_MAX`). Oldest entries are evicted first; optional TTLs (`DEDUPE_TTL_MS` / `HISTORY_TTL_MS`) expire them sooner. Evicting a pending digest bucket clears its timer, so it cannot flush later. SQLite history remains governed by `HISTORY_LIMIT` and retention.
 
@@ -591,6 +591,7 @@ All names English. Booleans: `1` `0` `true` `false` `yes` `no` `on` `off`. Numer
 | `HISTORY_TTL_MS` | `7200000` | process* | Pending digest bucket lifetime. `0` disables expiry; the cap still applies. |
 | `RETRY_MAX` | `5` | hot | Maximum 429/503 retries per queued item; `0` drops immediately. |
 | `SEND_INTERVAL_MS` | `350` | process* | Flush timer period (set at boot). |
+| `SHUTDOWN_FLUSH_MS` | `5000` | process* | Graceful-shutdown drain budget. Items still queued when it expires are persisted and resumed on the next start; `0` skips the drain and persists immediately. |
 | `AUDIT_MAX_AGE_MS` | `12000` | hot | Ignore older audit entries when attributing executor. |
 | `WEBHOOK_NAME` | `LogYazicam` | hot | Webhook username. |
 | `WEBHOOK_AVATAR_URL` | empty | hot | Webhook avatar URL. |

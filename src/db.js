@@ -75,6 +75,17 @@ function openDb(filePath) {
       inviter_id TEXT,
       PRIMARY KEY (guild_id, code)
     );
+    CREATE TABLE IF NOT EXISTS pending_deliveries (
+      id TEXT PRIMARY KEY,
+      guild_id TEXT NOT NULL,
+      channel_id TEXT NOT NULL,
+      event_key TEXT,
+      payload TEXT NOT NULL,
+      retry_at INTEGER DEFAULT 0,
+      retries INTEGER DEFAULT 0,
+      created_at INTEGER NOT NULL
+    );
+    CREATE INDEX IF NOT EXISTS pending_deliveries_created ON pending_deliveries (created_at);
   `);
 
   const ensureGuild = db.prepare(`
@@ -245,6 +256,83 @@ function openDb(filePath) {
   const listInvites = db.prepare("SELECT * FROM invites WHERE guild_id = ?");
   const deleteInvite = db.prepare("DELETE FROM invites WHERE guild_id = ? AND code = ?");
 
+  // Queued deliveries that survived a graceful shutdown. The dispatcher owns
+  // the payload shape; this layer only stores it verbatim and keeps the
+  // scheduling columns queryable. Upserting by id makes repeated shutdowns
+  // idempotent instead of duplicating rows.
+  const upsertPending = db.prepare(`
+    INSERT INTO pending_deliveries (id, guild_id, channel_id, event_key, payload, retry_at, retries, created_at)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+    ON CONFLICT(id) DO UPDATE SET
+      guild_id = excluded.guild_id,
+      channel_id = excluded.channel_id,
+      event_key = excluded.event_key,
+      payload = excluded.payload,
+      retry_at = excluded.retry_at,
+      retries = excluded.retries
+  `);
+  const listPending = db.prepare("SELECT * FROM pending_deliveries ORDER BY created_at ASC, id ASC");
+  const countPending = db.prepare("SELECT COUNT(*) AS n FROM pending_deliveries");
+  const deletePending = db.prepare("DELETE FROM pending_deliveries WHERE id = ?");
+
+  function savePendingDelivery(item) {
+    const id = String(item?.id || "").trim();
+    if (!id) throw new Error("pending delivery id is required");
+    const payload = JSON.stringify({
+      content: item.content ?? null,
+      embeds: item.embeds || [],
+      files: item.files || [],
+      delivery: item.delivery ?? null,
+      eventDelivery: item.eventDelivery ?? null,
+      preferWebhook: Boolean(item.preferWebhook),
+      sinksDone: Boolean(item.sinksDone),
+      summary: item.summary ?? null,
+      staff: Boolean(item.staff),
+    });
+    upsertPending.run(
+      id,
+      item.guildId,
+      item.channelId,
+      item.eventKey || null,
+      payload,
+      Number(item.retryAt) || 0,
+      Number(item.retries) || 0,
+      Number(item.createdAt) || Date.now(),
+    );
+    return id;
+  }
+
+  function listPendingDeliveries() {
+    return listPending.all().map((row) => {
+      let payload = {};
+      try {
+        payload = JSON.parse(row.payload || "{}");
+      } catch {
+        // A truncated payload must not stop startup; the dispatcher will log
+        // and drop the item if it cannot be delivered.
+        payload = {};
+      }
+      return {
+        ...payload,
+        id: row.id,
+        guildId: row.guild_id,
+        channelId: row.channel_id,
+        eventKey: row.event_key,
+        retryAt: row.retry_at || 0,
+        retries: row.retries || 0,
+        createdAt: row.created_at,
+      };
+    });
+  }
+
+  function deletePendingDelivery(id) {
+    return deletePending.run(id).changes;
+  }
+
+  function pendingDeliveryCount() {
+    return countPending.get().n;
+  }
+
   return {
     raw: db,
     ensureGuild: (id) => {
@@ -277,6 +365,10 @@ function openDb(filePath) {
     upsertInvite,
     listInvites,
     deleteInvite,
+    savePendingDelivery,
+    listPendingDeliveries,
+    deletePendingDelivery,
+    pendingDeliveryCount,
   };
 }
 

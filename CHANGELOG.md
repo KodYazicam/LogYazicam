@@ -22,6 +22,13 @@ All notable changes to this project are documented here. The format follows
 
 ### Fixed
 
+- Queued deliveries now survive a graceful restart. On SIGTERM/SIGINT the
+  dispatcher drains for `SHUTDOWN_FLUSH_MS` (default 5000 ms), then persists
+  every item still waiting (including a future `retryAt`, retry count, sink
+  marker, embeds, and file attachments) to the new `pending_deliveries` table.
+  The next start restores those items before normal traffic and removes a row
+  only after delivery or a permanent drop, so repeated shutdowns cannot
+  duplicate a pending delivery.
 - Webhook 429 and 503 retries honor `Retry-After` in delta-seconds or HTTP-date
   form, cap the wait at five minutes, and fall back to the existing backoff for
   invalid or missing headers. 503 responses now use the same bounded,
