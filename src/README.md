@@ -125,7 +125,7 @@ Control plane: slash `/log` and prefix `{PREFIX}{COMMAND_NAME} …` share `comma
 
 ## Intents
 
-Built by `intents.js` and passed to the client in `index.js`. Portal must match (Members, Message Content; Presence only when `PRESENCE_INTENT=true` and you enable `presenceUpdate`). `GuildMessageTyping` is required for `typingStart` and is already requested. Intents are fixed when the client connects, so toggling `PRESENCE_INTENT` needs a restart.
+Built by `intents.js` and passed to the client in `index.js`. Portal must match (Members, Message Content; Presence only when `PRESENCE_INTENT=true` and you enable `presenceUpdate`). `GuildMessageTyping` is required for `typingStart`, `GuildIntegrations` for `guildIntegrationsUpdate`, and `GuildMessagePolls` for the `messagePollVote*` events; all three are already requested. Intents are fixed when the client connects, so toggling `PRESENCE_INTENT` needs a restart.
 
 ## Errors
 
