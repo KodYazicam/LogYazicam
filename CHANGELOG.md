@@ -22,6 +22,12 @@ All notable changes to this project are documented here. The format follows
 
 ### Fixed
 
+- An HTTP sink response outside `2xx` is now a delivery failure. `postHttpSink`
+  settles with an error that includes the status code instead of treating the
+  request's `close` event as success, so a `401`, `404`, `429`, or `500` from
+  `HTTP_SINK_URL` logs `http sink failed` and, in a sink-only setup, increments
+  `dropped` rather than `sent`. When `discord` is still in `LOG_SINK` the mirror
+  stays asynchronous and cannot delay Discord delivery.
 - Queued deliveries now survive a graceful restart. On SIGTERM/SIGINT the
   dispatcher drains for `SHUTDOWN_FLUSH_MS` (default 5000 ms), then persists
   every item still waiting (including a future `retryAt`, retry count, sink

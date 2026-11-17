@@ -37,9 +37,13 @@ function postHttpSink(url, body, done) {
     };
     const req = lib.request(parsed, { method: "POST", headers: { "content-type": "application/json" } }, (res) => {
       res.resume();
+      // Only a 2xx response means the collector stored the event. A 3xx/4xx/5xx
+      // must reach the caller so a broken mirror is not counted as delivered.
+      const status = Number(res.statusCode) || 0;
+      if (status >= 200 && status < 300) settle(null);
+      else settle(new Error(`http sink responded ${status}`));
     });
     req.on("error", (error) => settle(error));
-    req.on("close", () => settle(null));
     req.setTimeout(5000, () => req.destroy(new Error("sink timeout")));
     req.end(JSON.stringify(body));
   } catch (error) {

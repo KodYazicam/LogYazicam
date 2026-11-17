@@ -100,6 +100,21 @@ test("postHttpSink swallows connection errors", async (t) => {
   assert.ok(error, "the client error reaches the optional completion callback");
 });
 
+test("postHttpSink reports a non-2xx response as an error", async (t) => {
+  const server = await listen(t, (req, res) => {
+    req.resume();
+    res.writeHead(500);
+    res.end("collector down");
+  });
+
+  const error = await new Promise((resolve) => {
+    postHttpSink(`http://127.0.0.1:${portOf(server)}/hook`, { eventKey: "messageDelete" }, resolve);
+  });
+
+  assert.ok(error instanceof Error, "a 500 response must not settle as success");
+  assert.match(error.message, /500/);
+});
+
 test("postHttpSink posts JSON to an HTTP endpoint", async (t) => {
   let resolveRequest;
   const received = new Promise((resolve) => {
