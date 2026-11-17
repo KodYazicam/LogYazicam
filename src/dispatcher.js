@@ -258,18 +258,32 @@ function createDispatcher({ client, db, processCfg, log, cache, deps = {} }) {
     let mirrored = false;
     if (!item.staff && !item.sinksDone) {
       item.sinksDone = true;
+      const discordSink = sinks.includes("discord");
       if (sinks.includes("file") || sinks.includes("http")) {
         const { writeFileSink, postHttpSink } = require("./sinks");
         const body = { guildId: item.guildId, eventKey: item.eventKey, summary: item.summary, at: Date.now() };
         try {
-          if (sinks.includes("file") && writeFileSink(processCfg.fileSinkDir, item.guildId, item.eventKey, body)) {
-            mirrored = true;
-          } else if (sinks.includes("file")) {
-            log.warn("file sink failed", processCfg.fileSinkDir || "(no directory)");
+          if (sinks.includes("file")) {
+            if (writeFileSink(processCfg.fileSinkDir, item.guildId, item.eventKey, body)) mirrored = true;
+            else log.warn("file sink failed", processCfg.fileSinkDir || "(no directory)");
           }
           if (sinks.includes("http")) {
-            postHttpSink(processCfg.httpSinkUrl, body);
-            if (processCfg.httpSinkUrl) mirrored = true;
+            const url = processCfg.httpSinkUrl;
+            if (!url) {
+              log.warn("http sink failed", "HTTP_SINK_URL is not set");
+            } else if (discordSink) {
+              // A mirror must never delay Discord delivery, so its result is
+              // reported asynchronously. A broken collector still gets a warning.
+              postHttpSink(url, body, (error) => {
+                if (error) log.warn("http sink failed", error.message);
+              });
+            } else {
+              // The HTTP sink is the delivery path here: wait for the real status
+              // before counting the event as delivered.
+              const error = await new Promise((resolve) => postHttpSink(url, body, resolve));
+              if (error) log.warn("http sink failed", error.message);
+              else mirrored = true;
+            }
           }
         } catch (error) {
           log.warn("sink failed", error.message);

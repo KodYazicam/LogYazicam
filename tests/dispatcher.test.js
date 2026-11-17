@@ -1228,3 +1228,63 @@ test("HTTP sinks mirror events and sink exceptions do not drop delivery", async 
     sinks.postHttpSink = original;
   }
 });
+
+test("an HTTP-only sink that answers 500 drops the event and logs a warning", async (t) => {
+  const server = http.createServer((req, res) => {
+    req.resume();
+    req.on("end", () => {
+      res.writeHead(500);
+      res.end("collector down");
+    });
+  });
+  await new Promise((resolve) => server.listen(0, "127.0.0.1", resolve));
+  t.after(
+    () =>
+      new Promise((resolve, reject) => {
+        server.closeAllConnections();
+        server.close((error) => (error ? reject(error) : resolve()));
+      }),
+  );
+  const { port } = server.address();
+
+  const h = setup({
+    item: makeItem({ preferWebhook: false }),
+    processCfg: {
+      logSink: "http",
+      httpSinkUrl: `http://127.0.0.1:${port}/sink`,
+    },
+    cfg: { webhookId: null, webhookToken: null, delivery: "channel" },
+  });
+  await h.dispatch.tick();
+
+  assert.equal(h.dispatch.metrics.sent, 0, "a failed mirror is not a delivered event");
+  assert.equal(h.dispatch.metrics.dropped, 1);
+  assert.deepEqual(h.channelFetchCalls, []);
+  assert.ok(h.warnings.some((warning) => warning.includes("http sink failed")));
+  assert.ok(h.warnings.some((warning) => warning.includes("500")));
+});
+
+test("a failing HTTP mirror does not block Discord delivery", async () => {
+  const sinks = require("../src/sinks");
+  const original = sinks.postHttpSink;
+  sinks.postHttpSink = (url, body, done) => {
+    if (typeof done === "function") done(new Error("http sink responded 500"));
+  };
+  try {
+    const h = setup({
+      item: makeItem({ preferWebhook: false }),
+      processCfg: {
+        logSink: "http,discord",
+        httpSinkUrl: "http://127.0.0.1:9/sink",
+      },
+      cfg: { webhookId: null, webhookToken: null, delivery: "channel" },
+    });
+    await h.dispatch.tick();
+
+    assert.equal(h.dispatch.metrics.sent, 1);
+    assert.equal(h.channelSends.length, 1);
+    assert.ok(h.warnings.some((warning) => warning.includes("http sink failed")));
+  } finally {
+    sinks.postHttpSink = original;
+  }
+});

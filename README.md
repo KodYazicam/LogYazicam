@@ -350,7 +350,7 @@ These are **not** fake Discord events. They sit on top of the catalog.
 
 **Field hiding** (`/log fields key:messageDelete hide:jump,id`): per-event embed field names (without `field.` prefix, or full `field.jump`). `*` hides on every event.
 
-**Sinks** (`LOG_SINK=discord,file,http`): after a successful route, also append JSONL under `FILE_SINK_DIR/guildId/YYYY-MM-DD.jsonl` and/or POST `HTTP_SINK_URL`. Omit `discord` to skip Discord entirely (file-only logger).
+**Sinks** (`LOG_SINK=discord,file,http`): after a successful route, also append JSONL under `FILE_SINK_DIR/guildId/YYYY-MM-DD.jsonl` and/or POST `HTTP_SINK_URL`. Omit `discord` to skip Discord entirely (file-only logger). Only a `2xx` answer from `HTTP_SINK_URL` counts as a delivered mirror: any other status (including `3xx`, `401`, `429`, and `500`) logs `http sink failed` with the status code, and in a sink-only setup the event is counted as `dropped` instead of `sent`. With `discord` still enabled, a failing collector is reported but never delays or blocks Discord delivery.
 
 **Backup** (`BACKUP_DIR` + `BACKUP_MS`): write a consistent SQLite online snapshot on an interval. WAL contents are included; do not replace this with a plain file copy. For a manual snapshot or a restore, use the CLI:
 
@@ -1209,6 +1209,7 @@ npm run check      # node --check for every JS file
 - Logger: camelCase and uppercase config keys, hot level/file reconfiguration, level filtering, unknown-level fallback, and unusable paths
 - Webhook delivery: succeeds without a channel fetch, falls back when enabled, and runs file/HTTP sinks before Discord
 - Sink isolation: unwritable file directories cannot drop Discord delivery
+- HTTP sink status: only a `2xx` mirror counts as delivered; `500` is logged and, in a sink-only setup, counted as `dropped`
 - SQLite backup: WAL-consistent online snapshots, nested directories, and logged failures
 - Backup/restore CLI: WAL-consistent snapshot, round-trip restore, `--force` and automatic pre-restore backup, corrupt and `integrity_check` rejection with no writes, usage exit codes, and no token in output
 
