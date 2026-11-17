@@ -153,14 +153,18 @@ function createDispatcher({ client, db, processCfg, log, cache, deps = {} }) {
       const digestMin = eventDigest?.min || processCfg.digestMin || 5;
       if (digestMs > 0 && !payload.digest) {
         const dkey = `${guild.id}:${eventKey}:${channelId}`;
-        const bucket = historyBuffer.get(dkey) || { count: 0, timer: null, sample: payload, guild, eventKey };
+        const bucket = historyBuffer.get(dkey) || { count: 0, timer: null, sample: payload, guild, eventKey, min: digestMin, pending: [] };
         bucket.count += 1;
         bucket.sample = payload;
+        // Keep the individual events only until the digest threshold is reached.
+        // A burst below the minimum is not a burst: every event must be delivered
+        // on its own instead of silently replacing the rest with the last sample.
+        if (bucket.count < bucket.min) bucket.pending.push(payload);
         if (!bucket.timer) {
           bucket.timer = setTimeout(() => {
             historyBuffer.delete(dkey);
             const n = bucket.count;
-            const min = digestMin;
+            const min = bucket.min;
             if (n >= min) {
               const { buildEmbed } = require("./util");
               const embed = buildEmbed(cfg, eventKey, [
@@ -169,7 +173,9 @@ function createDispatcher({ client, db, processCfg, log, cache, deps = {} }) {
               ], { description: `${n}× ${eventKey}` });
               enqueue(guild, eventKey, { ...bucket.sample, embeds: [embed], digest: true, summary: `digest ${n}` });
             } else {
-              enqueue(guild, eventKey, { ...bucket.sample, digest: true });
+              for (const event of bucket.pending) {
+                enqueue(guild, eventKey, { ...event, digest: true });
+              }
             }
           }, digestMs).unref();
         }

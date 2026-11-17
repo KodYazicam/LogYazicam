@@ -1122,6 +1122,62 @@ test("digest buckets flush after the window with and without enough events", asy
   assert.match(digest.embeds[0].data.description, /messageDelete/);
 });
 
+test("a burst below the digest minimum delivers every buffered event", async () => {
+  const h = setup({
+    queued: false,
+    cfg: {
+      locale: "en",
+      colors: { info: 0x5865f2, delete: 0xff0000 },
+      showTimestamp: false,
+      showCredit: false,
+      hiddenFields: {},
+      eventDigest: { messageUpdate: { ms: 20, min: 5 } },
+      events: { messageUpdate: { on: true, channelId: "c1" } },
+    },
+    processCfg: { digestMin: 1 },
+  });
+
+  for (const content of ["one", "two", "three"]) {
+    await h.dispatch.enqueue({ id: "g1" }, "messageUpdate", { summary: content, content });
+  }
+  assert.equal(h.dispatch.queues.get("g1:c1")?.length ?? 0, 0);
+
+  await new Promise((resolve) => setTimeout(resolve, 80));
+  assert.equal(h.dispatch.queues.get("g1:c1").length, 3);
+
+  for (let i = 0; i < 3; i += 1) await h.dispatch.tick();
+  assert.equal(h.hookCalls.length, 3);
+  assert.deepEqual(h.hookCalls.map((payload) => payload.content), ["one", "two", "three"]);
+});
+
+test("a burst at the digest minimum still collapses into one counted embed", async () => {
+  const h = setup({
+    queued: false,
+    cfg: {
+      locale: "en",
+      colors: { info: 0x5865f2, delete: 0xff0000 },
+      showTimestamp: false,
+      showCredit: false,
+      hiddenFields: {},
+      eventDigest: { messageUpdate: { ms: 20, min: 5 } },
+      events: { messageUpdate: { on: true, channelId: "c1" } },
+    },
+    processCfg: { digestMin: 1 },
+  });
+
+  for (let i = 0; i < 5; i += 1) {
+    await h.dispatch.enqueue({ id: "g1" }, "messageUpdate", { summary: `event-${i}` });
+  }
+  await new Promise((resolve) => setTimeout(resolve, 80));
+  assert.equal(h.dispatch.queues.get("g1:c1").length, 1);
+
+  await h.dispatch.tick();
+  assert.equal(h.hookCalls.length, 1);
+  const [embed] = h.hookCalls[0].embeds;
+  assert.match(embed.data.description, /5× messageUpdate/);
+  assert.equal(embed.data.fields[0].value, "5");
+});
+
 test("enqueue copies to the staff channel and logs route failures", async () => {
   const h = setup({
     queued: false,
