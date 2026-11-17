@@ -197,8 +197,9 @@ test("redactFiles rewrites text attachments and passes binary files through", ()
   const out = redactFiles([textFile, png], alwaysOn);
   assert.notEqual(out[0], textFile);
   assert.equal(out[0].name, "message-m1.txt");
-  assert.match(out[0].attachment.toString("utf8"), /\[discord-token\]/);
-  assert.doesNotMatch(out[0].attachment.toString("utf8"), new RegExp(token.replace(/\./g, "\\.")));
+  const redacted = out[0].attachment.toString("utf8");
+  assert.match(redacted, /\[discord-token\]/);
+  assert.ok(!redacted.includes(token));
   assert.equal(out[1], png);
 
   assert.deepEqual(redactFiles([], alwaysOn), []);

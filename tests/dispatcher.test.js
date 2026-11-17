@@ -1316,6 +1316,6 @@ test("redacts secret tokens inside long-message files before delivery", async ()
   const text = Buffer.isBuffer(sent.files[0].attachment)
     ? sent.files[0].attachment.toString("utf8")
     : String(sent.files[0].attachment);
-  assert.doesNotMatch(text, new RegExp(token.replace(/\./g, "\\.")));
+  assert.ok(!text.includes(token));
   assert.match(text, /\[discord-token\]/);
 });
