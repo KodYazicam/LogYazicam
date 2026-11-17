@@ -1,6 +1,6 @@
 # `tests/`
 
-No Discord token. Runner: `node --test` (CI and `npm test`).
+No Discord token. Runner: `node --test` (CI and `npm test`). The CI coverage step runs `npm run test:coverage`, which measures `src/**` only and fails below 94% lines / 80% branches / 90% functions. Those flags need Node >= 22.8; plain `npm test` does not use them.
 
 | File | Asserts |
 | --- | --- |
@@ -30,5 +30,7 @@ No Discord token. Runner: `node --test` (CI and `npm test`).
 | `intents.test.js` | `GuildPresences` is absent by default and added exactly once when `PRESENCE_INTENT` is enabled |
 | `doctor.test.js` | Node >= 22, token shape without leaking the token, required intents and malformed `PRESENCE_INTENT`, missing/writable/blocked data directories, world-writable warnings, missing/corrupt SQLite, `.env` permission modes, aggregate exit codes, CLI output/unknown command, and the `bin` entry |
 | `commands.test.js` | Slash default permission uses the supplied `processConfig`, falls back to `ManageGuild` for invalid names, keeps the `process.env` fallback, clamps history limits, enforces filter/setting allowlists, rejects unknown/out-of-range values, stores/clears per-event colors, cooldowns, digest windows, actor modes, quiet bypasses, channel allow-lists, delivery modes, history toggles, and redaction flags, resets only one event's overrides, and parses quiet-day aliases; also covers denial/owner access, status metrics, channel/group/event routing, ignore lists, locale/timezone validation, filter/webhook/footer, test/pack/setup, fields/string/color/mention/languages, history CSV/JSONL/empty, config export/import validation (including deferring the slash reply), watch/events, autocomplete, invalid per-event validation, empty-container cleanup, set-alias validation, watch removal/default fallthrough, import read/database failures, and missing attachments |
+
+| `coverage-gate.test.js` | `test:coverage` keeps the `src/**` include and the 94/80/90 line/branch/function floors, plain `npm test` stays flag-free, and CI still runs the coverage gate on Node 22 |
 
 When you add a locale file, update the sorted array in `catalog.test.js`. When you add an event, `en.js` + catalog uniqueness is enough — no new test file required unless the formatter has branches (`voiceKind`).
