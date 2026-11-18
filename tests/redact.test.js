@@ -137,6 +137,18 @@ test("always strips fine-grained GitHub PATs", () => {
   assert.equal(redactText("github_pat_short", alwaysOn), "github_pat_short");
 });
 
+test("always strips temporary AWS access key IDs", () => {
+  // AKIA is the long-term IAM prefix; ASIA is the STS temporary prefix.
+  const temporary = "ASIA1234567890ABCDEF";
+  const out = redactText(`key ${temporary} end`, alwaysOn);
+  assert.equal(out, "key [aws-key] end");
+
+  // AWS keys belong to the always-on set, not the optional flags.
+  assert.equal(redactText(temporary, off), temporary);
+  // A bare prefix or a short fragment is not a key.
+  assert.equal(redactText("ASIA and ASIAABC are words", alwaysOn), "ASIA and ASIAABC are words");
+});
+
 test("ordinary text is not changed by always-on token patterns", () => {
   const text = "Deploy at 10:30; ask @ops about sk-learn and AKIA is not a key here.";
   assert.equal(redactText(text, alwaysOn), text);

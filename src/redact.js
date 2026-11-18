@@ -5,7 +5,7 @@ const PATTERNS = [
   { kind: "openai", re: /\bsk-(?:proj|svcacct)-[A-Za-z0-9_-]{16,}\b/g },
   { kind: "openai", re: /\bsk-[A-Za-z0-9]{32,}\b/g },
   { kind: "anthropic", re: /\bsk-ant-[A-Za-z0-9_-]{16,}\b/g },
-  { kind: "aws-key", re: /\bAKIA[0-9A-Z]{16}\b/g },
+  { kind: "aws-key", re: /\b(?:AKIA|ASIA)[0-9A-Z]{16}\b/g },
   { kind: "stripe", re: /\b(?:sk|rk)_live_[A-Za-z0-9]{16,}\b/g },
   { kind: "slack-token", re: /\bxox[baprs]-[A-Za-z0-9-]{10,}\b/g },
   { kind: "url", re: /https?:\/\/[^\s<]+/gi },

@@ -27,6 +27,12 @@ All notable changes to this project are documented here. The format follows
   patterns, are stripped from the uploaded file instead of only from the embed and
   plain-text body. The attachment keeps its `message-<id>.txt` name; binary and
   other non-text files are untouched.
+- AWS temporary access key IDs (`ASIA…`, used by STS credentials) are now
+  stripped by the always-on token redaction. The matcher only covered the
+  long-term `AKIA…` prefix, so a session access key ID in a logged message
+  reached Discord embeds, the plain/HTTP/file sinks, and the long-message
+  `.txt` attachment in clear text even though the README says AWS token shapes
+  cannot be logged unredacted.
 - Fine-grained GitHub personal access tokens (`github_pat_…`) are now stripped
   by the always-on token redaction. The matcher only covered the classic
   `ghp_`/`gho_`/`ghu_`/`ghs_`/`ghr_` prefixes, so a fine-grained PAT in a
