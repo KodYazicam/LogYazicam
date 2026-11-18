@@ -368,7 +368,7 @@ logyazicam restore ./backups/logyazicam-2026-11-13.sqlite --force
 
 **Snapshot TTL / bots:** `SNAPSHOT_TTL_MS` drops old rows; `SNAPSHOT_BOTS=false` (default) skips bot messages in the cache.
 
-**Redaction:** `REDACT_URLS` `REDACT_MENTIONS` `REDACT_EMAILS` `REDACT_INVITES` (all default **false**). Discord/GitHub/OpenAI/Anthropic/AWS/Stripe/Slack token shapes are always stripped. Guild: `/log set name:redact_url value:true`. Per event: `/log event redact`.
+**Redaction:** `REDACT_URLS` `REDACT_MENTIONS` `REDACT_EMAILS` `REDACT_INVITES` (all default **false**). Discord/GitHub (classic and fine-grained PATs)/OpenAI/Anthropic/AWS/Stripe/Slack token shapes are always stripped. Guild: `/log set name:redact_url value:true`. Per event: `/log event redact`.
 
 **Staff channel:** `/log set name:staff_ch value:CHANNEL_ID` posts a second copy (never via webhook). Empty = off.
 
@@ -828,7 +828,7 @@ Allow-list. Empty = every channel. `add` / `remove` / `clear` / `list` a text ch
 
 `/log event delivery` controls how one event is rendered. `plain` flattens that event's embeds to text, `embed` keeps embeds even when the guild uses `plain_text`, and `webhook` prefers the guild webhook for that event. `plain`/`embed` also force channel delivery for that event when the guild otherwise uses webhook credentials. `default` removes the override. The event mode beats both the guild `delivery` setting and `plain_text`.
 
-`/log event redact` controls optional redaction per event. An event `url:true` strips links from that event even if the guild default is off; `url:false` keeps links for that event even when the guild redacts them. Secret-token patterns (Discord, GitHub, OpenAI, Anthropic, AWS, Stripe, Slack) are always on and cannot be disabled.
+`/log event redact` controls optional redaction per event. An event `url:true` strips links from that event even if the guild default is off; `url:false` keeps links for that event even when the guild redacts them. Secret-token patterns (Discord, GitHub classic and fine-grained PATs, OpenAI, Anthropic, AWS, Stripe, Slack) are always on and cannot be disabled.
 
 Quiet hours, pause, allow-list, cooldown, and account age all run **before** the send queue. They apply without restart. `quiet_days` is evaluated in the guild timezone at send time; an empty list keeps the window active every day. `/log event bypass` lets selected events bypass quiet hours, but not pause.
 
