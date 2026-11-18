@@ -125,6 +125,18 @@ test("always strips token-like strings regardless of optional flags", () => {
   assert.match(out, /\[slack-token\]/);
 });
 
+test("always strips fine-grained GitHub PATs", () => {
+  // github_pat_ + 22 chars + separator + 59 chars, the documented format.
+  const fineGrained = `github_pat_${"A".repeat(22)}_${"b".repeat(59)}`;
+  const out = redactText(`token ${fineGrained} end`, alwaysOn);
+  assert.equal(out, "token [github-token] end");
+
+  // Fine-grained PATs belong to the always-on set, not the optional flags.
+  assert.equal(redactText(fineGrained, off), fineGrained);
+  // A prose mention or a short fragment is not a credential.
+  assert.equal(redactText("github_pat_short", alwaysOn), "github_pat_short");
+});
+
 test("ordinary text is not changed by always-on token patterns", () => {
   const text = "Deploy at 10:30; ask @ops about sk-learn and AKIA is not a key here.";
   assert.equal(redactText(text, alwaysOn), text);

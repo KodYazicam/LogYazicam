@@ -27,6 +27,12 @@ All notable changes to this project are documented here. The format follows
   patterns, are stripped from the uploaded file instead of only from the embed and
   plain-text body. The attachment keeps its `message-<id>.txt` name; binary and
   other non-text files are untouched.
+- Fine-grained GitHub personal access tokens (`github_pat_…`) are now stripped
+  by the always-on token redaction. The matcher only covered the classic
+  `ghp_`/`gho_`/`ghu_`/`ghs_`/`ghr_` prefixes, so a fine-grained PAT in a
+  logged message reached Discord embeds, the plain/HTTP/file sinks, and SQLite
+  history in clear text even though the README says GitHub token shapes cannot
+  be logged unredacted.
 - An HTTP sink response outside `2xx` is now a delivery failure. `postHttpSink`
   settles with an error that includes the status code instead of treating the
   request's `close` event as success, so a `401`, `404`, `429`, or `500` from

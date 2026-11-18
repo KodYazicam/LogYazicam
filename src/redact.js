@@ -1,6 +1,7 @@
 const PATTERNS = [
   { kind: "discord-token", re: /[\w-]{24}\.[\w-]{6}\.[\w-]{27,}/g },
   { kind: "github-token", re: /\bgh[pousr]_[A-Za-z0-9_]{20,}\b/g },
+  { kind: "github-token", re: /\bgithub_pat_[A-Za-z0-9_]{20,}\b/g },
   { kind: "openai", re: /\bsk-(?:proj|svcacct)-[A-Za-z0-9_-]{16,}\b/g },
   { kind: "openai", re: /\bsk-[A-Za-z0-9]{32,}\b/g },
   { kind: "anthropic", re: /\bsk-ant-[A-Za-z0-9_-]{16,}\b/g },
