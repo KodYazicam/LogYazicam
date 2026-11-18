@@ -258,7 +258,7 @@ Create / delete / update for each. Role update diffs name, color, hoist, mention
 
 ### Group `webhook` / `integration`
 
-`webhooksUpdate` → `webhookUpdate` (channel). `guildIntegrationsUpdate` → server name only (Discord does not send the integration body on this event).
+`webhooksUpdate` → `webhookUpdate` (channel). `guildIntegrationsUpdate` → server name only (Discord does not send the integration body on this event) and needs the `GuildIntegrations` intent (already requested).
 
 ### Group `event` (scheduled events)
 
@@ -295,7 +295,7 @@ Rule create/delete/update. `autoModerationActionExecution` — user, rule id, ma
 | `messagePollVoteAdd` | `messagePollVoteAdd` | user id, answer text, jump | Someone voted on a native Discord poll. Answer text is whatever Discord still has on the poll object. |
 | `messagePollVoteRemove` | `messagePollVoteRemove` | same | Vote retracted. |
 
-`/log group on name:poll` enables both. Needs the bot to see the poll message (same channel access as message logs).
+`/log group on name:poll` enables both. Needs the `GuildMessagePolls` intent (already requested) and the bot must see the poll message (same channel access as message logs).
 
 ### Group `typing` (default **off**)
 
@@ -1112,7 +1112,7 @@ Add a string: put it in `en.js` first, then override.
 
 From `src/intents.js` and `src/index.js`:
 
-**Intents:** Guilds, GuildMembers, GuildMessages, GuildMessageTyping, GuildMessageReactions, MessageContent, GuildVoiceStates, GuildInvites, GuildModeration, GuildEmojisAndStickers, GuildWebhooks, GuildScheduledEvents, AutoModerationConfiguration, AutoModerationExecution. `GuildPresences` is added only when `PRESENCE_INTENT=true`.
+**Intents:** Guilds, GuildMembers, GuildMessages, GuildMessageTyping, GuildMessageReactions, GuildMessagePolls, MessageContent, GuildVoiceStates, GuildInvites, GuildModeration, GuildEmojisAndStickers, GuildWebhooks, GuildIntegrations, GuildScheduledEvents, AutoModerationConfiguration, AutoModerationExecution. `GuildPresences` is added only when `PRESENCE_INTENT=true`.
 
 **Partials:** Message, Channel, Reaction, User, GuildMember, ThreadMember, GuildScheduledEvent.
 
