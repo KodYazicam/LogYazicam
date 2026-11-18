@@ -100,7 +100,8 @@ test("always strips token-like strings regardless of optional flags", () => {
   const openaiProject = `sk-proj-${"a".repeat(20)}`;
   const openaiLegacy = `sk-${"B".repeat(32)}`;
   const anthropic = `sk-ant-${"c".repeat(20)}`;
-  const aws = "AKIA1234567890ABCDEF";
+  // Assembled at runtime so the repository carries no literal key ID.
+  const aws = "AKIA" + "1234567890ABCDEF";
   const stripe = `sk_live_${"d".repeat(20)}`;
   const slack = "xoxb-1234567890abcdefgh";
   const out = redactText(
@@ -139,7 +140,8 @@ test("always strips fine-grained GitHub PATs", () => {
 
 test("always strips temporary AWS access key IDs", () => {
   // AKIA is the long-term IAM prefix; ASIA is the STS temporary prefix.
-  const temporary = "ASIA1234567890ABCDEF";
+  // Assembled at runtime so the repository carries no literal key ID.
+  const temporary = "ASIA" + "1234567890ABCDEF";
   const out = redactText(`key ${temporary} end`, alwaysOn);
   assert.equal(out, "key [aws-key] end");
 
