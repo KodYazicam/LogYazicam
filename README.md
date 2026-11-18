@@ -258,7 +258,7 @@ Create / delete / update for each. Role update diffs name, color, hoist, mention
 
 ### Group `webhook` / `integration`
 
-`webhooksUpdate` → `webhookUpdate` (channel). `guildIntegrationsUpdate` → server name only (Discord does not send the integration body on this event).
+`webhooksUpdate` → `webhookUpdate` (channel). `guildIntegrationsUpdate` → server name only (Discord does not send the integration body on this event) and needs the `GuildIntegrations` intent (already requested).
 
 ### Group `event` (scheduled events)
 
@@ -295,7 +295,7 @@ Rule create/delete/update. `autoModerationActionExecution` — user, rule id, ma
 | `messagePollVoteAdd` | `messagePollVoteAdd` | user id, answer text, jump | Someone voted on a native Discord poll. Answer text is whatever Discord still has on the poll object. |
 | `messagePollVoteRemove` | `messagePollVoteRemove` | same | Vote retracted. |
 
-`/log group on name:poll` enables both. Needs the bot to see the poll message (same channel access as message logs).
+`/log group on name:poll` enables both. Needs the `GuildMessagePolls` intent (already requested) and the bot must see the poll message (same channel access as message logs).
 
 ### Group `typing` (default **off**)
 
@@ -344,7 +344,7 @@ These are **not** fake Discord events. They sit on top of the catalog.
 
 **Invite attribution** (`INVITE_TRACK`): on `ready` and `guildCreate` the bot caches invite uses. On `guildMemberAdd` it diffs uses and sets `field.inviter` (`tag (code)`). Needs permission to fetch invites. Vanity / widget joins have no row.
 
-**Burst digest** (`DIGEST_MS`, guild `digest_ms`): if more than `DIGEST_MIN` of the **same** event key hit the same log channel within the window, one embed `{count}× eventKey` is sent instead of N embeds. `0` disables. Filters still run first (ignored users never enter the bucket).
+**Burst digest** (`DIGEST_MS`, guild `digest_ms`): if `DIGEST_MIN` or more of the **same** event key hit the same log channel within the window, one embed `{count}× eventKey` is sent instead of N embeds. A shorter burst is delivered event by event, so nothing is dropped. `0` disables. Filters still run first (ignored users never enter the bucket).
 
 **Packs** (`/log pack name:moderation|voice|message|server|quiet`): enables a curated key list. `/log setup channel:#mod-log` sets the default channel **and** applies `quiet` (ban, timeout, delete, unavailable). Defined in `src/packs.js`.
 
@@ -368,7 +368,7 @@ logyazicam restore ./backups/logyazicam-2026-11-13.sqlite --force
 
 **Snapshot TTL / bots:** `SNAPSHOT_TTL_MS` drops old rows; `SNAPSHOT_BOTS=false` (default) skips bot messages in the cache.
 
-**Redaction:** `REDACT_URLS` `REDACT_MENTIONS` `REDACT_EMAILS` `REDACT_INVITES` (all default **false**). Discord/GitHub (classic and fine-grained PATs)/OpenAI/Anthropic/AWS/Stripe/Slack token shapes are always stripped. Guild: `/log set name:redact_url value:true`. Per event: `/log event redact`.
+**Redaction:** `REDACT_URLS` `REDACT_MENTIONS` `REDACT_EMAILS` `REDACT_INVITES` (all default **false**). Discord/GitHub (classic and fine-grained PATs)/OpenAI/Anthropic/AWS/Stripe/Slack token shapes are always stripped. Guild: `/log set name:redact_url value:true`. Per event: `/log event redact`. The same flags also rewrite the `message-<id>.txt` attachment uploaded for long deleted messages, so the file cannot contain a secret the embed hides.
 
 **Staff channel:** `/log set name:staff_ch value:CHANNEL_ID` posts a second copy (never via webhook). Empty = off.
 
@@ -828,7 +828,7 @@ Allow-list. Empty = every channel. `add` / `remove` / `clear` / `list` a text ch
 
 `/log event delivery` controls how one event is rendered. `plain` flattens that event's embeds to text, `embed` keeps embeds even when the guild uses `plain_text`, and `webhook` prefers the guild webhook for that event. `plain`/`embed` also force channel delivery for that event when the guild otherwise uses webhook credentials. `default` removes the override. The event mode beats both the guild `delivery` setting and `plain_text`.
 
-`/log event redact` controls optional redaction per event. An event `url:true` strips links from that event even if the guild default is off; `url:false` keeps links for that event even when the guild redacts them. Secret-token patterns (Discord, GitHub classic and fine-grained PATs, OpenAI, Anthropic, AWS, Stripe, Slack) are always on and cannot be disabled.
+`/log event redact` controls optional redaction per event. An event `url:true` strips links from that event even if the guild default is off; `url:false` keeps links for that event even when the guild redacts them. Secret-token patterns (Discord, GitHub classic and fine-grained PATs, OpenAI, Anthropic, AWS, Stripe, Slack) are always on and cannot be disabled. Redaction also applies to the long-message `.txt` attachment, not just the embed.
 
 Quiet hours, pause, allow-list, cooldown, and account age all run **before** the send queue. They apply without restart. `quiet_days` is evaluated in the guild timezone at send time; an empty list keeps the window active every day. `/log event bypass` lets selected events bypass quiet hours, but not pause.
 
@@ -1112,7 +1112,7 @@ Add a string: put it in `en.js` first, then override.
 
 From `src/intents.js` and `src/index.js`:
 
-**Intents:** Guilds, GuildMembers, GuildMessages, GuildMessageTyping, GuildMessageReactions, MessageContent, GuildVoiceStates, GuildInvites, GuildModeration, GuildEmojisAndStickers, GuildWebhooks, GuildScheduledEvents, AutoModerationConfiguration, AutoModerationExecution. `GuildPresences` is added only when `PRESENCE_INTENT=true`.
+**Intents:** Guilds, GuildMembers, GuildMessages, GuildMessageTyping, GuildMessageReactions, GuildMessagePolls, MessageContent, GuildVoiceStates, GuildInvites, GuildModeration, GuildEmojisAndStickers, GuildWebhooks, GuildIntegrations, GuildScheduledEvents, AutoModerationConfiguration, AutoModerationExecution. `GuildPresences` is added only when `PRESENCE_INTENT=true`.
 
 **Partials:** Message, Channel, Reaction, User, GuildMember, ThreadMember, GuildScheduledEvent.
 

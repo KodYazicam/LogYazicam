@@ -48,6 +48,25 @@ function redactEmbeds(embeds, flags) {
   });
 }
 
+function redactFiles(files, flags) {
+  if (!files?.length || !flags) return files;
+  let changed = false;
+  const out = files.map((file) => {
+    const buffer = file?.attachment;
+    if (!Buffer.isBuffer(buffer) || !/\.txt$/i.test(file.name || "")) return file;
+    const text = buffer.toString("utf8");
+    const redacted = redactText(text, flags);
+    if (redacted === text) return file;
+    changed = true;
+    const { AttachmentBuilder } = require("discord.js");
+    return new AttachmentBuilder(Buffer.from(redacted, "utf8"), {
+      name: file.name,
+      description: file.description ?? undefined,
+    });
+  });
+  return changed ? out : files;
+}
+
 function flagsFrom(cfg, processCfg) {
   const extra = cfg?.extra?.redact || {};
   return {
@@ -77,4 +96,4 @@ function eventRedactFlags(cfg, eventKey, base) {
   return flags;
 }
 
-module.exports = { redactText, redactEmbeds, flagsFrom, eventRedactFlags, EVENT_FLAGS, PATTERNS };
+module.exports = { redactText, redactEmbeds, redactFiles, flagsFrom, eventRedactFlags, EVENT_FLAGS, PATTERNS };

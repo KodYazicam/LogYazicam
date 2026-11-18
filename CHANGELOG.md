@@ -22,6 +22,11 @@ All notable changes to this project are documented here. The format follows
 
 ### Fixed
 
+- Long-message `.txt` attachments (`attach_long`) are now redacted with the same
+  flags as the embed. Secret-token shapes, and optional URL/mention/e-mail/invite
+  patterns, are stripped from the uploaded file instead of only from the embed and
+  plain-text body. The attachment keeps its `message-<id>.txt` name; binary and
+  other non-text files are untouched.
 - Fine-grained GitHub personal access tokens (`github_pat_…`) are now stripped
   by the always-on token redaction. The matcher only covered the classic
   `ghp_`/`gho_`/`ghu_`/`ghs_`/`ghr_` prefixes, so a fine-grained PAT in a
