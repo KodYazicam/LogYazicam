@@ -1,7 +1,7 @@
 const { randomUUID } = require("node:crypto");
 const { WebhookClient, AttachmentBuilder } = require("discord.js");
 const { ignored, inQuietHours, includeOk, embedToPlain } = require("./util");
-const { redactEmbeds, redactText, flagsFrom, eventRedactFlags } = require("./redact");
+const { redactEmbeds, redactText, redactFiles, flagsFrom, eventRedactFlags } = require("./redact");
 const { retryDecision } = require("./retry");
 const { createBoundedCache } = require("./boundedCache");
 
@@ -185,7 +185,7 @@ function createDispatcher({ client, db, processCfg, log, cache, deps = {} }) {
       if (!cooldownOk(cfg, guild.id, eventKey)) return;
 
       let embeds = payload.embeds || [];
-      const files = payload.files || [];
+      let files = payload.files || [];
       let content = payload.content || (cfg.mentionOnDelete && eventKey === "messageDelete" && cfg.mentionRole
         ? `<@&${cfg.mentionRole}>`
         : null);
@@ -193,6 +193,7 @@ function createDispatcher({ client, db, processCfg, log, cache, deps = {} }) {
       const flags = eventRedactFlags(cfg, eventKey, flagsFrom(cfg, processCfg));
       if (embeds.length) embeds = redactEmbeds(embeds, flags);
       if (content) content = redactText(content, flags);
+      files = redactFiles(files, flags);
 
       const eventMode = cfg.eventDelivery?.[eventKey];
       const eventDelivery = ["embed", "plain", "webhook"].includes(eventMode) ? eventMode : null;

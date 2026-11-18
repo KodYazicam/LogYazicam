@@ -1,7 +1,7 @@
 const { test } = require("node:test");
 const assert = require("node:assert/strict");
 const { EmbedBuilder } = require("discord.js");
-const { redactText, redactEmbeds, flagsFrom, eventRedactFlags } = require("../src/redact");
+const { redactText, redactEmbeds, redactFiles, flagsFrom, eventRedactFlags } = require("../src/redact");
 
 const BASE_FLAGS = {
   redactUrls: false,
@@ -186,4 +186,26 @@ test("eventRedactFlags overrides only optional per-event flags", () => {
   assert.equal(flags.unknown, undefined);
   assert.equal(base.url, true);
   assert.deepEqual(eventRedactFlags({}, "messageDelete", base), base);
+});
+
+test("redactFiles rewrites text attachments and passes binary files through", () => {
+  const { AttachmentBuilder } = require("discord.js");
+  const token = "________________________.______.___________________________";
+  const textFile = new AttachmentBuilder(Buffer.from(`token ${token}`, "utf8"), { name: "message-m1.txt" });
+  const png = new AttachmentBuilder(Buffer.from([0x89, 0x50, 0x4e, 0x47]), { name: "image.png" });
+
+  const out = redactFiles([textFile, png], alwaysOn);
+  assert.notEqual(out[0], textFile);
+  assert.equal(out[0].name, "message-m1.txt");
+  const redacted = out[0].attachment.toString("utf8");
+  assert.match(redacted, /\[discord-token\]/);
+  assert.ok(!redacted.includes(token));
+  assert.equal(out[1], png);
+
+  assert.deepEqual(redactFiles([], alwaysOn), []);
+  assert.equal(redactFiles(undefined, alwaysOn), undefined);
+  const files = [textFile];
+  assert.equal(redactFiles(files, null), files);
+  const clean = new AttachmentBuilder(Buffer.from("nothing secret", "utf8"), { name: "message-m2.txt" });
+  assert.equal(redactFiles([clean], alwaysOn)[0], clean);
 });

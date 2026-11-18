@@ -22,6 +22,11 @@ All notable changes to this project are documented here. The format follows
 
 ### Fixed
 
+- Long-message `.txt` attachments (`attach_long`) are now redacted with the same
+  flags as the embed. Secret-token shapes, and optional URL/mention/e-mail/invite
+  patterns, are stripped from the uploaded file instead of only from the embed and
+  plain-text body. The attachment keeps its `message-<id>.txt` name; binary and
+  other non-text files are untouched.
 - An HTTP sink response outside `2xx` is now a delivery failure. `postHttpSink`
   settles with an error that includes the status code instead of treating the
   request's `close` event as success, so a `401`, `404`, `429`, or `500` from

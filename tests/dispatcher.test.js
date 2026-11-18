@@ -1344,3 +1344,34 @@ test("a failing HTTP mirror does not block Discord delivery", async () => {
     sinks.postHttpSink = original;
   }
 });
+
+test("redacts secret tokens inside long-message files before delivery", async () => {
+  const { AttachmentBuilder } = require("discord.js");
+  const token = "________________________.______.___________________________";
+  const body = `preamble ${token} trailing`;
+  const h = setup({
+    queued: false,
+    cfg: {
+      delivery: "embed",
+      events: { messageDelete: { on: true, channelId: "c1" } },
+    },
+  });
+
+  await h.dispatch.enqueue({ id: "g1" }, "messageDelete", {
+    summary: "delete m1",
+    content: "short",
+    embeds: [{ title: "Message deleted", fields: [{ name: "Content", value: body }] }],
+    files: [new AttachmentBuilder(Buffer.from(body, "utf8"), { name: "message-m1.txt" })],
+  });
+  await h.dispatch.tick();
+
+  assert.equal(h.hookCalls.length, 1);
+  const sent = h.hookCalls[0];
+  assert.equal(sent.files.length, 1);
+  assert.equal(sent.files[0].name, "message-m1.txt");
+  const text = Buffer.isBuffer(sent.files[0].attachment)
+    ? sent.files[0].attachment.toString("utf8")
+    : String(sent.files[0].attachment);
+  assert.ok(!text.includes(token));
+  assert.match(text, /\[discord-token\]/);
+});
