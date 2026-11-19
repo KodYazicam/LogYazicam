@@ -22,6 +22,14 @@ All notable changes to this project are documented here. The format follows
 
 ### Fixed
 
+- AWS secret access keys and STS session tokens are now stripped by the
+  always-on token redaction when they appear as `aws_secret_access_key` /
+  `SecretAccessKey` or `aws_session_token` / `SessionToken`. Only access key
+  IDs (`AKIA`/`ASIA`) were matched before, so the secret half of a credential
+  block pasted into a logged message reached Discord embeds, the plain/HTTP/file
+  sinks, SQLite history, and the long-message `.txt` attachment in clear text.
+  The matcher stays anchored on the key name because a bare 40-character value
+  cannot be told apart from an ordinary hash.
 - Long-message `.txt` attachments (`attach_long`) are now redacted with the same
   flags as the embed. Secret-token shapes, and optional URL/mention/e-mail/invite
   patterns, are stripped from the uploaded file instead of only from the embed and
