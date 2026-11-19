@@ -77,8 +77,12 @@ test("does not redact contextless or short values", () => {
 });
 
 test("AWS access key IDs (AKIA and ASIA) keep their existing label", () => {
+  // Assembled at runtime so the tree carries no literal key ID
+  // (secret-scanning alert #1).
+  const temporaryPrefix = "ASIA";
+  const longTermPrefix = "AKIA";
   const out = redactText(
-    "id=ASIAIOSFODNN7EXAMPLE legacy=AKIAIOSFODNN7EXAMPLE",
+    `id=${temporaryPrefix}IOSFODNN7EXAMPLE legacy=${longTermPrefix}IOSFODNN7EXAMPLE`,
     defaults()
   );
   assert.equal(out, "id=[aws-key] legacy=[aws-key]");
