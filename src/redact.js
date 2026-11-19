@@ -15,6 +15,13 @@ const PATTERNS = [
   // A webhook URL carries a secret token; the numeric id alone is not enough.
   // Match it before the optional url pattern so the default config is safe.
   { kind: "webhook-url", re: /https?:\/\/(?:canary\.|ptb\.)?(?:discord|discordapp)\.com\/api\/(?:v\d+\/)?webhooks\/\d+\/[\w-]+/gi },
+  {
+    // PEM private keys (RSA, EC, DSA, OpenSSH, encrypted PKCS#8, PGP). The
+    // base64 body is the credential, so the whole block must go, not just the
+    // header. A truncated paste (no END line) fails closed to end of text.
+    kind: "private-key",
+    re: /-----BEGIN(?: [A-Z0-9]+)* PRIVATE KEY(?: BLOCK)?-----[\s\S]*?(?:-----END(?: [A-Z0-9]+)* PRIVATE KEY(?: BLOCK)?-----|$)/g,
+  },
   { kind: "url", re: /https?:\/\/[^\s<]+/gi },
   { kind: "invite", re: /(?:discord\.gg|discord\.com\/invite)\/[A-Za-z0-9-]+/gi },
   { kind: "email", re: /\b[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}\b/gi },
@@ -90,6 +97,7 @@ function flagsFrom(cfg, processCfg) {
     "aws-secret": true,
     stripe: true,
     "slack-token": true,
+    "private-key": true,
   };
 }
 

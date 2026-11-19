@@ -30,6 +30,13 @@ All notable changes to this project are documented here. The format follows
   sinks, SQLite history, and the long-message `.txt` attachment in clear text.
   The matcher stays anchored on the key name because a bare 40-character value
   cannot be told apart from an ordinary hash.
+- PEM private-key blocks (`-----BEGIN … PRIVATE KEY-----` through the matching
+  `END`, covering RSA, EC, OpenSSH, encrypted PKCS#8 and PGP) are now stripped by
+  the always-on redaction. The matcher only covered provider token shapes, so a
+  private key pasted into a logged message reached the embed, the plain/HTTP/file
+  sinks, and the long-message `.txt` attachment in clear text. A truncated block
+  without an `END` line is redacted to the end of the text, and public keys or
+  certificates are left untouched.
 - Long-message `.txt` attachments (`attach_long`) are now redacted with the same
   flags as the embed. Secret-token shapes, and optional URL/mention/e-mail/invite
   patterns, are stripped from the uploaded file instead of only from the embed and

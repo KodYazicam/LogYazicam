@@ -368,7 +368,7 @@ logyazicam restore ./backups/logyazicam-2026-11-13.sqlite --force
 
 **Snapshot TTL / bots:** `SNAPSHOT_TTL_MS` drops old rows; `SNAPSHOT_BOTS=false` (default) skips bot messages in the cache.
 
-**Redaction:** `REDACT_URLS` `REDACT_MENTIONS` `REDACT_EMAILS` `REDACT_INVITES` (all default **false**). Discord/GitHub (classic and fine-grained PATs)/OpenAI/Anthropic/AWS (long-term and temporary access key IDs plus named secret access keys and session tokens)/Stripe/Slack token shapes and Discord webhook URLs are always stripped. Guild: `/log set name:redact_url value:true`. Per event: `/log event redact`. The same flags also rewrite the `message-<id>.txt` attachment uploaded for long deleted messages, so the file cannot contain a secret the embed hides.
+**Redaction:** `REDACT_URLS` `REDACT_MENTIONS` `REDACT_EMAILS` `REDACT_INVITES` (all default **false**). Discord/GitHub (classic and fine-grained PATs)/OpenAI/Anthropic/AWS (long-term and temporary access key IDs plus named secret access keys and session tokens)/Stripe/Slack token shapes, Discord webhook URLs, and PEM private keys are always stripped. Guild: `/log set name:redact_url value:true`. Per event: `/log event redact`. The same flags also rewrite the `message-<id>.txt` attachment uploaded for long deleted messages, so the file cannot contain a secret the embed hides.
 
 **Staff channel:** `/log set name:staff_ch value:CHANNEL_ID` posts a second copy (never via webhook). Empty = off.
 
@@ -828,7 +828,7 @@ Allow-list. Empty = every channel. `add` / `remove` / `clear` / `list` a text ch
 
 `/log event delivery` controls how one event is rendered. `plain` flattens that event's embeds to text, `embed` keeps embeds even when the guild uses `plain_text`, and `webhook` prefers the guild webhook for that event. `plain`/`embed` also force channel delivery for that event when the guild otherwise uses webhook credentials. `default` removes the override. The event mode beats both the guild `delivery` setting and `plain_text`.
 
-`/log event redact` controls optional redaction per event. An event `url:true` strips links from that event even if the guild default is off; `url:false` keeps links for that event even when the guild redacts them. Secret-token patterns (Discord, GitHub classic and fine-grained PATs, OpenAI, Anthropic, AWS long-term and temporary access key IDs plus named secret/session keys, Stripe, Slack) and Discord webhook URLs are always on and cannot be disabled. Redaction also applies to the long-message `.txt` attachment, not just the embed.
+`/log event redact` controls optional redaction per event. An event `url:true` strips links from that event even if the guild default is off; `url:false` keeps links for that event even when the guild redacts them. Secret-token patterns (Discord, GitHub classic and fine-grained PATs, OpenAI, Anthropic, AWS long-term and temporary access key IDs plus named secret/session keys, Stripe, Slack), Discord webhook URLs, and PEM private-key blocks are always on and cannot be disabled. Redaction also applies to the long-message `.txt` attachment, not just the embed.
 
 Quiet hours, pause, allow-list, cooldown, and account age all run **before** the send queue. They apply without restart. `quiet_days` is evaluated in the guild timezone at send time; an empty list keeps the window active every day. `/log event bypass` lets selected events bypass quiet hours, but not pause.
 
@@ -1204,7 +1204,7 @@ npm run check      # node --check for every JS file
 - Config transfer: export without webhook secrets, round-trip import with channel remapping, unknown-key skips, validation/size rejection before writes, rollback, and attachment download limits
 - Dashboard: newest-first events, guild filter, limit cap, reduced payloads, bearer-token auth, non-loopback refusal, no external assets, health, 404, and 405
 - History retention: cutoff boundaries, per-guild overrides, unknown-guild defaults, untouched non-history tables, and config transfer
-- Redaction: each flag independently, invite/url coupling, always-on token shapes, embed title/description/fields, and per-guild overrides; `voiceKind` covers every transition and move precedence
+- Redaction: each flag independently, invite/url coupling, always-on token shapes and PEM private keys, embed title/description/fields, and per-guild overrides; `voiceKind` covers every transition and move precedence
 - Locales: every non-English pack translates the config-transfer replies with the same placeholders as English
 - Logger: camelCase and uppercase config keys, hot level/file reconfiguration, level filtering, unknown-level fallback, and unusable paths
 - Webhook delivery: succeeds without a channel fetch, falls back when enabled, and runs file/HTTP sinks before Discord
