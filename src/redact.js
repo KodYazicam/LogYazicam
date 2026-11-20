@@ -6,6 +6,10 @@ const PATTERNS = [
   { kind: "openai", re: /\bsk-[A-Za-z0-9]{32,}\b/g },
   { kind: "anthropic", re: /\bsk-ant-[A-Za-z0-9_-]{16,}\b/g },
   { kind: "aws-key", re: /\b(?:AKIA|ASIA)[0-9A-Z]{16}\b/g },
+  // The secret half of an AWS credential has no stable prefix, so anchor on
+  // the key name. A bare 40-character value is indistinguishable from a hash.
+  { kind: "aws-secret", re: /(?<![A-Za-z0-9])(?:aws[_-]?secret[_-]?access[_-]?key|SecretAccessKey)\b["']?[ \t]*[:=][ \t]*["']?[A-Za-z0-9/+=]{40}(?=$|[\s"',;&}])/gi },
+  { kind: "aws-secret", re: /(?<![A-Za-z0-9])(?:aws[_-]?session[_-]?token|SessionToken)\b["']?[ \t]*[:=][ \t]*["']?[A-Za-z0-9/+=]{100,}(?=$|[\s"',;&}])/gi },
   { kind: "stripe", re: /\b(?:sk|rk)_live_[A-Za-z0-9]{16,}\b/g },
   { kind: "slack-token", re: /\bxox[baprs]-[A-Za-z0-9-]{10,}\b/g },
   // A webhook URL carries a secret token; the numeric id alone is not enough.
@@ -83,6 +87,7 @@ function flagsFrom(cfg, processCfg) {
     openai: true,
     anthropic: true,
     "aws-key": true,
+    "aws-secret": true,
     stripe: true,
     "slack-token": true,
   };
