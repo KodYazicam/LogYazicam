@@ -8,6 +8,9 @@ const PATTERNS = [
   { kind: "aws-key", re: /\b(?:AKIA|ASIA)[0-9A-Z]{16}\b/g },
   { kind: "stripe", re: /\b(?:sk|rk)_live_[A-Za-z0-9]{16,}\b/g },
   { kind: "slack-token", re: /\bxox[baprs]-[A-Za-z0-9-]{10,}\b/g },
+  // A webhook URL carries a secret token; the numeric id alone is not enough.
+  // Match it before the optional url pattern so the default config is safe.
+  { kind: "webhook-url", re: /https?:\/\/(?:canary\.|ptb\.)?(?:discord|discordapp)\.com\/api\/(?:v\d+\/)?webhooks\/\d+\/[\w-]+/gi },
   { kind: "url", re: /https?:\/\/[^\s<]+/gi },
   { kind: "invite", re: /(?:discord\.gg|discord\.com\/invite)\/[A-Za-z0-9-]+/gi },
   { kind: "email", re: /\b[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}\b/gi },
@@ -75,6 +78,7 @@ function flagsFrom(cfg, processCfg) {
     email: extra.email != null ? extra.email : processCfg.redactEmails,
     invite: extra.invite != null ? extra.invite : processCfg.redactInvites,
     "discord-token": true,
+    "webhook-url": true,
     "github-token": true,
     openai: true,
     anthropic: true,
