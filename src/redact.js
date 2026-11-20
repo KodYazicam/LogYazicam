@@ -28,6 +28,11 @@ const PATTERNS = [
   { kind: "mention", re: /<@!?\d+>/g },
 ];
 
+// The optional url pattern only covers http(s), so database and cache DSNs
+// would otherwise reach every sink with the password intact. Strip the
+// userinfo half unconditionally; the host stays readable for operators.
+const URL_CREDENTIALS = /\b([a-z][a-z0-9+.-]*:\/\/)[^\s/<>@]*:[^\s/<>@]*@/gi;
+
 function redactText(text, flags) {
   if (!text || !flags) return text;
   let out = String(text);
@@ -37,6 +42,7 @@ function redactText(text, flags) {
     re.lastIndex = 0;
     out = out.replace(re, `[${kind}]`);
   }
+  out = out.replace(URL_CREDENTIALS, "$1[credentials]@");
   if (flags.mention) out = out.replace(/<@!?\d+>/g, "[user]");
   return out;
 }

@@ -37,6 +37,11 @@ All notable changes to this project are documented here. The format follows
   sinks, and the long-message `.txt` attachment in clear text. A truncated block
   without an `END` line is redacted to the end of the text, and public keys or
   certificates are left untouched.
+- Credentials embedded in connection-string URLs (`postgres://user:pass@host`,
+  `redis://:pass@host`) are now removed from the userinfo by the always-on
+  redaction pass. The optional `url` flag only matches `http(s)` links, so
+  database, cache, and other DSNs used to reach Discord embeds, the plain/HTTP/
+  file sinks, and SQLite history with the password in clear text.
 - Long-message `.txt` attachments (`attach_long`) are now redacted with the same
   flags as the embed. Secret-token shapes, and optional URL/mention/e-mail/invite
   patterns, are stripped from the uploaded file instead of only from the embed and
