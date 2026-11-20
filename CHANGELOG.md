@@ -61,6 +61,11 @@ All notable changes to this project are documented here. The format follows
   `HISTORY_TTL_MS` limit pending digest-history buckets. Oldest entries are
   evicted first, evicted digest buckets have their timers cleared, and invalid
   positive-integer limits fail fast instead of growing heap use indefinitely.
+- Test fixtures no longer contain literal AWS access key IDs. `tests/redact.test.js`
+  assembles the `AKIA…` and `ASIA…` samples at runtime, and the new
+  `tests/secret-fixtures.test.js` fails on any literal key ID under `src/`,
+  `tests/`, `scripts/`, or `docs/`, so a push cannot re-open secret-scanning
+  alert #1.
 
 ## [2.0.0] - 2026-11-12
 
