@@ -344,7 +344,7 @@ These are **not** fake Discord events. They sit on top of the catalog.
 
 **Invite attribution** (`INVITE_TRACK`): on `ready` and `guildCreate` the bot caches invite uses. On `guildMemberAdd` it diffs uses and sets `field.inviter` (`tag (code)`). Needs permission to fetch invites. Vanity / widget joins have no row.
 
-**Burst digest** (`DIGEST_MS`, guild `digest_ms`): if `DIGEST_MIN` or more of the **same** event key hit the same log channel within the window, one embed `{count}× eventKey` is sent instead of N embeds. A shorter burst is delivered event by event, so nothing is dropped. `0` disables. Filters still run first (ignored users never enter the bucket).
+**Burst digest** (`DIGEST_MS`, guild `digest_ms`): if `DIGEST_MIN` or more of the **same** event key hit the same log channel within the window, one embed `{count}× eventKey` is sent instead of N embeds. A shorter burst is delivered event by event, so nothing is dropped. `0` disables. Filters still run first (ignored users never enter the bucket). Pending buckets are flushed on graceful shutdown, so a window longer than the teardown does not lose events.
 
 **Packs** (`/log pack name:moderation|voice|message|server|quiet`): enables a curated key list. `/log setup channel:#mod-log` sets the default channel **and** applies `quiet` (ban, timeout, delete, unavailable). Defined in `src/packs.js`.
 
@@ -372,7 +372,7 @@ logyazicam restore ./backups/logyazicam-2026-11-13.sqlite --force
 
 **Staff channel:** `/log set name:staff_ch value:CHANNEL_ID` posts a second copy (never via webhook). Empty = off.
 
-**429/503:** `RETRY_429=true` re-queues rate-limited or temporarily unavailable Discord webhook sends; `RETRY_MAX` caps attempts per item (default `5`, `0` disables). A valid `Retry-After` header (delta seconds or HTTP-date) sets the timestamp, waits are capped at 5 minutes, and invalid/missing values use the existing backoff. One waiting channel does not stall the others. `/log status` shows `sent` / `dropped`. On SIGTERM/SIGINT the dispatcher drains for `SHUTDOWN_FLUSH_MS`, then writes the remaining queued items to SQLite (`pending_deliveries`); the next start restores them and delivers each once.
+**429/503:** `RETRY_429=true` re-queues rate-limited or temporarily unavailable Discord webhook sends; `RETRY_MAX` caps attempts per item (default `5`, `0` disables). A valid `Retry-After` header (delta seconds or HTTP-date) sets the timestamp, waits are capped at 5 minutes, and invalid/missing values use the existing backoff. One waiting channel does not stall the others. `/log status` shows `sent` / `dropped`. On SIGTERM/SIGINT the dispatcher first flushes pending digest buckets (a below-minimum burst event by event, a full burst as its counted embed), then drains for `SHUTDOWN_FLUSH_MS`, then writes the remaining queued items to SQLite (`pending_deliveries`); the next start restores them and delivers each once.
 
 **Memory bounds:** dedupe/cooldown keys and pending digest-history buckets are capped in memory (`DEDUPE_MAX` / `HISTORY_MAX`). Oldest entries are evicted first; optional TTLs (`DEDUPE_TTL_MS` / `HISTORY_TTL_MS`) expire them sooner. Evicting a pending digest bucket clears its timer, so it cannot flush later. SQLite history remains governed by `HISTORY_LIMIT` and retention.
 

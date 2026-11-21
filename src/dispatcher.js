@@ -127,6 +127,26 @@ function createDispatcher({ client, db, processCfg, log, cache, deps = {} }) {
     };
   }
 
+  // Emit a digest bucket exactly as its timer would: a full burst becomes one
+  // counted embed, a below-minimum burst is replayed event by event. Shared by
+  // the timer and flushDigests() so both paths behave identically.
+  function emitDigest(dkey, bucket) {
+    historyBuffer.delete(dkey);
+    const n = bucket.count;
+    if (n >= bucket.min) {
+      const { buildEmbed } = require("./util");
+      const embed = buildEmbed(bucket.cfg, bucket.eventKey, [
+        ["field.count", String(n)],
+        ["field.channel", `<#${bucket.channelId}>`],
+      ], { description: `${n}× ${bucket.eventKey}` });
+      enqueue(bucket.guild, bucket.eventKey, { ...bucket.sample, embeds: [embed], digest: true, summary: `digest ${n}` });
+    } else {
+      for (const event of bucket.pending) {
+        enqueue(bucket.guild, bucket.eventKey, { ...event, digest: true });
+      }
+    }
+  }
+
   async function enqueue(guild, eventKey, payload) {
     try {
       if (!guild) return;
@@ -153,7 +173,7 @@ function createDispatcher({ client, db, processCfg, log, cache, deps = {} }) {
       const digestMin = eventDigest?.min || processCfg.digestMin || 5;
       if (digestMs > 0 && !payload.digest) {
         const dkey = `${guild.id}:${eventKey}:${channelId}`;
-        const bucket = historyBuffer.get(dkey) || { count: 0, timer: null, sample: payload, guild, eventKey, min: digestMin, pending: [] };
+        const bucket = historyBuffer.get(dkey) || { count: 0, timer: null, sample: payload, guild, eventKey, channelId, cfg, min: digestMin, pending: [] };
         bucket.count += 1;
         bucket.sample = payload;
         // Keep the individual events only until the digest threshold is reached.
@@ -161,23 +181,7 @@ function createDispatcher({ client, db, processCfg, log, cache, deps = {} }) {
         // on its own instead of silently replacing the rest with the last sample.
         if (bucket.count < bucket.min) bucket.pending.push(payload);
         if (!bucket.timer) {
-          bucket.timer = setTimeout(() => {
-            historyBuffer.delete(dkey);
-            const n = bucket.count;
-            const min = bucket.min;
-            if (n >= min) {
-              const { buildEmbed } = require("./util");
-              const embed = buildEmbed(cfg, eventKey, [
-                ["field.count", String(n)],
-                ["field.channel", `<#${channelId}>`],
-              ], { description: `${n}× ${eventKey}` });
-              enqueue(guild, eventKey, { ...bucket.sample, embeds: [embed], digest: true, summary: `digest ${n}` });
-            } else {
-              for (const event of bucket.pending) {
-                enqueue(guild, eventKey, { ...event, digest: true });
-              }
-            }
-          }, digestMs).unref();
+          bucket.timer = setTimeout(() => emitDigest(dkey, bucket), digestMs).unref();
         }
         historyBuffer.set(dkey, bucket);
         return;
@@ -446,6 +450,27 @@ function createDispatcher({ client, db, processCfg, log, cache, deps = {} }) {
     return true;
   }
 
+  // A pending digest bucket is not on a delivery queue until its window closes.
+  // The timer is unref'd, so a graceful shutdown can exit before it fires and
+  // lose every buffered event. drain() flushes each bucket now; the enqueued
+  // items then follow the normal deliver-or-persist path.
+  function flushDigests() {
+    let flushed = 0;
+    for (const dkey of historyBuffer.keys()) {
+      const bucket = historyBuffer.get(dkey);
+      if (!bucket) continue;
+      if (bucket.timer) clearTimeout(bucket.timer);
+      bucket.timer = null;
+      try {
+        emitDigest(dkey, bucket);
+        flushed += 1;
+      } catch (error) {
+        log.error("digest flush", dkey, error);
+      }
+    }
+    return flushed;
+  }
+
   // Best-effort shutdown drain: flush while there is time left, but never
   // block shutdown forever on a future 429 retryAt or a slow network call.
   // Whatever is still queued when the budget expires is written to SQLite so
@@ -455,6 +480,7 @@ function createDispatcher({ client, db, processCfg, log, cache, deps = {} }) {
     const budget = Number(timeoutMs);
     const enabled = Number.isFinite(budget) && budget > 0;
     const deadline = now() + (enabled ? budget : 0);
+    flushDigests();
     while (enabled && queueSize() > 0 && now() <= deadline) {
       // Every remaining item waits on a future retryAt, so sleeping cannot
       // deliver anything; persist it now instead of burning the budget.
