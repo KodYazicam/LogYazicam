@@ -22,6 +22,12 @@ All notable changes to this project are documented here. The format follows
 
 ### Fixed
 
+- Slack app-level tokens (`xapp-…`) are now stripped by the always-on token
+  redaction alongside `xox[baprs]-` bot, user, and refresh tokens. The matcher
+  only covered the `xox` family, so an app-level token pasted into a logged
+  message reached the embed, the plain/HTTP/file sinks, SQLite history, and the
+  long-message `.txt` attachment in clear text despite the README promise that
+  Slack token shapes are always stripped.
 - AWS secret access keys and STS session tokens are now stripped by the
   always-on token redaction when they appear as `aws_secret_access_key` /
   `SecretAccessKey` or `aws_session_token` / `SessionToken`. Only access key

@@ -11,7 +11,7 @@ const PATTERNS = [
   { kind: "aws-secret", re: /(?<![A-Za-z0-9])(?:aws[_-]?secret[_-]?access[_-]?key|SecretAccessKey)\b["']?[ \t]*[:=][ \t]*["']?[A-Za-z0-9/+=]{40}(?=$|[\s"',;&}])/gi },
   { kind: "aws-secret", re: /(?<![A-Za-z0-9])(?:aws[_-]?session[_-]?token|SessionToken)\b["']?[ \t]*[:=][ \t]*["']?[A-Za-z0-9/+=]{100,}(?=$|[\s"',;&}])/gi },
   { kind: "stripe", re: /\b(?:sk|rk)_live_[A-Za-z0-9]{16,}\b/g },
-  { kind: "slack-token", re: /\bxox[baprs]-[A-Za-z0-9-]{10,}\b/g },
+  { kind: "slack-token", re: /\b(?:xox[baprs]|xapp)-[A-Za-z0-9-]{10,}\b/g },
   // A webhook URL carries a secret token; the numeric id alone is not enough.
   // Match it before the optional url pattern so the default config is safe.
   { kind: "webhook-url", re: /https?:\/\/(?:canary\.|ptb\.)?(?:discord|discordapp)\.com\/api\/(?:v\d+\/)?webhooks\/\d+\/[\w-]+/gi },
