@@ -86,6 +86,13 @@ All notable changes to this project are documented here. The format follows
   `tests/secret-fixtures.test.js` fails on any literal key ID under `src/`,
   `tests/`, `scripts/`, or `docs/`, so a push cannot re-open secret-scanning
   alert #1.
+- Pending digest buckets are flushed on graceful shutdown. `drain()` only
+  counted delivery queues, and a bucket stays out of those queues until its
+  unref'd timer fires, so a digest window longer than the teardown lost every
+  buffered event when `shutdown()` called `process.exit()`. `drain()` now emits
+  each bucket first (below-minimum events individually, a full burst as its
+  counted embed), then delivers or persists the result through the existing
+  `pending_deliveries` path.
 
 ## [2.0.0] - 2026-11-12
 

@@ -1375,3 +1375,85 @@ test("redacts secret tokens inside long-message files before delivery", async ()
   assert.ok(!text.includes(token));
   assert.match(text, /\[discord-token\]/);
 });
+
+function digestSetup(options = {}) {
+  return setup({
+    queued: false,
+    cfg: {
+      locale: "en",
+      colors: { info: 0x5865f2, delete: 0xff0000 },
+      showTimestamp: false,
+      showCredit: false,
+      hiddenFields: {},
+      eventDigest: { messageUpdate: { ms: 60000, min: 5 } },
+      events: { messageUpdate: { on: true, channelId: "c1" } },
+      ...(options.cfg || {}),
+    },
+    processCfg: { digestMin: 1, ...(options.processCfg || {}) },
+    db: options.db,
+  });
+}
+
+test("drain flushes a below-minimum digest bucket instead of dropping it", async () => {
+  const h = digestSetup();
+
+  for (const content of ["one", "two", "three"]) {
+    await h.dispatch.enqueue({ id: "g1" }, "messageUpdate", { summary: content, content });
+  }
+  assert.equal(h.dispatch.queues.get("g1:c1")?.length ?? 0, 0);
+
+  const remaining = await h.dispatch.drain({ timeoutMs: 1000, intervalMs: 1 });
+
+  assert.equal(remaining, 0);
+  assert.deepEqual(h.hookCalls.map((payload) => payload.content), ["one", "two", "three"]);
+});
+
+test("drain flushes an at-minimum digest bucket as one counted embed", async () => {
+  const h = digestSetup();
+
+  for (let i = 0; i < 5; i += 1) {
+    await h.dispatch.enqueue({ id: "g1" }, "messageUpdate", { summary: `event-${i}` });
+  }
+
+  const remaining = await h.dispatch.drain({ timeoutMs: 1000, intervalMs: 1 });
+
+  assert.equal(remaining, 0);
+  assert.equal(h.hookCalls.length, 1);
+  const [embed] = h.hookCalls[0].embeds;
+  assert.match(embed.data.description, /5× messageUpdate/);
+  assert.equal(embed.data.fields[0].value, "5");
+});
+
+test("drain clears the digest timer so a flushed bucket cannot fire twice", async () => {
+  const h = digestSetup({ cfg: { eventDigest: { messageUpdate: { ms: 50, min: 5 } } } });
+
+  for (const content of ["one", "two", "three"]) {
+    await h.dispatch.enqueue({ id: "g1" }, "messageUpdate", { summary: content, content });
+  }
+
+  await h.dispatch.drain({ timeoutMs: 1000, intervalMs: 1 });
+  assert.equal(h.hookCalls.length, 3);
+
+  await new Promise((resolve) => setTimeout(resolve, 120));
+
+  assert.equal(h.hookCalls.length, 3);
+  assert.equal(h.dispatch.queues.get("g1:c1")?.length ?? 0, 0);
+});
+
+test("drain persists flushed digest events when the shutdown budget is zero", async () => {
+  const saved = [];
+  const h = digestSetup({
+    db: { savePendingDelivery: (item) => saved.push(item) },
+  });
+
+  for (const content of ["one", "two", "three"]) {
+    await h.dispatch.enqueue({ id: "g1" }, "messageUpdate", { summary: content, content });
+  }
+
+  const remaining = await h.dispatch.drain({ timeoutMs: 0 });
+
+  assert.equal(remaining, 3);
+  assert.equal(h.hookCalls.length, 0);
+  assert.equal(saved.length, 3);
+  assert.deepEqual(saved.map((item) => item.content), ["one", "two", "three"]);
+});
