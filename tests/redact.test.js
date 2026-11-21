@@ -126,6 +126,21 @@ test("always strips token-like strings regardless of optional flags", () => {
   assert.match(out, /\[slack-token\]/);
 });
 
+test("always strips Slack app-level tokens (xapp-)", () => {
+  // Assembled at runtime so the repository carries no literal token.
+  const appLevel = ["xapp", "1", "A0123456789", "9876543210123", "a".repeat(64)].join("-");
+  const out = redactText(`token ${appLevel} end`, alwaysOn);
+  assert.equal(out, "token [slack-token] end");
+
+  // Bot and user tokens keep working through the same pattern.
+  const bot = "xoxb-1234567890abcdefgh";
+  const user = "xoxp-1234567890abcdefgh";
+  assert.equal(redactText(`a ${bot} b ${user} c`, alwaysOn), "a [slack-token] b [slack-token] c");
+
+  // The bare prefix is prose, not a token.
+  assert.equal(redactText("xapp- is a Slack prefix", alwaysOn), "xapp- is a Slack prefix");
+});
+
 test("always strips fine-grained GitHub PATs", () => {
   // github_pat_ + 22 chars + separator + 59 chars, the documented format.
   const fineGrained = `github_pat_${"A".repeat(22)}_${"b".repeat(59)}`;
