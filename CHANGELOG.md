@@ -22,6 +22,12 @@ All notable changes to this project are documented here. The format follows
 
 ### Fixed
 
+- `/log string` values and imported UI-string overrides are now capped at 256
+  characters, Discord's limit for embed titles and field names. A longer value
+  used to be stored successfully and then made `buildEmbed` throw on the next
+  event, which the dispatcher caught and logged, so every event for that guild
+  was silently dropped. `buildEmbed` also truncates the title and field names
+  defensively, so existing over-long rows no longer take the guild offline.
 - AWS secret access keys and STS session tokens are now stripped by the
   always-on token redaction when they appear as `aws_secret_access_key` /
   `SecretAccessKey` or `aws_session_token` / `SessionToken`. Only access key

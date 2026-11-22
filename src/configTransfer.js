@@ -1,5 +1,6 @@
 const { byKey, COLORS } = require("./catalog");
 const { LOCALES } = require("./locales");
+const { EMBED_STRING_MAX } = require("./util");
 
 const FORMAT = "logyazicam-config";
 const VERSION = 1;
@@ -338,7 +339,9 @@ function cleanHiddenFields(value) {
   return { value: out, skipped };
 }
 
-function cleanStringMap(value, { maxKey = 128, maxValue = 2000, maxEntries = 500 } = {}) {
+// UI overrides feed embed titles and field names, so imports use the same
+// 256-character cap as `/log string` instead of the old 2000-character limit.
+function cleanStringMap(value, { maxKey = 128, maxValue = EMBED_STRING_MAX, maxEntries = 500 } = {}) {
   if (!isPlainObject(value)) return { value: undefined, skipped: 1 };
   const out = {};
   let skipped = 0;

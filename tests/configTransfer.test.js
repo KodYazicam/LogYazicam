@@ -330,6 +330,25 @@ test("skips invalid timezone, hidden fields, strings, colors, and redact flags",
   assert.equal(extra.includeChannels, undefined);
 });
 
+test("importGuild drops string overrides above the embed limit", (t) => {
+  const db = withDb(t);
+  if (!db) return;
+
+  const payload = sourcePayload();
+  payload.extra.strings = {
+    short: "value",
+    exact: "y".repeat(256),
+    long: "x".repeat(257),
+  };
+
+  const counts = importGuild(db, "204", payload);
+  assert.equal(counts.skippedExtra, 1);
+  assert.deepEqual(db.extraOf(db.getGuild.get("204")).strings, {
+    short: "value",
+    exact: "y".repeat(256),
+  });
+});
+
 test("replaces omitted settings and clears missing mention roles", (t) => {
   const db = withDb(t);
   if (!db) return;

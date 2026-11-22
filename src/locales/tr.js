@@ -66,6 +66,7 @@ module.exports = {
   "event.voiceMove": "Ses kanalı değişti",
   "event.test": "Yapılandırma testi",
   "cmd.string_set": "`{key}` metni bu sunucu için değiştirildi.",
+  "cmd.string_too_long": "Metin geçersiz kılmaları en fazla {max} karakter olabilir.",
   "cmd.color_set": "Renk `{slot}` = `{hex}`.",
   "cmd.languages": "Yüklü diller ({count}): {list}",
   "event.messageReactionAdd": "Tepki eklendi",
