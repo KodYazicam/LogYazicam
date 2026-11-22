@@ -342,7 +342,7 @@ These are **not** fake Discord events. They sit on top of the catalog.
 
 **Snapshots** (`SNAPSHOT_ENABLED=false` by default; opt in with `SNAPSHOT_ENABLED=true` or `/log set name:snapshot value:true`): every `messageCreate` stores `{content, author, attachments}` in SQLite (capped by `SNAPSHOT_LIMIT` per guild), even if `messageCreate` logging is off. `messageDelete` fills empty bodies from this table. This stores message text at rest, so it is opt-in; treat `data/` as sensitive and use `SNAPSHOT_TTL_MS` if you need automatic expiry.
 
-**Invite attribution** (`INVITE_TRACK`): on `ready` and `guildCreate` the bot caches invite uses. On `guildMemberAdd` it diffs uses and sets `field.inviter` (`tag (code)`). Needs permission to fetch invites. Vanity / widget joins have no row.
+**Invite attribution** (`INVITE_TRACK`): on `ready`, `guildCreate`, and `inviteCreate` the bot caches invite uses, and removes the row on `inviteDelete`. On `guildMemberAdd` it diffs uses and sets `field.inviter` (`tag (code)`). Needs permission to fetch invites. Vanity / widget joins have no row, and a single-use invite Discord deletes before the join cannot be diffed.
 
 **Burst digest** (`DIGEST_MS`, guild `digest_ms`): if `DIGEST_MIN` or more of the **same** event key hit the same log channel within the window, one embed `{count}× eventKey` is sent instead of N embeds. A shorter burst is delivered event by event, so nothing is dropped. `0` disables. Filters still run first (ignored users never enter the bucket).
 

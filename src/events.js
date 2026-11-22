@@ -240,6 +240,12 @@ function bindEvents(client, { dispatch, processCfg, log }) {
     if (!invite.guild) return;
     const cfg = dispatch.guildCfg(invite.guild.id);
     if (!cfg) return;
+    // guildMemberAdd attributes a join by diffing each invite's uses count
+    // against this table, so an invite created while the bot is online needs a
+    // previous row before its first use or the join is logged as Unknown.
+    if (processCfg.inviteTrack) {
+      dispatch.db.upsertInvite.run(invite.guild.id, invite.code, invite.uses || 0, invite.inviter?.id || null);
+    }
     await run(invite.guild, "inviteCreate", namedCreate("inviteCreate", invite.code, [
       ["field.channel", channelTag(invite.channel)],
       ["field.user", invite.inviter ? userTag(invite.inviter) : null],
@@ -251,6 +257,7 @@ function bindEvents(client, { dispatch, processCfg, log }) {
     if (!invite.guild) return;
     const cfg = dispatch.guildCfg(invite.guild.id);
     if (!cfg) return;
+    if (processCfg.inviteTrack) dispatch.db.deleteInvite.run(invite.guild.id, invite.code);
     await run(invite.guild, "inviteDelete", namedDelete("inviteDelete", invite.code, [["field.channel", channelTag(invite.channel)]], cfg));
   }));
 
