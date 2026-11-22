@@ -1,12 +1,24 @@
 const { AuditLogEvent, AttachmentBuilder } = require("discord.js");
 const { buildEmbed, userTag, channelTag, truncate, diff, audit, code } = require("./util");
 const { t } = require("./locales");
+const { flagsFrom, eventRedactFlags, redactText } = require("./redact");
 
-function messageSnapshot(message) {
+// `cleanContent` has already resolved <@id>, <@&id> and <#id> to readable
+// names, so mention redaction has nothing left to strip. Read the raw content
+// only when the mention flag is on; otherwise keep the readable form.
+function messageContent(message, flags) {
+  if (!message) return "";
+  const clean = message.cleanContent || message.content || "";
+  if (!flags) return clean;
+  const source = flags.mention ? (message.content || clean) : clean;
+  return redactText(source, flags);
+}
+
+function messageSnapshot(message, flags) {
   if (!message) return {};
   return {
     id: message.id,
-    content: message.cleanContent || message.content || "",
+    content: messageContent(message, flags),
     author: message.author ? userTag(message.author) : "—",
     authorId: message.author?.id,
     bot: Boolean(message.author?.bot),
@@ -17,13 +29,14 @@ function messageSnapshot(message) {
   };
 }
 
-async function formatMessageDelete(oldMessage, client, cfg, processCfg, storedSnap) {
+async function formatMessageDelete(oldMessage, client, cfg, processCfg = {}, storedSnap) {
   const message = oldMessage.partial ? await oldMessage.fetch().catch(() => oldMessage) : oldMessage;
-  let snap = messageSnapshot(message);
+  const flags = eventRedactFlags(cfg, "messageDelete", flagsFrom(cfg, processCfg));
+  let snap = messageSnapshot(message, flags);
   if ((!snap.content || snap.content === "") && storedSnap) {
     snap = {
       ...snap,
-      content: storedSnap.content || snap.content,
+      content: redactText(storedSnap.content || snap.content, flags),
       author: storedSnap.author_tag || snap.author,
       authorId: storedSnap.author_id || snap.authorId,
       attachments: storedSnap.attachments || snap.attachments,
@@ -54,10 +67,11 @@ async function formatMessageDelete(oldMessage, client, cfg, processCfg, storedSn
   };
 }
 
-async function formatMessageUpdate(oldMessage, newMessage, cfg) {
-  const before = oldMessage.partial ? null : messageSnapshot(oldMessage);
+async function formatMessageUpdate(oldMessage, newMessage, cfg, processCfg = {}) {
+  const flags = eventRedactFlags(cfg, "messageUpdate", flagsFrom(cfg, processCfg));
+  const before = oldMessage.partial ? null : messageSnapshot(oldMessage, flags);
   const afterMsg = newMessage.partial ? await newMessage.fetch().catch(() => newMessage) : newMessage;
-  const after = messageSnapshot(afterMsg);
+  const after = messageSnapshot(afterMsg, flags);
   if (before && before.content === after.content && before.attachments === after.attachments) return null;
   const fields = [
     ["field.author", after.author],
@@ -76,10 +90,11 @@ async function formatMessageUpdate(oldMessage, newMessage, cfg) {
   };
 }
 
-function formatBulk(messages, channel, cfg) {
+function formatBulk(messages, channel, cfg, processCfg = {}) {
+  const flags = eventRedactFlags(cfg, "messageDeleteBulk", flagsFrom(cfg, processCfg));
   const lines = [...messages.values()].slice(0, cfg.bulkLineLimit || 40).map((m) => {
     const author = m.author ? m.author.tag : "?";
-    return `${author}: ${truncate(m.cleanContent || m.content || "", 80)}`;
+    return `${author}: ${truncate(messageContent(m, flags), 80)}`;
   });
   const fields = [
     ["field.channel", channelTag(channel)],
@@ -215,6 +230,7 @@ function namedUpdate(eventKey, name, before, after, cfg) {
 }
 
 module.exports = {
+  messageContent,
   messageSnapshot,
   formatMessageDelete,
   formatMessageUpdate,

@@ -1,3 +1,5 @@
+const MENTION_RE = /<@!?\d+>|<@&\d+>|<#\d+>/g;
+
 const PATTERNS = [
   { kind: "discord-token", re: /[\w-]{24}\.[\w-]{6}\.[\w-]{27,}/g },
   { kind: "github-token", re: /\bgh[pousr]_[A-Za-z0-9_]{20,}\b/g },
@@ -25,7 +27,7 @@ const PATTERNS = [
   { kind: "url", re: /https?:\/\/[^\s<]+/gi },
   { kind: "invite", re: /(?:discord\.gg|discord\.com\/invite)\/[A-Za-z0-9-]+/gi },
   { kind: "email", re: /\b[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}\b/gi },
-  { kind: "mention", re: /<@!?\d+>/g },
+  { kind: "mention", re: MENTION_RE },
 ];
 
 // The optional url pattern only covers http(s), so database and cache DSNs
@@ -43,7 +45,7 @@ function redactText(text, flags) {
     out = out.replace(re, `[${kind}]`);
   }
   out = out.replace(URL_CREDENTIALS, "$1[credentials]@");
-  if (flags.mention) out = out.replace(/<@!?\d+>/g, "[user]");
+  if (flags.mention) out = out.replace(MENTION_RE, "[mention]");
   return out;
 }
 
