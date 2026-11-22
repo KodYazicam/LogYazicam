@@ -151,6 +151,19 @@ test("always strips temporary AWS access key IDs", () => {
   assert.equal(redactText("ASIA and ASIAABC are words", alwaysOn), "ASIA and ASIAABC are words");
 });
 
+test("always strips Discord MFA user tokens", () => {
+  // Accounts with 2FA enabled receive `mfa.<84 characters>` instead of the
+  // classic three-part token shape.
+  const mfa = `mfa.${"A".repeat(84)}`;
+  assert.equal(redactText(mfa, alwaysOn), "[discord-token]");
+  assert.equal(redactText(`token ${mfa} end`, alwaysOn), "token [discord-token] end");
+
+  // Discord tokens belong to the always-on set, not the optional flags.
+  assert.equal(redactText(mfa, off), mfa);
+  // A bare prefix or a short fragment is not a credential.
+  assert.equal(redactText("mfa. is only a prefix", alwaysOn), "mfa. is only a prefix");
+});
+
 test("ordinary text is not changed by always-on token patterns", () => {
   const text = "Deploy at 10:30; ask @ops about sk-learn and AKIA is not a key here.";
   assert.equal(redactText(text, alwaysOn), text);

@@ -1,5 +1,8 @@
 const PATTERNS = [
   { kind: "discord-token", re: /[\w-]{24}\.[\w-]{6}\.[\w-]{27,}/g },
+  // Accounts with 2FA enabled receive `mfa.<84 characters>` instead of the
+  // classic three-part token shape.
+  { kind: "discord-token", re: /\bmfa\.[\w-]{84}\b/g },
   { kind: "github-token", re: /\bgh[pousr]_[A-Za-z0-9_]{20,}\b/g },
   { kind: "github-token", re: /\bgithub_pat_[A-Za-z0-9_]{20,}\b/g },
   { kind: "openai", re: /\bsk-(?:proj|svcacct)-[A-Za-z0-9_-]{16,}\b/g },
