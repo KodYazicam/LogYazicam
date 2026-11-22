@@ -1144,6 +1144,13 @@ test("fields, string, color, mention, languages, watch, and events commands work
   await runCommand(h, { sub: "string", strings: { key: "welcome", value: "Hello" } });
   assert.equal(h.extra.strings.welcome, "Hello");
 
+  const tooLong = await runCommand(h, {
+    sub: "string",
+    strings: { key: "welcome", value: "x".repeat(257) },
+  });
+  assert.match(tooLong.content, /at most 256/);
+  assert.equal(h.extra.strings.welcome, "Hello");
+
   await runCommand(h, { sub: "color", strings: { slot: "delete", hex: "#00ff00" } });
   assert.equal(h.extra.colors.delete, 0x00ff00);
 

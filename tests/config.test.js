@@ -6,7 +6,7 @@ const path = require("path");
 const { openDb } = require("../src/db");
 const { loadEnvFile, processConfig, applyConfig, mergeGuild } = require("../src/config");
 const { COLORS } = require("../src/catalog");
-const { buildEmbed } = require("../src/util");
+const { EMBED_STRING_MAX, buildEmbed } = require("../src/util");
 
 function withDb(t) {
   const dir = fs.mkdtempSync(path.join(os.tmpdir(), "logyazicam-config-"));
@@ -388,4 +388,28 @@ test("buildEmbed prefers a per-event color over the slot color", () => {
 
   assert.equal(buildEmbed(cfg, "messageDelete", []).data.color, 0);
   assert.equal(buildEmbed(cfg, "messageDeleteBulk", []).data.color, 0xff0000);
+});
+
+test("buildEmbed truncates over-long UI strings to the embed limit", () => {
+  const cfg = {
+    id: "g1",
+    locale: "en",
+    colors: { create: 0xffffff, update: 0xffffff, delete: 0xffffff, voice: 0xffffff, member: 0xffffff, mod: 0xffffff, info: 0xffffff },
+    showTimestamp: false,
+    showCredit: false,
+    embedCompact: false,
+    hiddenFields: {},
+    extra: {
+      strings: {
+        "event.messageDelete": "T".repeat(300),
+        "field.author": "A".repeat(300),
+      },
+    },
+  };
+
+  const embed = buildEmbed(cfg, "messageDelete", [["field.author", "value"]]);
+
+  assert.equal(embed.data.title.length, EMBED_STRING_MAX);
+  assert.equal(embed.data.fields[0].name.length, EMBED_STRING_MAX);
+  assert.ok(embed.data.title.endsWith("…"));
 });

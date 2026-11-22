@@ -28,6 +28,7 @@ module.exports = {
   "cmd.config_import_invalid": "Import fehlgeschlagen: {error}",
   "cmd.config_import_too_big": "Die Konfigurationsdatei ist größer als {max} KB.",
   "cmd.config_import_file": "Hänge eine `.json`-Datei aus `/log export` an.",
+  "cmd.string_too_long": "Text-Overrides dürfen höchstens {max} Zeichen lang sein.",
   "yes": "Ja",
   "no": "Nein",
   "on": "An",

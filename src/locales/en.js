@@ -33,6 +33,7 @@ module.exports = {
   "cmd.config_import_too_big": "Config file is larger than {max} KB.",
   "cmd.config_import_file": "Attach a `.json` file exported by `/log export`.",
   "cmd.string_set": "String `{key}` overridden for this guild.",
+  "cmd.string_too_long": "String overrides must be at most {max} characters.",
   "cmd.color_set": "Color `{slot}` = `{hex}`.",
   "cmd.languages": "Installed locales ({count}): {list}",
   "field.author": "Author",

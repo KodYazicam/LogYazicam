@@ -765,7 +765,7 @@ Reloads `src/locales/*.js` from disk and lists codes. Adding `sv.js` does not ne
 
 ### `/log string`
 
-`key` (e.g. `event.messageDelete`) + `value` → `guilds.extra_json.strings`. Per-guild UI override. Placeholders like `{channel}` still work. Does not change English keys in slash options.
+`key` (e.g. `event.messageDelete`) + `value` → `guilds.extra_json.strings`. Per-guild UI override. Placeholders like `{channel}` still work. Does not change English keys in slash options. Values are capped at 256 characters, Discord's limit for embed titles and field names; longer values are rejected and config imports skip them.
 
 ### `/log color`
 

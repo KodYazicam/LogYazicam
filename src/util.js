@@ -2,6 +2,9 @@ const { EmbedBuilder } = require("discord.js");
 const { t } = require("./locales");
 const { byKey } = require("./catalog");
 
+/** Discord rejects embed titles and field names longer than 256 characters. */
+const EMBED_STRING_MAX = 256;
+
 function parseHexColor(value) {
   const text = String(value ?? "").trim();
   const hex = text.startsWith("#") ? text.slice(1) : text;
@@ -65,7 +68,7 @@ function buildEmbed(guildCfg, eventKey, fields, { description, thumbnail, url } 
   const locale = guildCfg.locale;
   const embed = new EmbedBuilder()
     .setColor(color)
-    .setTitle(t(locale, `event.${eventKey}`, {}, guildCfg.extra?.strings));
+    .setTitle(truncate(t(locale, `event.${eventKey}`, {}, guildCfg.extra?.strings), EMBED_STRING_MAX));
   if (guildCfg.showTimestamp !== false) embed.setTimestamp(new Date());
   if (description) embed.setDescription(truncate(description, guildCfg.descMax || 4000));
   if (thumbnail && guildCfg.showThumbnails !== false) embed.setThumbnail(thumbnail);
@@ -77,7 +80,7 @@ function buildEmbed(guildCfg, eventKey, fields, { description, thumbnail, url } 
     const short = name.replace(/^field\./, "");
     if (hidden.has(name) || hidden.has(short)) continue;
     embed.addFields({
-      name: t(locale, name, {}, guildCfg.extra?.strings),
+      name: truncate(t(locale, name, {}, guildCfg.extra?.strings), EMBED_STRING_MAX),
       value: truncate(value, guildCfg.fieldMax || 1024),
       inline: compact,
     });
@@ -173,4 +176,4 @@ function hasConfigPermission(memberPermissions, processCfg) {
   return false;
 }
 
-module.exports = { parseHexColor, truncate, code, userTag, channelTag, diff, when, buildEmbed, audit, ignored, inQuietHours, includeOk, embedToPlain, hasConfigPermission };
+module.exports = { EMBED_STRING_MAX, parseHexColor, truncate, code, userTag, channelTag, diff, when, buildEmbed, audit, ignored, inQuietHours, includeOk, embedToPlain, hasConfigPermission };

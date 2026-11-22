@@ -6,7 +6,7 @@ const {
 } = require("discord.js");
 const { EVENTS, GROUPS, byKey } = require("./catalog");
 const { LOCALES, t } = require("./locales");
-const { buildEmbed, parseHexColor } = require("./util");
+const { EMBED_STRING_MAX, buildEmbed, parseHexColor } = require("./util");
 const { EVENT_FLAGS } = require("./redact");
 
 const MAX_HISTORY_LIMIT = 500;
@@ -546,7 +546,13 @@ function data(config = {}) {
         .setName("string")
         .setDescription("Override one UI string")
         .addStringOption((o) => o.setName("key").setDescription("e.g. event.messageDelete").setRequired(true))
-        .addStringOption((o) => o.setName("value").setDescription("Replacement text ({vars} ok)").setRequired(true)),
+        .addStringOption((o) =>
+          o
+            .setName("value")
+            .setDescription("Replacement text ({vars} ok)")
+            .setRequired(true)
+            .setMaxLength(EMBED_STRING_MAX),
+        ),
     )
     .addSubcommand((s) =>
       s
@@ -1274,6 +1280,12 @@ async function execute(interaction, { db, dispatch, processCfg }) {
   if (sub === "string") {
     const key = interaction.options.getString("key", true);
     const value = interaction.options.getString("value", true);
+    if (value.length > EMBED_STRING_MAX) {
+      return interaction.reply({
+        content: t(locale, "cmd.string_too_long", { max: EMBED_STRING_MAX }),
+        ephemeral: true,
+      });
+    }
     const row = db.ensureGuild(interaction.guildId);
     const extra = db.extraOf(row);
     extra.strings = extra.strings || {};
