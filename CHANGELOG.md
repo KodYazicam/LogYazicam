@@ -86,6 +86,12 @@ All notable changes to this project are documented here. The format follows
   `tests/secret-fixtures.test.js` fails on any literal key ID under `src/`,
   `tests/`, `scripts/`, or `docs/`, so a push cannot re-open secret-scanning
   alert #1.
+- Discord user tokens for accounts with 2FA enabled (`mfa.` followed by 84
+  characters) are now stripped by the always-on token redaction. The matcher
+  only covered the classic three-part shape, so an MFA token pasted into a
+  logged message reached Discord embeds, the plain/HTTP/file sinks, SQLite
+  history, and the long-message `.txt` attachment in clear text even though the
+  README says Discord token shapes cannot be logged unredacted.
 
 ## [2.0.0] - 2026-11-12
 
