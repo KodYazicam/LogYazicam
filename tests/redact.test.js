@@ -80,6 +80,15 @@ test("each optional redaction flag works independently", () => {
   assert.doesNotMatch(invite, /discord\.gg\/abc/);
 });
 
+test("mention redaction covers user, role, and channel mentions", () => {
+  const text = "hi <@123> <@!456> <@&789> <#321>";
+  assert.equal(
+    redactText(text, { ...off, mention: true }),
+    "hi [mention] [mention] [mention] [mention]",
+  );
+  assert.equal(redactText(text, off), text);
+});
+
 test("invite is redacted when either url or invite is enabled", () => {
   assert.equal(redactText("discord.gg/abc", { ...off, invite: true }), "[invite]");
   assert.equal(redactText("discord.gg/abc", { ...off, url: true }), "[invite]");

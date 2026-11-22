@@ -146,6 +146,39 @@ test("messageSnapshot normalizes message content and attachment state", () => {
   assert.deepEqual(messageSnapshot(null), {});
 });
 
+test("messageSnapshot reads raw content only when mention redaction is enabled", () => {
+  const message = makeMessage({
+    content: "hi <@111>, ping <@&222> in <#333>",
+    cleanContent: "hi @Alice, ping @Moderators in #general",
+  });
+
+  assert.equal(messageSnapshot(message).content, "hi @Alice, ping @Moderators in #general");
+  assert.equal(
+    messageSnapshot(message, { mention: true }).content,
+    "hi [mention], ping [mention] in [mention]",
+  );
+});
+
+test("formatMessageDelete redacts resolved mentions from the embed and attachment", async () => {
+  const message = makeMessage({
+    content: "hi <@111>, ping <@&222> in <#333>",
+    cleanContent: "hi @Alice, ping @Moderators in #general",
+  });
+  const cfg = { ...guildCfg(), attachMin: 5, extra: { redact: { mention: true } } };
+
+  const result = await formatMessageDelete(message, {}, cfg, {});
+  const content = result.embeds[0].data.fields[2].value;
+  assert.equal(content, "hi [mention], ping [mention] in [mention]");
+  assert.equal(result.files.length, 1);
+  assert.equal(result.files[0].attachment.toString("utf8"), content);
+
+  const readable = await formatMessageDelete(message, {}, guildCfg(), {});
+  assert.equal(
+    readable.embeds[0].data.fields[2].value,
+    "hi @Alice, ping @Moderators in #general",
+  );
+});
+
 test("formatMessageDelete builds fields, files, and ignore context", async () => {
   const result = await formatMessageDelete(makeMessage({
     content: "a long deleted body",

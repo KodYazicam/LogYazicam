@@ -1,5 +1,6 @@
 const { AuditLogEvent } = require("discord.js");
 const {
+  messageContent,
   formatMessageDelete,
   formatMessageUpdate,
   formatBulk,
@@ -15,6 +16,7 @@ const {
 } = require("./format");
 const { userTag, channelTag, buildEmbed, audit, diff } = require("./util");
 const { t } = require("./locales");
+const { flagsFrom, eventRedactFlags } = require("./redact");
 
 function bindEvents(client, { dispatch, processCfg, log }) {
   const safe = (name, fn) => (...args) => {
@@ -38,7 +40,7 @@ function bindEvents(client, { dispatch, processCfg, log }) {
     if (!after.guild) return;
     const cfg = dispatch.guildCfg(after.guild.id);
     if (!cfg) return;
-    await run(after.guild, "messageUpdate", await formatMessageUpdate(before, after, cfg));
+    await run(after.guild, "messageUpdate", await formatMessageUpdate(before, after, cfg, processCfg));
   }));
 
   client.on("messageDeleteBulk", safe("messageDeleteBulk", async (messages, channel) => {
@@ -46,7 +48,7 @@ function bindEvents(client, { dispatch, processCfg, log }) {
     if (!guild) return;
     const cfg = dispatch.guildCfg(guild.id);
     if (!cfg) return;
-    await run(guild, "messageDeleteBulk", formatBulk(messages, channel, cfg));
+    await run(guild, "messageDeleteBulk", formatBulk(messages, channel, cfg, processCfg));
   }));
 
   const reaction = (key) => async (reaction, user) => {
@@ -590,13 +592,14 @@ function bindEvents(client, { dispatch, processCfg, log }) {
     const cfg = dispatch.guildCfg(message.guild.id) || dispatch.refreshGuild(message.guild.id);
     if (cfg.snapshotOn === false) return;
     if (message.author?.bot && !processCfg.snapshotBots) return;
+    const flags = eventRedactFlags(cfg, "messageCreate", flagsFrom(cfg, processCfg));
     dispatch.db.putSnapshot({
       message_id: message.id,
       guild_id: message.guild.id,
       channel_id: message.channel.id,
       author_id: message.author?.id,
       author_tag: message.author?.tag,
-      content: message.cleanContent || message.content || "",
+      content: messageContent(message, flags),
       attachments: [...(message.attachments?.values?.() || [])].map((a) => a.url).join("\n"),
       created_at: message.createdTimestamp || Date.now(),
     }, processCfg.snapshotLimit, processCfg.snapshotTtlMs);
@@ -606,11 +609,12 @@ function bindEvents(client, { dispatch, processCfg, log }) {
     if (!message.guild || message.author?.id === client.user.id) return;
     const cfg = dispatch.guildCfg(message.guild.id);
     if (!cfg) return;
+    const flags = eventRedactFlags(cfg, "messageCreate", flagsFrom(cfg, processCfg));
     await run(message.guild, "messageCreate", {
       embeds: [buildEmbed(cfg, "messageCreate", [
         ["field.author", userTag(message.author)],
         ["field.channel", channelTag(message.channel)],
-        ["field.content", message.cleanContent || message.content],
+        ["field.content", messageContent(message, flags)],
         ["field.jump", cfg.embedShowJump ? message.url : null],
       ])],
       bot: message.author?.bot,

@@ -530,6 +530,24 @@ test("voice, presence, typing, polls, effects, snapshots, and interactions dispa
   assert.equal(errors.length, 0);
 });
 
+test("messageCreate stores mention-redacted content in snapshots", async () => {
+  const h = setup({ cfg: { extra: { redact: { mention: true } } } });
+  const { client, guild } = h;
+  const channel = makeChannel({ guild });
+  const author = makeUser();
+
+  await fire(client, "messageCreate", makeMessage({
+    guild,
+    channel,
+    author,
+    content: "hi <@111>, ping <@&222> in <#333>",
+    cleanContent: "hi @Alice, ping @Moderators in #general",
+  }));
+
+  assert.equal(h.snapshots.length, 1);
+  assert.equal(h.snapshots[0].row.content, "hi [mention], ping [mention] in [mention]");
+});
+
 test("guild, scheduled, automod, audit, soundboard, entitlement, and subscription bindings dispatch", async () => {
   const { client, guild, calls, errors } = setup();
   const user = makeUser();

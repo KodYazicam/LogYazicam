@@ -22,6 +22,12 @@ All notable changes to this project are documented here. The format follows
 
 ### Fixed
 
+- `REDACT_MENTIONS` now strips user, role, and channel mentions from message
+  content, including mentions Discord had already resolved to `@name` / `#name`
+  in `cleanContent`. The formatter reads the raw message content when mention
+  redaction is enabled, so the embed, the long-message `.txt` attachment, and the
+  delete snapshot no longer keep the mentioned names or IDs. With the flag off,
+  the readable `cleanContent` form is still used.
 - AWS secret access keys and STS session tokens are now stripped by the
   always-on token redaction when they appear as `aws_secret_access_key` /
   `SecretAccessKey` or `aws_session_token` / `SessionToken`. Only access key
