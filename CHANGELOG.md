@@ -22,6 +22,13 @@ All notable changes to this project are documented here. The format follows
 
 ### Fixed
 
+- An invite created while the bot is online is now written to the invite cache
+  immediately (`inviteCreate`), and its row is removed on `inviteDelete`; the
+  cache previously only filled on `ready` and `guildCreate`. Without a previous
+  row the `guildMemberAdd` diff could not match the new invite, so the first
+  join through it was logged as `Unknown` (or the vanity fallback) while later
+  joins were attributed correctly. Single-use invites Discord deletes before
+  the join still cannot be diffed.
 - AWS secret access keys and STS session tokens are now stripped by the
   always-on token redaction when they appear as `aws_secret_access_key` /
   `SecretAccessKey` or `aws_session_token` / `SessionToken`. Only access key

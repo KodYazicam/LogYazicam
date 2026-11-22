@@ -265,17 +265,30 @@ function setup(options = {}) {
   const calls = [];
   const snapshots = [];
   const upserts = [];
+  const deletes = [];
   const errors = [];
   const guild = makeGuild(options.guild);
   const cfg = guildCfg(options.cfg);
   const member = makeMember({ id: "u1", guild, user: makeUser() });
   guild.members.cache.set("u1", member);
 
+  const inviteRows = new Map((options.oldInvites || []).map((row) => [row.code, { ...row }]));
   const db = {
     getSnap: { get: (id) => options.snapStore?.[id] || null },
     putSnapshot: (row, limit, ttl) => snapshots.push({ row, limit, ttl }),
-    listInvites: { all: () => options.oldInvites || [] },
-    upsertInvite: { run: (...args) => upserts.push(args) },
+    listInvites: { all: () => [...inviteRows.values()] },
+    upsertInvite: {
+      run: (guildId, code, uses, inviterId) => {
+        upserts.push([guildId, code, uses, inviterId]);
+        inviteRows.set(code, { guild_id: guildId, code, uses, inviter_id: inviterId });
+      },
+    },
+    deleteInvite: {
+      run: (guildId, code) => {
+        deletes.push([guildId, code]);
+        inviteRows.delete(code);
+      },
+    },
   };
   const dispatch = {
     guildCfg: (id) => (id === guild.id ? cfg : null),
@@ -295,7 +308,7 @@ function setup(options = {}) {
   };
   const client = new FakeClient([guild]);
   bindEvents(client, { dispatch, processCfg, log: { error: (...args) => errors.push(args) } });
-  return { client, guild, cfg, member, calls, snapshots, upserts, errors, processCfg };
+  return { client, guild, cfg, member, calls, snapshots, upserts, deletes, errors, processCfg };
 }
 
 async function fire(client, name, ...args) {
@@ -426,6 +439,32 @@ test("member, moderation, invite, and derived member updates dispatch", async ()
     "guildMemberNickname", "guildMemberTimeout", "guildMemberRoles",
     "guildMemberPending", "guildMemberBoost", "guildMemberAvatar", "guildMemberUpdate",
   ]);
+  assert.equal(errors.length, 0);
+});
+
+test("an invite created while the bot is online is cached before its first join", async () => {
+  const h = setup({ processCfg: { inviteTrack: true }, oldInvites: [] });
+  const { client, guild, calls, upserts, deletes, errors } = h;
+  const channel = makeChannel({ guild });
+  const creator = makeUser({ id: "creator1", tag: "creator#0001" });
+
+  await fire(client, "inviteCreate", {
+    guild, code: "newinv", channel, inviter: creator, uses: 0, maxUses: 0, expiresTimestamp: null,
+  });
+  assert.deepEqual(upserts, [[guild.id, "newinv", 0, "creator1"]]);
+
+  guild.invites.fetch = async () => new Map([["newinv", {
+    code: "newinv", uses: 1, inviter: creator,
+  }]]);
+  const joiner = makeMember({ id: "u2", user: makeUser({ id: "u2" }), guild });
+  await fire(client, "guildMemberAdd", joiner);
+
+  const add = calls.find(([, key]) => key === "guildMemberAdd");
+  assert.match(JSON.stringify(add[2]), /creator#0001/);
+  assert.equal(errors.length, 0);
+
+  await fire(client, "inviteDelete", { guild, code: "newinv", channel });
+  assert.deepEqual(deletes, [[guild.id, "newinv"]]);
   assert.equal(errors.length, 0);
 });
 
