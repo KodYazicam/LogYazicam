@@ -55,6 +55,14 @@ function when(ts, timezone = "UTC") {
   }
 }
 
+function hiddenFieldSet(hiddenFields, eventKey) {
+  const names = [];
+  for (const value of [hiddenFields?.["*"], hiddenFields?.[eventKey]]) {
+    if (Array.isArray(value)) names.push(...value.map(String));
+  }
+  return new Set(names);
+}
+
 function buildEmbed(guildCfg, eventKey, fields, { description, thumbnail, url } = {}) {
   const meta = byKey[eventKey] || { color: "info" };
   const slotColor = guildCfg.colors[meta.color] ?? guildCfg.colors.info;
@@ -71,7 +79,7 @@ function buildEmbed(guildCfg, eventKey, fields, { description, thumbnail, url } 
   if (thumbnail && guildCfg.showThumbnails !== false) embed.setThumbnail(thumbnail);
   if (url) embed.setURL(url);
   const compact = guildCfg.embedCompact;
-  const hidden = new Set((guildCfg.hiddenFields?.[eventKey] || guildCfg.hiddenFields?.["*"] || []).map(String));
+  const hidden = hiddenFieldSet(guildCfg.hiddenFields, eventKey);
   for (const [name, value] of fields) {
     if (value == null || value === "") continue;
     const short = name.replace(/^field\./, "");

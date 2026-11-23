@@ -10,6 +10,7 @@ const {
   audit,
   inQuietHours,
   hasConfigPermission,
+  buildEmbed,
 } = require("../src/util");
 
 test("code and truncate handle null, backticks, and long values", () => {
@@ -62,4 +63,48 @@ test("hasConfigPermission rejects missing and non-function permission objects", 
     true,
   );
   assert.equal(hasConfigPermission({ has: () => true }, {}), true);
+});
+
+function embedCfg(hiddenFields = {}) {
+  return {
+    locale: "en",
+    colors: { create: 0xffffff, update: 0xffffff, delete: 0xffffff, voice: 0xffffff, member: 0xffffff, mod: 0xffffff, info: 0xffffff },
+    showTimestamp: false,
+    showCredit: false,
+    embedCompact: false,
+    descMax: 4000,
+    fieldMax: 1024,
+    footerMax: 2048,
+    extra: {},
+    hiddenFields,
+  };
+}
+
+function embeddedFieldNames(hiddenFields) {
+  return buildEmbed(embedCfg(hiddenFields), "messageDelete", [
+    ["field.id", "123"],
+    ["field.jump", "https://discord.com/channels/1/2/3"],
+    ["field.author", "tester"],
+  ]).data.fields.map((field) => field.name);
+}
+
+test("hiddenFields wildcard and event list are combined", () => {
+  assert.deepEqual(
+    embeddedFieldNames({ "*": ["id"], messageDelete: ["jump"] }),
+    ["Author"],
+  );
+});
+
+test("an empty event-specific hiddenFields list does not disable the wildcard", () => {
+  assert.deepEqual(
+    embeddedFieldNames({ "*": ["id"], messageDelete: [] }),
+    ["Jump", "Author"],
+  );
+});
+
+test("malformed hiddenFields entries are ignored instead of dropping the embed", () => {
+  assert.deepEqual(
+    embeddedFieldNames({ "*": "id", messageDelete: null }),
+    ["ID", "Jump", "Author"],
+  );
 });
