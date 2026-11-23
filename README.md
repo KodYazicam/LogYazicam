@@ -360,7 +360,7 @@ logyazicam backup --out ./backups/logyazicam-2026-11-13.sqlite
 logyazicam restore ./backups/logyazicam-2026-11-13.sqlite --force
 ```
 
-`backup` defaults to a timestamped file next to `DATABASE_PATH`. `restore` runs SQLite `PRAGMA integrity_check` before touching anything, refuses to replace an existing database without `--force`, and with `--force` writes a timestamped `.bak-…` copy of the existing database before swapping the new file in atomically. A corrupt input leaves the live database untouched. The CLI never prints token or secret values.
+`backup` defaults to a timestamped file next to `DATABASE_PATH`. `restore` runs SQLite `PRAGMA integrity_check` and confirms the input has the LogYazicam tables (`guilds`, `event_routes`, `ignores`, `history`) before touching anything, refuses to replace an existing database without `--force`, and with `--force` writes a timestamped `.bak-…` copy of the existing database before swapping the new file in atomically. A corrupt or unrelated SQLite input leaves the live database untouched. The CLI never prints token or secret values.
 
 **Sharding** (`SHARD_LIST=auto` or a number): process starts a `ShardingManager`. Empty = single process.
 
@@ -1211,7 +1211,7 @@ npm run check      # node --check for every JS file
 - Sink isolation: unwritable file directories cannot drop Discord delivery
 - HTTP sink status: only a `2xx` mirror counts as delivered; `500` is logged and, in a sink-only setup, counted as `dropped`
 - SQLite backup: WAL-consistent online snapshots, nested directories, and logged failures
-- Backup/restore CLI: WAL-consistent snapshot, round-trip restore, `--force` and automatic pre-restore backup, corrupt and `integrity_check` rejection with no writes, usage exit codes, and no token in output
+- Backup/restore CLI: WAL-consistent snapshot, round-trip restore, `--force` and automatic pre-restore backup, corrupt, `integrity_check`, and non-LogYazicam SQLite rejection with no writes, usage exit codes, and no token in output
 
 CI: GitHub Actions runs `npm ci`, the syntax check, the full test suite on Node 22 and 24, coverage on Node 22, a production dependency audit, and a Docker image build. The coverage step is a gate: `npm run test:coverage` measures `src/**` only and fails below 94% lines, 80% branches, or 90% functions (Node >= 22.8 is required for the threshold flags; CI runs the latest 22.x).
 
