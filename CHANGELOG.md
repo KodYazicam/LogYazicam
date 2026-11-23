@@ -86,6 +86,11 @@ All notable changes to this project are documented here. The format follows
   `tests/secret-fixtures.test.js` fails on any literal key ID under `src/`,
   `tests/`, `scripts/`, or `docs/`, so a push cannot re-open secret-scanning
   alert #1.
+- An empty `/log string` override for an event title or field label now falls
+  back to the locale pack. Discord rejects zero-length embed titles and field
+  names; an empty title made `buildEmbed` throw and the dispatcher silently
+  dropped every matching event. Empty `bot.credit` keeps hiding the footer
+  credit, and existing empty rows recover without a migration.
 
 ## [2.0.0] - 2026-11-12
 

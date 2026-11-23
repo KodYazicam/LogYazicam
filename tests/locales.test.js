@@ -1,6 +1,7 @@
 const { test } = require("node:test");
 const assert = require("node:assert/strict");
 const { PACKS, LOCALES, t } = require("../src/locales");
+const { buildEmbed } = require("../src/util");
 
 const MEMBER_KEYS = ["field.created", "invite.vanity"];
 
@@ -72,4 +73,36 @@ test("translated config replies interpolate their placeholders", () => {
 test("translated validation replies interpolate their placeholders", () => {
   assert.match(t("tr", "cmd.invalid_timezone", { tz: "Mars/Olympus" }), /Mars\/Olympus/);
   assert.match(t("de", "cmd.error", { error: "boom" }), /boom/);
+});
+
+test("empty UI overrides fall back to the locale pack", () => {
+  const strings = { "event.messageDelete": "", "field.author": "" };
+  assert.equal(t("en", "event.messageDelete", {}, strings), PACKS.en["event.messageDelete"]);
+  assert.equal(t("en", "field.author", {}, strings), PACKS.en["field.author"]);
+  assert.equal(t("de", "event.messageDelete", {}, strings), PACKS.de["event.messageDelete"]);
+});
+
+test("empty event and field overrides do not make buildEmbed throw", () => {
+  const cfg = {
+    locale: "en",
+    colors: { create: 0, update: 0, delete: 0xed4245, voice: 0, member: 0, mod: 0, info: 0 },
+    eventColors: {},
+    extra: { strings: { "event.messageDelete": "", "field.author": "" } },
+    showTimestamp: false,
+    showCredit: false,
+    embedFooter: "",
+    embedCompact: false,
+    fieldMax: 1024,
+    descMax: 4000,
+    footerMax: 2048,
+    hiddenFields: {},
+  };
+  const embed = buildEmbed(cfg, "messageDelete", [["field.author", "a"]]);
+  assert.equal(embed.data.title, PACKS.en["event.messageDelete"]);
+  assert.equal(embed.data.fields[0].name, PACKS.en["field.author"]);
+});
+
+test("an empty credit override still hides the footer credit", () => {
+  assert.equal(t("en", "bot.credit", {}, { "bot.credit": "" }), "");
+  assert.equal(t("en", "bot.credit", {}, {}), PACKS.en["bot.credit"]);
 });
