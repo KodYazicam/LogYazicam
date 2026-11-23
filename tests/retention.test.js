@@ -14,6 +14,7 @@ const {
   guildDays,
   pruneGuild,
   pruneAll,
+  pruneSnapshots,
 } = require("../src/retention");
 
 function tempDb(t) {
@@ -126,6 +127,43 @@ test("per-guild days win, and history for unknown guild rows still uses the glob
     rows(db).map((row) => `${row.guild_id}:${Math.round((now - row.created_at) / DAY_MS)}`),
     ["history-only:1", "known:2"],
   );
+});
+
+test("snapshot TTL sweeps old rows even when no new snapshot is written", (t) => {
+  const db = tempDb(t);
+  if (!db) return;
+  // putSnapshot's own write-time prune uses Date.now(), so keep these stamps
+  // relative to the real clock.
+  const now = Date.now();
+  const snapshot = (messageId, createdAt) => ({
+    message_id: messageId,
+    guild_id: "A",
+    channel_id: "c1",
+    author_id: "u1",
+    author_tag: "u#1",
+    content: messageId,
+    attachments: "",
+    created_at: createdAt,
+  });
+
+  db.putSnapshot(snapshot("old", now - 2 * DAY_MS), 10, 0);
+  db.putSnapshot(snapshot("fresh", now - DAY_MS / 2), 10, 0);
+  assert.equal(db.getSnap.get("old").content, "old");
+
+  assert.equal(pruneSnapshots(db, { snapshotTtlMs: DAY_MS }, now), 1);
+  assert.equal(db.getSnap.get("old"), undefined);
+  assert.equal(db.getSnap.get("fresh").content, "fresh");
+
+  assert.equal(pruneSnapshots(db, { snapshotTtlMs: 0 }, now), 0);
+  assert.equal(pruneSnapshots(db, {}, now), 0);
+  assert.equal(pruneSnapshots({}, { snapshotTtlMs: DAY_MS }, now), 0);
+  assert.equal(db.pruneSnapshots(Number.NaN, now), 0);
+
+  db.putSnapshot(snapshot("stale", now - 5 * DAY_MS), 10, 0);
+  db.putSnapshot(snapshot("newest", now), 10, DAY_MS);
+  assert.equal(db.getSnap.get("stale"), undefined);
+  assert.equal(db.getSnap.get("fresh").content, "fresh");
+  assert.equal(db.getSnap.get("newest").content, "newest");
 });
 
 test("pruneGuild returns zero when the guild keeps history forever", (t) => {

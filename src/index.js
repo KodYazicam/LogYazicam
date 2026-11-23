@@ -57,19 +57,31 @@ const dispatch = createDispatcher({ client, db, processCfg, log, cache });
 // dispatcher itself defers delivery until the client is ready.
 const restoredDeliveries = dispatch.restorePending();
 
-function runHistoryRetention(reason) {
+function runRetention(reason) {
   try {
-    const { pruneAll } = require("./retention");
+    const { pruneAll, pruneSnapshots } = require("./retention");
     const deleted = pruneAll(db, processCfg);
-    if (deleted > 0) log.info("history retention", reason, `${deleted} row(s) removed`);
+    const snapshots = pruneSnapshots(db, processCfg);
+    if (deleted > 0 || snapshots > 0) {
+      log.info("retention", reason, `${deleted} history row(s), ${snapshots} snapshot row(s) removed`);
+    }
   } catch (error) {
-    log.error("history retention", reason, error);
+    log.error("retention", reason, error);
   }
 }
 
-runHistoryRetention("startup");
-if (processCfg.historyPruneMs > 0) {
-  setInterval(() => runHistoryRetention("interval"), processCfg.historyPruneMs).unref();
+runRetention("startup");
+// Snapshot TTL shares this sweep so old message text still expires when a guild
+// has no new messages to trigger the write-time prune. With HISTORY_PRUNE_MS=0
+// history stays startup-only, but a configured SNAPSHOT_TTL_MS still gets a
+// periodic sweep (capped at one hour).
+const retentionMs = processCfg.historyPruneMs > 0
+  ? processCfg.historyPruneMs
+  : processCfg.snapshotTtlMs > 0
+    ? Math.max(1000, Math.min(processCfg.snapshotTtlMs, 3600000))
+    : 0;
+if (retentionMs > 0) {
+  setInterval(() => runRetention("interval"), retentionMs).unref();
 }
 
 if (processCfg.dashboardEnabled) {

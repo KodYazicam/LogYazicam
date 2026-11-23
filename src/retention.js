@@ -35,4 +35,18 @@ function pruneAll(db, processCfg, now = Date.now()) {
   return deleted;
 }
 
-module.exports = { DAY_MS, MAX_DAYS, normalizeDays, cutoffFor, guildDays, pruneGuild, pruneAll };
+function pruneSnapshots(db, processCfg, now = Date.now()) {
+  if (typeof db.pruneSnapshots !== "function") return 0;
+  return db.pruneSnapshots(processCfg.snapshotTtlMs, now);
+}
+
+module.exports = {
+  DAY_MS,
+  MAX_DAYS,
+  normalizeDays,
+  cutoffFor,
+  guildDays,
+  pruneGuild,
+  pruneAll,
+  pruneSnapshots,
+};
