@@ -23,8 +23,14 @@ function reloadLocales() {
 }
 
 function t(locale, key, vars = {}, overrides = {}) {
-  if (overrides && typeof overrides[key] === "string") {
-    let text = overrides[key];
+  const override = overrides?.[key];
+  // Discord rejects empty embed titles and field names (1-256 characters), and
+  // buildEmbed throws before a send when a title is empty. An empty override
+  // therefore means "unset" so the pack value can be used. The credit footer is
+  // the one exception: buildEmbed filters an empty credit out, which is the
+  // documented way to hide it.
+  if (typeof override === "string" && (override.length > 0 || key === "bot.credit")) {
+    let text = override;
     for (const [name, value] of Object.entries(vars)) {
       text = text.replaceAll(`{${name}}`, value == null ? "—" : String(value));
     }

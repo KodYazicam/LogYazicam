@@ -41,6 +41,8 @@ differs from English and uses the same placeholders.
 
 `/log string key:event.messageDelete value:…` writes `guilds.extra_json.strings`. That wins over the pack for **that guild only**. Credit key `bot.credit` can be rephrased or hidden; Apache-2.0 does not require visible credit.
 
+An empty override is treated as unset for event titles and field labels, so the pack value is used. Discord requires those strings to be at least one character, and an empty title made `buildEmbed` throw and drop events. The one exception is `bot.credit`: an empty value stays empty, and `buildEmbed` omits the credit footer, which is the supported way to hide it.
+
 Placeholders: `{key}`, `{channel}`, `{locale}`, … — same names as in `en.js`.
 
 ## Placeholders used in `en.js`
