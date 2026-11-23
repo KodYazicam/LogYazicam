@@ -10,6 +10,34 @@ function parsePrefix(content, prefix, commandName = "log") {
   return rest;
 }
 
+// A prefix option such as `channel:#logs` is typed by hand, so it may name a
+// channel instead of carrying a snowflake or a <#id> mention. Return the id
+// part of a mention/id token, or null when the token is a plain name.
+function mentionId(raw) {
+  const match = /^<[#@][&!]?([^>]+)>$/.exec(raw);
+  return match ? match[1] : null;
+}
+
+function byIdOrName(cache, raw, prefixChars) {
+  let token = mentionId(raw);
+  if (token == null) {
+    token = raw;
+    while (prefixChars.includes(token[0])) token = token.slice(1);
+  }
+  if (!token) return null;
+  if (typeof cache?.get === "function") {
+    const hit = cache.get(token);
+    if (hit) return hit;
+  }
+  if (typeof cache?.values === "function") {
+    const wanted = token.toLowerCase();
+    for (const item of cache.values()) {
+      if (String(item?.name || "").toLowerCase() === wanted) return item;
+    }
+  }
+  return undefined;
+}
+
 function fakeInteraction(message, rawTokens, commandName = "log") {
   const options = {};
   const tokens = [];
@@ -69,14 +97,22 @@ function fakeInteraction(message, rawTokens, commandName = "log") {
       getChannel: (name) => {
         const raw = get(name, false);
         if (!raw) return null;
-        const id = String(raw).replace(/[<#>]/g, "");
-        return message.guild.channels.cache.get(id) || { id, toString: () => `<#${id}>` };
+        const token = String(raw).trim();
+        const found = byIdOrName(message.guild.channels.cache, token, "#");
+        if (found) return found;
+        const id = mentionId(token) ?? token.replace(/^#/, "");
+        if (!id) return null;
+        return { id, toString: () => `<#${id}>` };
       },
       getRole: (name) => {
         const raw = get(name, false);
         if (!raw) return null;
-        const id = String(raw).replace(/[<@&>]/g, "");
-        return message.guild.roles.cache.get(id) || { id };
+        const token = String(raw).trim();
+        const found = byIdOrName(message.guild.roles.cache, token, "@");
+        if (found) return found;
+        const id = mentionId(token) ?? token.replace(/^@/, "");
+        if (!id) return null;
+        return { id };
       },
       getAttachment: (name) => {
         const raw = get(name, false);
