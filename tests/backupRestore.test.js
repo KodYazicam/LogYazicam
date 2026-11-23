@@ -205,6 +205,38 @@ test("restore rejects a non-SQLite file before writing anything", async (t) => {
   assert.deepEqual(readMarker(dbPath), { locale: "en", summary: "live" });
 });
 
+test("restore rejects a valid SQLite file that is not a LogYazicam database", async (t) => {
+  if (skipWithoutBindings(t)) return;
+  const dir = tempDir(t);
+  const dbPath = path.join(dir, "data", "live.sqlite");
+  const unrelated = path.join(dir, "unrelated.sqlite");
+  seedDb(dbPath, { locale: "en", summary: "live" });
+
+  const other = new Database(unrelated);
+  try {
+    other.exec("CREATE TABLE notes (body TEXT); INSERT INTO notes VALUES ('hello');");
+  } finally {
+    other.close();
+  }
+
+  const beforeHash = sha256(dbPath);
+  const beforeFiles = files(path.join(dir, "data"));
+
+  await assert.rejects(
+    restoreDatabase({
+      cwd: dir,
+      env: { DATABASE_PATH: "./data/live.sqlite" },
+      file: "unrelated.sqlite",
+      force: true,
+    }),
+    /not a LogYazicam database/i,
+  );
+
+  assert.equal(sha256(dbPath), beforeHash);
+  assert.deepEqual(files(path.join(dir, "data")), beforeFiles);
+  assert.deepEqual(readMarker(dbPath), { locale: "en", summary: "live" });
+});
+
 test("restore rejects a file that fails PRAGMA integrity_check before writing anything", async (t) => {
   if (skipWithoutBindings(t)) return;
   const dir = tempDir(t);

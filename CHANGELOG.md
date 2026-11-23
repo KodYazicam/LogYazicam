@@ -22,6 +22,13 @@ All notable changes to this project are documented here. The format follows
 
 ### Fixed
 
+- `logyazicam restore` now verifies that the input is a LogYazicam database
+  before replacing the live file. `PRAGMA integrity_check` alone accepted any
+  valid SQLite database, so restoring an unrelated `.sqlite` file swapped in a
+  schema without `guilds`, `event_routes`, `ignores`, or `history`; the bot then
+  recreated the tables on start and every guild config, route, ignore rule, and
+  history row was gone. The check runs before the auto-backup and atomic swap,
+  so a rejected file leaves the live database byte-identical.
 - AWS secret access keys and STS session tokens are now stripped by the
   always-on token redaction when they appear as `aws_secret_access_key` /
   `SecretAccessKey` or `aws_session_token` / `SessionToken`. Only access key

@@ -43,6 +43,11 @@ function sameFile(first, second) {
   }
 }
 
+// A valid SQLite file from another application passes integrity_check but
+// carries none of the tables this bot queries. Restoring it would replace the
+// live database with an empty schema and silently drop every guild config.
+const REQUIRED_TABLES = ["guilds", "event_routes", "ignores", "history"];
+
 function verifySqlite(file, DatabaseImpl = Database) {
   const db = new DatabaseImpl(file, { readonly: true, fileMustExist: true });
   try {
@@ -50,6 +55,13 @@ function verifySqlite(file, DatabaseImpl = Database) {
     if (result !== "ok") {
       const detail = String(result).split("\n")[0];
       throw new Error(`integrity_check failed: ${detail}`);
+    }
+    const tables = new Set(
+      db.prepare("SELECT name FROM sqlite_master WHERE type = 'table'").all().map((row) => row.name),
+    );
+    const missing = REQUIRED_TABLES.filter((name) => !tables.has(name));
+    if (missing.length) {
+      throw new Error(`not a LogYazicam database (missing table: ${missing.join(", ")})`);
     }
   } finally {
     db.close();
