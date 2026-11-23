@@ -65,6 +65,14 @@ All notable changes to this project are documented here. The format follows
   `HTTP_SINK_URL` logs `http sink failed` and, in a sink-only setup, increments
   `dropped` rather than `sent`. When `discord` is still in `LOG_SINK` the mirror
   stays asynchronous and cannot delay Discord delivery.
+- A delivery that is already being sent when a graceful shutdown starts is now
+  persisted like queued work. `flushQueues()` removed the item from its channel
+  queue before awaiting the send, so `drain()` saw an empty queue and
+  `persistPending()` wrote nothing; `process.exit()` then aborted the send and
+  the event was lost from both Discord and `pending_deliveries`. In-flight items
+  are tracked until the attempt settles, counted in `queueSize()`, and included
+  in the shutdown persist pass, so the next start resumes a copy that did not
+  finish. An overflow drop still only removes items that are genuinely waiting.
 - Queued deliveries now survive a graceful restart. On SIGTERM/SIGINT the
   dispatcher drains for `SHUTDOWN_FLUSH_MS` (default 5000 ms), then persists
   every item still waiting (including a future `retryAt`, retry count, sink

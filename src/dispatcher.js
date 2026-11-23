@@ -35,6 +35,10 @@ function decodeFiles(files) {
 
 function createDispatcher({ client, db, processCfg, log, cache, deps = {} }) {
   const queues = new Map();
+  // Items are shifted out of their queue before the network send starts. Keep
+  // them here until the attempt settles: a shutdown drain must persist them
+  // like queued work, and an overflow drop must not touch a send in progress.
+  const inFlight = new Set();
   const metrics = { sent: 0, dropped: 0, retries: 0 };
   const makeWebhook = deps.createWebhookClient || ((options) => new WebhookClient(options));
   const now = deps.now || Date.now;
@@ -352,6 +356,7 @@ function createDispatcher({ client, db, processCfg, log, cache, deps = {} }) {
         if (!item) continue;
         if (item.retryAt && item.retryAt > now()) continue;
         q.shift();
+        inFlight.add(item);
         try {
           const delivered = await flushOne(item);
           if (delivered) {
@@ -379,6 +384,8 @@ function createDispatcher({ client, db, processCfg, log, cache, deps = {} }) {
             const cfg = guildCfg(item.guildId);
             if (cfg) cfg.lastError = error.message;
           }
+        } finally {
+          inFlight.delete(item);
         }
       }
     } finally {
@@ -387,7 +394,7 @@ function createDispatcher({ client, db, processCfg, log, cache, deps = {} }) {
   }
 
   function queueSize() {
-    let size = 0;
+    let size = inFlight.size;
     for (const q of queues.values()) size += q.length;
     return size;
   }
@@ -407,16 +414,18 @@ function createDispatcher({ client, db, processCfg, log, cache, deps = {} }) {
   function persistPending() {
     if (typeof db.savePendingDelivery !== "function") return 0;
     let saved = 0;
+    const items = new Set(inFlight);
     for (const q of queues.values()) {
-      for (const item of q) {
-        if (!item?.id) continue;
-        try {
-          db.savePendingDelivery({ ...item, files: encodeFiles(item.files) });
-          item.persisted = true;
-          saved += 1;
-        } catch (error) {
-          log.error("pending delivery save failed", error.message);
-        }
+      for (const item of q) items.add(item);
+    }
+    for (const item of items) {
+      if (!item?.id) continue;
+      try {
+        db.savePendingDelivery({ ...item, files: encodeFiles(item.files) });
+        item.persisted = true;
+        saved += 1;
+      } catch (error) {
+        log.error("pending delivery save failed", error.message);
       }
     }
     return saved;
@@ -437,6 +446,9 @@ function createDispatcher({ client, db, processCfg, log, cache, deps = {} }) {
   }
 
   function allWaitingOnRetry() {
+    // A send that is still in flight is not waiting on a retry timestamp; the
+    // drain must stay inside its budget and give it a chance to settle.
+    if (inFlight.size) return false;
     const at = now();
     for (const q of queues.values()) {
       for (const item of q) {

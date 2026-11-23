@@ -556,6 +556,51 @@ test("drain flushes queued items and reports an empty queue", async () => {
   assert.equal(h.hookCalls.length, 1);
 });
 
+test("drain persists an item that is still being sent", async () => {
+  const saved = [];
+  let releaseSend;
+  let markStarted;
+  const started = new Promise((resolve) => {
+    markStarted = resolve;
+  });
+  const blocked = new Promise((resolve) => {
+    releaseSend = resolve;
+  });
+  const h = setup({
+    queued: false,
+    db: {
+      savePendingDelivery: (item) => {
+        saved.push(item);
+        return item.id;
+      },
+    },
+    send: async (payload) => {
+      markStarted();
+      await blocked;
+      return payload;
+    },
+    cfg: {
+      events: { messageDelete: { on: true, channelId: "c1" } },
+    },
+  });
+
+  await h.dispatch.enqueue({ id: "g1" }, "messageDelete", { summary: "mid-send" });
+  const tick = h.dispatch.tick();
+  await started;
+
+  // The send is in progress, so the item is no longer at the head of the
+  // queue but it has not been delivered or persisted yet.
+  assert.equal(h.dispatch.queueSize(), 1);
+  const remaining = await h.dispatch.drain({ timeoutMs: 0 });
+  assert.equal(remaining, 1);
+  assert.equal(saved.length, 1);
+  assert.equal(saved[0].summary, "mid-send");
+
+  releaseSend();
+  await tick;
+  assert.equal(h.dispatch.metrics.sent, 1);
+});
+
 test("per-event cooldown zero disables the guild cooldown", async () => {
   const h = setup({
     queued: false,
