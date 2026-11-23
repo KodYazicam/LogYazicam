@@ -236,10 +236,17 @@ function openDb(filePath) {
     )
   `);
   const expireSnap = db.prepare("DELETE FROM snapshots WHERE created_at < ?");
+  function pruneSnapshots(ttlMs, now = Date.now()) {
+    const ttl = Number(ttlMs);
+    if (!Number.isFinite(ttl) || ttl <= 0) return 0;
+    // The snapshots table has no guild scope here: a TTL is a global retention
+    // promise, and a guild without recent traffic must still lose old text.
+    return expireSnap.run(now - ttl).changes;
+  }
   function putSnapshot(row, limit, ttlMs) {
     upsertSnap.run(row.message_id, row.guild_id, row.channel_id, row.author_id, row.author_tag, row.content, row.attachments, row.created_at);
     trimSnap.run(row.guild_id, row.guild_id, limit || 2000);
-    if (ttlMs > 0) expireSnap.run(Date.now() - ttlMs);
+    pruneSnapshots(ttlMs);
   }
 
   const queryHistory = db.prepare(`
@@ -361,6 +368,7 @@ function openDb(filePath) {
     pruneHistory,
     queryHistory,
     putSnapshot,
+    pruneSnapshots,
     getSnap,
     upsertInvite,
     listInvites,
