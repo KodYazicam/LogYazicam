@@ -167,6 +167,42 @@ test("prefix booleans, channels, and roles resolve from options or caches", () =
   assert.equal(fake(["set"]).options.getRole("role"), null);
 });
 
+test("prefix channel and role names resolve from the guild cache", () => {
+  const channel = { id: "c1", name: "logs", toString: () => "#logs" };
+  const role = { id: "r1", name: "R&D" };
+  const source = message({
+    guild: {
+      channels: { cache: new Map([["c1", channel]]) },
+      roles: { cache: new Map([["r1", role]]) },
+    },
+  });
+
+  const event = fakeInteraction(source, [
+    "event",
+    "on",
+    "key:messageDelete",
+    "channel:#logs",
+  ]);
+  assert.equal(event.options.getChannel("channel"), channel);
+
+  const plain = fakeInteraction(source, ["channel", "set", "channel:logs"]);
+  assert.equal(plain.options.getChannel("channel"), channel);
+
+  const upper = fakeInteraction(source, ["event", "on", "channel:#LOGS"]);
+  assert.equal(upper.options.getChannel("channel"), channel);
+
+  const mentioned = fakeInteraction(source, ["mention", "role:@R&D"]);
+  assert.equal(mentioned.options.getRole("role"), role);
+  const bare = fakeInteraction(source, ["mention", "role:R&D"]);
+  assert.equal(bare.options.getRole("role"), role);
+
+  // An unknown name keeps the previous synthetic fallback so a raw snowflake
+  // that is not in the cache still reaches the command handler.
+  const missing = fakeInteraction(source, ["set", "channel:#missing"]);
+  assert.equal(missing.options.getChannel("channel").id, "missing");
+  assert.equal(missing.options.getChannel("channel").toString(), "<#missing>");
+});
+
 test("prefix reply passes content, files, and no replied-user mention", () => {
   const replies = [];
   const source = message({
